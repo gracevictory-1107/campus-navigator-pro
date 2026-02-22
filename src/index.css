@@ -1,96 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 207 80% 3%;
+    --foreground: 195 50% 85%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 207 60% 5%;
+    --card-foreground: 195 50% 85%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 207 60% 5%;
+    --popover-foreground: 195 50% 85%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 193 100% 50%;
+    --primary-foreground: 207 80% 3%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 207 50% 12%;
+    --secondary-foreground: 195 50% 85%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 207 40% 10%;
+    --muted-foreground: 195 30% 35%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 37 100% 50%;
+    --accent-foreground: 207 80% 3%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 200 60% 16%;
+    --input: 200 60% 16%;
+    --ring: 193 100% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0.25rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Custom campus tokens */
+    --cyan: 193 100% 50%;
+    --cyan-dim: 195 100% 23%;
+    --cyan-glow: 193 100% 50%;
+    --amber: 37 100% 50%;
+    --green: 152 100% 50%;
+    --purple: 270 100% 63%;
+    --grid-line: 200 60% 7%;
+    --surface: 207 60% 5%;
+    --text-dim: 195 40% 25%;
+    --text-mid: 195 35% 45%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --font-display: 'Rajdhani', sans-serif;
+    --font-mono: 'Share Tech Mono', monospace;
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* Room type colors */
+    --room-lab: 145 100% 6%;
+    --room-lab-stroke: 152 80% 27%;
+    --room-class: 220 80% 8%;
+    --room-class-stroke: 220 60% 33%;
+    --room-hod: 270 60% 10%;
+    --room-hod-stroke: 270 60% 40%;
+    --room-stairs: 48 50% 6%;
+    --room-stairs-stroke: 48 60% 30%;
+    --room-lift: 220 80% 8%;
+    --room-lift-stroke: 220 80% 40%;
+    --room-wc: 180 60% 6%;
+    --room-wc-stroke: 180 60% 24%;
+    --room-exit: 120 80% 5%;
+    --room-exit-stroke: 120 60% 35%;
+    --room-corridor: 220 30% 4%;
+    --room-corridor-stroke: 220 20% 13%;
+    --room-staff: 150 60% 5%;
+    --room-staff-stroke: 150 60% 24%;
+    --room-innov: 270 60% 8%;
+    --room-innov-stroke: 270 60% 40%;
+    --room-open: 120 30% 4%;
+    --room-open-stroke: 120 30% 15%;
+    --room-canteen: 30 80% 5%;
+    --room-canteen-stroke: 30 80% 33%;
+    --room-dean: 290 60% 10%;
+    --room-dean-stroke: 290 60% 40%;
+    --room-court: 165 60% 6%;
+    --room-court-stroke: 165 60% 24%;
 
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 207 60% 3%;
+    --sidebar-foreground: 195 50% 85%;
+    --sidebar-primary: 193 100% 50%;
+    --sidebar-primary-foreground: 207 80% 3%;
+    --sidebar-accent: 207 50% 8%;
+    --sidebar-accent-foreground: 195 50% 85%;
+    --sidebar-border: 200 60% 16%;
+    --sidebar-ring: 193 100% 50%;
   }
 }
 
@@ -101,5 +99,62 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-mono);
+    cursor: crosshair;
   }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(hsl(var(--grid-line)) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--grid-line)) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Scanline effect */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+@layer utilities {
+  .text-glow-cyan {
+    text-shadow: 0 0 20px hsl(var(--cyan) / 0.5);
+  }
+  .text-glow-green {
+    text-shadow: 0 0 10px hsl(var(--green) / 0.5);
+  }
+  .text-glow-amber {
+    text-shadow: 0 0 10px hsl(var(--amber) / 0.5);
+  }
+  .glow-cyan {
+    box-shadow: 0 0 15px hsl(var(--cyan) / 0.1);
+  }
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .font-mono-tech {
+    font-family: var(--font-mono);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
