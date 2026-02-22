@@ -123,20 +123,23 @@ const mbGroundFloor: FloorPlan = {
     { id: "principal", label: "Principal", sublabel: "Office", type: "hod", x: 20, y: 22, w: 130, h: 70, description: "Principal Office" },
     { id: "director", label: "Director", sublabel: "Room", type: "class", x: 152, y: 22, w: 80, h: 70, description: "Director Room" },
     { id: "lift", label: "Lift", type: "lift", x: 234, y: 22, w: 56, h: 70 },
-    { id: "cash", label: "Cash", sublabel: "Counters", type: "class", x: 340, y: 22, w: 100, h: 34, description: "Cash Counters" },
-    { id: "main-entrance", label: "Main", sublabel: "Entrance", type: "exit", x: 442, y: 22, w: 78, h: 34, description: "Main Entrance" },
-    // Admin desk
+    // Cash Counter at right edge, top row
+    { id: "cash", label: "Cash", sublabel: "Counters", type: "class", x: 340, y: 22, w: 80, h: 34, description: "Cash Counters" },
+    { id: "main-entrance", label: "Main", sublabel: "Entrance", type: "exit", x: 442, y: 22, w: 78, h: 70, description: "Main Entrance" },
+    // Administrative Desk: spans from Cash Counter start (x:340) to Main Entrance end (x:520)
     { id: "admin-desk", label: "Administrative", sublabel: "Desk", type: "class", x: 340, y: 58, w: 180, h: 34, description: "Administrative Desk" },
     // Board room (left, large)
     { id: "board-room", label: "Board Room", type: "class", x: 20, y: 94, w: 130, h: 100, description: "Board Room" },
-    // Vice principal + Help desk
-    { id: "vp-cabin", label: "Vice Principal", sublabel: "Cabin", type: "hod", x: 310, y: 134, w: 100, h: 60, description: "Vice Principal Cabin" },
-    { id: "help-desk", label: "Help", sublabel: "Desk", type: "class", x: 412, y: 134, w: 78, h: 60, description: "Help Desk" },
     // Free space between top row and VP area
     { id: "free-space-1", label: "", type: "corridor", x: 152, y: 94, w: 156, h: 100 },
-    // Office back door + Office desk
+    // VP Cabin starts parallel to Cash Counter start (x:340), with gap before Help Desk
+    { id: "vp-cabin", label: "Vice Principal", sublabel: "Cabin", type: "hod", x: 340, y: 94, w: 80, h: 60, description: "Vice Principal Cabin" },
+    // Help Desk opposite to VP Cabin, at far right edge of wall, with space between VP and Help Desk
+    { id: "help-desk", label: "Help", sublabel: "Desk", type: "class", x: 442, y: 94, w: 78, h: 60, description: "Help Desk" },
+    // Office Desk: spans from Cash Counter start wall (x:340) to Main Entrance end wall (x:520), below VP + Help Desk
+    { id: "office-desk", label: "Office Desk", type: "class", x: 340, y: 156, w: 180, h: 38, description: "Office Desk" },
+    // Office back door
     { id: "office-back", label: "Office", sublabel: "Back door", type: "exit", x: 230, y: 250, w: 100, h: 40, description: "Office Back Door" },
-    { id: "office-desk", label: "Office Desk", type: "class", x: 332, y: 250, w: 100, h: 40, description: "Office Desk" },
     // Free space
     { id: "free-space-2", label: "", type: "corridor", x: 20, y: 196, w: 500, h: 52 },
     // Staircases
@@ -296,8 +299,8 @@ const mbFloor5: FloorPlan = {
     { id: "r36", label: "R36 — Empty", type: "class", x: 20, y: 424, w: 180, h: 60 },
     { id: "ladies-wc", label: "Ladies Washroom", type: "wc", x: 20, y: 486, w: 180, h: 70 },
     { id: "corridor", label: "CORRIDOR", type: "corridor", x: 202, y: 22, w: 56, h: 534 },
-    { id: "r32", label: "R32 — II BSc CS-3", sublabel: "(A + B sections)", type: "class", x: 260, y: 22, w: 180, h: 184 },
-    { id: "r38", label: "R38", type: "class", x: 260, y: 208, w: 180, h: 70 },
+    { id: "r32", label: "R32 — II BSc CS-3", sublabel: "(A + B sections)", type: "class", x: 260, y: 22, w: 180, h: 128 },
+    { id: "r33", label: "R33 — II BBA-G", type: "class", x: 260, y: 152, w: 180, h: 126 },
     { id: "stair-r", label: "Staircase (R)", type: "stairs", x: 260, y: 280, w: 180, h: 70 },
     { id: "r34", label: "R34 — II BBA-DM", type: "class", x: 260, y: 352, w: 180, h: 70 },
     { id: "mini-seminar", label: "Mini Seminar Hall", type: "dean", x: 260, y: 424, w: 180, h: 132 },
@@ -347,23 +350,24 @@ const fbFloor1: FloorPlan = {
   subtitle: "1st & 2nd Year Classes",
   code: "11",
   svgWidth: 580,
-  svgHeight: 680,
+  svgHeight: 590,
   rooms: [
     { id: "staff", label: "Staff Room", type: "staff", x: 20, y: 22, w: 170, h: 88 },
-    { id: "corridor", label: "CORRIDOR — FULL LENGTH", type: "corridor", x: 192, y: 22, w: 78, h: 624 },
-    { id: "stairs", label: "Staircase", sublabel: "(2 rows)", type: "stairs", x: 20, y: 112, w: 170, h: 180 },
-    { id: "room1", label: "Room 1", type: "class", x: 272, y: 112, w: 280, h: 88 },
-    { id: "room2", label: "Room 2 — 2nd Year", type: "hod", x: 272, y: 202, w: 280, h: 90 },
-    { id: "room4", label: "Room 4 — 1st Year", type: "hod", x: 20, y: 294, w: 170, h: 88 },
-    { id: "room3", label: "Room 3", type: "class", x: 272, y: 294, w: 280, h: 88 },
-    { id: "room5", label: "Room 5", type: "class", x: 20, y: 384, w: 170, h: 88 },
-    { id: "lift", label: "Lift", type: "lift", x: 272, y: 384, w: 280, h: 88 },
-    { id: "room6", label: "Room 6", type: "class", x: 20, y: 474, w: 170, h: 172 },
-    { id: "wc", label: "Washrooms", type: "wc", x: 272, y: 474, w: 280, h: 172 },
+    { id: "corridor", label: "CORRIDOR — FULL LENGTH", type: "corridor", x: 192, y: 22, w: 78, h: 540 },
+    { id: "room1", label: "Room 1", type: "class", x: 272, y: 22, w: 280, h: 88 },
+    { id: "stairs", label: "Staircase", sublabel: "(2 rows)", type: "stairs", x: 20, y: 112, w: 170, h: 88 },
+    { id: "room2", label: "Room 2 — 2nd Year", type: "hod", x: 272, y: 112, w: 280, h: 88 },
+    { id: "room4", label: "Room 4 — 1st Year", type: "hod", x: 20, y: 202, w: 170, h: 88 },
+    { id: "room3", label: "Room 3", type: "class", x: 272, y: 202, w: 280, h: 88 },
+    { id: "room5", label: "Room 5", type: "class", x: 20, y: 292, w: 170, h: 88 },
+    { id: "lift", label: "Lift", type: "lift", x: 272, y: 292, w: 280, h: 88 },
+    { id: "room6", label: "Room 6", type: "class", x: 20, y: 382, w: 170, h: 88 },
+    { id: "wc", label: "Washrooms", type: "wc", x: 272, y: 382, w: 280, h: 88 },
+    { id: "ladies-wc", label: "Ladies WC", type: "wc", x: 20, y: 472, w: 170, h: 88 },
   ],
   labels: [
     { text: "▲ FRONT", x: 300, y: 14, color: "green", anchor: "middle" },
-    { text: "▼ BACK", x: 300, y: 664, color: "amber", anchor: "middle" },
+    { text: "▼ BACK", x: 300, y: 578, color: "amber", anchor: "middle" },
   ],
 };
 
