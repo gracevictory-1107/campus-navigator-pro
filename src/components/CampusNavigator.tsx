@@ -4,6 +4,7 @@ import { allFloorPlans } from "@/data/floorPlans";
 import CampusSidebar from "./CampusSidebar";
 import FloorPlanSVG from "./FloorPlanSVG";
 import SearchBar from "./SearchBar";
+import ExportPDF from "./ExportPDF";
 
 export default function CampusNavigator() {
   const [activeFloor, setActiveFloor] = useState("campus");
@@ -31,6 +32,7 @@ export default function CampusNavigator() {
           </span>
         </div>
         <div className="flex items-center gap-4">
+          <ExportPDF />
           <SearchBar onNavigate={handleNavigate} />
           <div className="w-1.5 h-1.5 rounded-full bg-green shadow-[0_0_8px_hsl(var(--green))]" style={{ animation: "pulse-glow 2s infinite" }} />
           <span className="text-[10px] text-text-mid tracking-wider">SYSTEM ONLINE</span>
