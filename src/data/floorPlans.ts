@@ -132,12 +132,12 @@ const mbGroundFloor: FloorPlan = {
     { id: "vp-cabin", label: "Vice Principal", sublabel: "Cabin", type: "hod", x: 340, y: 94, w: 80, h: 60, description: "Vice Principal Cabin" },
     { id: "help-desk", label: "Help", sublabel: "Desk", type: "class", x: 442, y: 94, w: 78, h: 60, description: "Help Desk" },
     { id: "office-desk", label: "Office Desk", type: "class", x: 340, y: 156, w: 180, h: 38, description: "Office Desk" },
-    // Office back door at bottom of office/board room south wall, opp & parallel to lift
-    { id: "office-back", label: "Office", sublabel: "Back Door", type: "exit", x: 340, y: 196, w: 180, h: 28, description: "Office Back Door" },
-    // Stairs attached to board room & office desk end wall
+    // Stairs on left, attached to board room end wall
     { id: "stair-l", label: "Stairs", type: "stairs", x: 20, y: 196, w: 130, h: 80, description: "Left Staircase" },
-    { id: "corr-mid", label: "", type: "corridor", x: 152, y: 196, w: 186, h: 80 },
-    { id: "stair-r", label: "Stairs", type: "stairs", x: 340, y: 226, w: 180, h: 50, description: "Right Staircase" },
+    // Office back door — south wall, opp & parallel to lift (green box)
+    { id: "office-back", label: "Office", sublabel: "Back Door", type: "exit", x: 152, y: 196, w: 186, h: 80, description: "Office Back Door" },
+    // Stairs on right — attached to office desk end wall (orange box)
+    { id: "stair-r", label: "Stairs", type: "stairs", x: 340, y: 196, w: 180, h: 80, description: "Right Staircase" },
     // Library — back door & entrance INSIDE the library
     { id: "library", label: "Library", type: "class", x: 20, y: 278, w: 500, h: 200, description: "Library" },
     { id: "lib-back", label: "Library Back Door", type: "exit", x: 170, y: 282, w: 160, h: 22, description: "Library Back Door — inside library, parallel to office back door" },
@@ -292,7 +292,7 @@ const mbFloor5: FloorPlan = {
     { id: "r36", label: "R36 — Empty", type: "class", x: 20, y: 424, w: 180, h: 60 },
     { id: "ladies-wc", label: "Ladies Washroom", type: "wc", x: 20, y: 486, w: 180, h: 70 },
     { id: "corridor", label: "CORRIDOR", type: "corridor", x: 202, y: 22, w: 56, h: 534 },
-    { id: "r32", label: "R32 — II BSc CS-3", sublabel: "(A + B sections)", type: "class", x: 260, y: 22, w: 180, h: 128 },
+    { id: "r32", label: "R32 — II BSc CS-3", type: "class", x: 260, y: 22, w: 180, h: 128 },
     { id: "r33", label: "R33 — II BBA-G", type: "class", x: 260, y: 152, w: 180, h: 126 },
     { id: "stair-r", label: "Staircase (R)", type: "stairs", x: 260, y: 280, w: 180, h: 70 },
     { id: "r34", label: "R34 — II BBA-DM", type: "class", x: 260, y: 352, w: 180, h: 70 },
@@ -343,24 +343,26 @@ const fbFloor1: FloorPlan = {
   subtitle: "1st & 2nd Year Classes",
   code: "11",
   svgWidth: 580,
-  svgHeight: 620,
+  svgHeight: 540,
   rooms: [
     { id: "staff", label: "Staff Room", type: "staff", x: 20, y: 22, w: 170, h: 88 },
-    { id: "corridor", label: "CORRIDOR — FULL LENGTH", type: "corridor", x: 192, y: 22, w: 78, h: 570 },
-    // Rooms pushed to bottom wall
-    { id: "stairs", label: "Staircase", sublabel: "(2 rows)", type: "stairs", x: 20, y: 232, w: 170, h: 80 },
-    { id: "room1", label: "Room 1", type: "class", x: 272, y: 232, w: 280, h: 80 },
-    { id: "room4", label: "Room 4 — 1st Year", type: "hod", x: 20, y: 314, w: 170, h: 80 },
-    { id: "room2", label: "Room 2 — 2nd Year", type: "hod", x: 272, y: 314, w: 280, h: 80 },
-    { id: "room5", label: "Room 5", type: "class", x: 20, y: 396, w: 170, h: 80 },
-    { id: "room3", label: "Room 3", type: "class", x: 272, y: 396, w: 280, h: 80 },
-    { id: "room6", label: "Room 6", type: "class", x: 20, y: 478, w: 170, h: 114 },
-    { id: "lift", label: "Lift", type: "lift", x: 272, y: 478, w: 280, h: 55 },
-    { id: "wc", label: "Washrooms", type: "wc", x: 272, y: 535, w: 280, h: 57 },
+    // Corridor continues on the right side horizontally from staff room level
+    { id: "corridor", label: "CORRIDOR — FULL LENGTH", type: "corridor", x: 192, y: 22, w: 78, h: 490 },
+    // No gap between staff room and staircase on left
+    { id: "stairs", label: "Staircase", sublabel: "(2 rows)", type: "stairs", x: 20, y: 112, w: 170, h: 80 },
+    { id: "room1", label: "Room 1", type: "class", x: 272, y: 112, w: 280, h: 80 },
+    { id: "room4", label: "Room 4 — 1st Year", type: "hod", x: 20, y: 194, w: 170, h: 80 },
+    { id: "room2", label: "Room 2 — 2nd Year", type: "hod", x: 272, y: 194, w: 280, h: 80 },
+    { id: "room5", label: "Room 5", type: "class", x: 20, y: 276, w: 170, h: 80 },
+    { id: "room3", label: "Room 3", type: "class", x: 272, y: 276, w: 280, h: 80 },
+    { id: "room6", label: "Room 6", type: "class", x: 20, y: 358, w: 170, h: 80 },
+    { id: "lift", label: "Lift", type: "lift", x: 272, y: 358, w: 280, h: 38 },
+    { id: "ladies-wc", label: "Ladies Washroom", type: "wc", x: 20, y: 440, w: 170, h: 72 },
+    { id: "wc", label: "Washrooms", type: "wc", x: 272, y: 398, w: 280, h: 114 },
   ],
   labels: [
     { text: "▲ FRONT", x: 300, y: 14, color: "green", anchor: "middle" },
-    { text: "▼ BACK", x: 300, y: 610, color: "amber", anchor: "middle" },
+    { text: "▼ BACK", x: 300, y: 530, color: "amber", anchor: "middle" },
   ],
 };
 
@@ -371,19 +373,21 @@ const fbFloor2: FloorPlan = {
   subtitle: "Innovation Center",
   code: "12",
   svgWidth: 580,
-  svgHeight: 560,
+  svgHeight: 600,
   rooms: [
     { id: "staff", label: "Staff Room", type: "staff", x: 20, y: 22, w: 170, h: 88 },
     { id: "corridor", label: "CORRIDOR", type: "corridor", x: 192, y: 22, w: 360, h: 88, description: "Horizontal corridor next to staff room" },
     { id: "stairs", label: "Staircase", type: "stairs", x: 20, y: 112, w: 170, h: 88 },
-    { id: "innov", label: "INNOVATION CENTER", type: "innov", x: 20, y: 202, w: 532, h: 260, description: "Innovation Center — full width, no middle corridor" },
-    // Lift + Washrooms at bottom right (like B Block Floor 3)
-    { id: "lift", label: "Lift", type: "lift", x: 362, y: 464, w: 190, h: 42 },
-    { id: "wc", label: "Washroom", type: "wc", x: 362, y: 508, w: 190, h: 42 },
+    // Purple box: Innovation center fills right of staircase + full width below
+    { id: "innov-side", label: "", type: "innov", x: 192, y: 112, w: 360, h: 88, description: "Innovation Center — right of staircase" },
+    { id: "innov", label: "INNOVATION CENTER", type: "innov", x: 20, y: 202, w: 532, h: 300, description: "Innovation Center — full width, no middle corridor" },
+    // Lift + Washrooms at bottom right
+    { id: "lift", label: "Lift", type: "lift", x: 362, y: 504, w: 190, h: 42 },
+    { id: "wc", label: "Washroom", type: "wc", x: 362, y: 548, w: 190, h: 42 },
   ],
   labels: [
     { text: "▲ FRONT", x: 300, y: 14, color: "green", anchor: "middle" },
-    { text: "▼ BACK", x: 300, y: 546, color: "amber", anchor: "middle" },
+    { text: "▼ BACK", x: 300, y: 596, color: "amber", anchor: "middle" },
   ],
 };
 
