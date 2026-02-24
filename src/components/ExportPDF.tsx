@@ -4,7 +4,11 @@ import { Download, Loader2 } from "lucide-react";
 import { allFloorPlans } from "@/data/floorPlans";
 import { toast } from "@/hooks/use-toast";
 
-export default function ExportPDF() {
+interface Props {
+  iconOnly?: boolean;
+}
+
+export default function ExportPDF({ iconOnly }: Props) {
   const [exporting, setExporting] = useState(false);
 
   const handleExport = async () => {
@@ -24,26 +28,23 @@ export default function ExportPDF() {
       for (const floorId of floorIds) {
         const plan = allFloorPlans[floorId];
 
-        // Create an offscreen container to render the floor plan
         const container = document.createElement("div");
         container.style.cssText = `
           position: fixed; left: -9999px; top: 0;
-          background: #0a0f1a; padding: 24px;
+          background: #ffffff; padding: 24px;
           width: ${Math.max(plan.svgWidth + 48, 800)}px;
         `;
 
-        // Title
         const title = document.createElement("div");
-        title.style.cssText = "color: #7ab8cc; font-size: 18px; font-weight: bold; letter-spacing: 3px; margin-bottom: 4px; font-family: monospace;";
+        title.style.cssText = "color: #1a1a2e; font-size: 18px; font-weight: bold; letter-spacing: 1px; margin-bottom: 4px; font-family: sans-serif;";
         title.textContent = plan.title;
         container.appendChild(title);
 
         const subtitle = document.createElement("div");
-        subtitle.style.cssText = "color: #4a6670; font-size: 11px; letter-spacing: 2px; margin-bottom: 16px; font-family: monospace;";
-        subtitle.textContent = `${plan.subtitle}  //  CODE ${plan.code}`;
+        subtitle.style.cssText = "color: #666; font-size: 12px; margin-bottom: 16px; font-family: sans-serif;";
+        subtitle.textContent = `${plan.subtitle}  •  Floor ${plan.code}`;
         container.appendChild(subtitle);
 
-        // Build SVG
         const svgNS = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(svgNS, "svg");
         svg.setAttribute("width", String(plan.svgWidth));
@@ -51,20 +52,20 @@ export default function ExportPDF() {
         svg.setAttribute("xmlns", svgNS);
 
         const roomColors: Record<string, { fill: string; stroke: string }> = {
-          lab: { fill: "#0d2a3a", stroke: "#1a4a6a" },
-          class: { fill: "#0d2a3a", stroke: "#1a4a6a" },
-          hod: { fill: "#1a2a1a", stroke: "#2a4a2a" },
-          stairs: { fill: "#1a1a2a", stroke: "#2a2a4a" },
-          lift: { fill: "#1a1a2a", stroke: "#2a2a4a" },
-          wc: { fill: "#2a1a2a", stroke: "#4a2a4a" },
-          exit: { fill: "#0a2a1a", stroke: "#1a4a2a" },
-          corridor: { fill: "#0a0f1a", stroke: "#1a2530" },
-          staff: { fill: "#1a2a1a", stroke: "#2a4a2a" },
-          innov: { fill: "#1a1a2a", stroke: "#3a2a5a" },
-          open: { fill: "#0d2030", stroke: "#1a3a4a" },
-          canteen: { fill: "#2a1a0a", stroke: "#4a3a1a" },
-          dean: { fill: "#1a1a2a", stroke: "#3a2a5a" },
-          court: { fill: "#0a1a0a", stroke: "#1a3a1a" },
+          lab: { fill: "#e8f5e9", stroke: "#66bb6a" },
+          class: { fill: "#e3f2fd", stroke: "#42a5f5" },
+          hod: { fill: "#f3e5f5", stroke: "#ab47bc" },
+          stairs: { fill: "#fff8e1", stroke: "#ffa726" },
+          lift: { fill: "#e3f2fd", stroke: "#5c6bc0" },
+          wc: { fill: "#e0f7fa", stroke: "#26a69a" },
+          exit: { fill: "#e8f5e9", stroke: "#43a047" },
+          corridor: { fill: "#f5f5f5", stroke: "#bdbdbd" },
+          staff: { fill: "#e8f5e9", stroke: "#66bb6a" },
+          innov: { fill: "#ede7f6", stroke: "#7e57c2" },
+          open: { fill: "#f1f8e9", stroke: "#7cb342" },
+          canteen: { fill: "#fff3e0", stroke: "#ef6c00" },
+          dean: { fill: "#fce4ec", stroke: "#e91e63" },
+          court: { fill: "#e0f2f1", stroke: "#009688" },
         };
 
         for (const room of plan.rooms) {
@@ -74,10 +75,10 @@ export default function ExportPDF() {
           rect.setAttribute("y", String(room.y));
           rect.setAttribute("width", String(room.w));
           rect.setAttribute("height", String(room.h));
-          rect.setAttribute("rx", "2");
+          rect.setAttribute("rx", "6");
           rect.setAttribute("fill", colors.fill);
           rect.setAttribute("stroke", colors.stroke);
-          rect.setAttribute("stroke-width", "1.5");
+          rect.setAttribute("stroke-width", "1.2");
           svg.appendChild(rect);
 
           if (room.label) {
@@ -91,10 +92,10 @@ export default function ExportPDF() {
             text.setAttribute("y", String(labelY));
             text.setAttribute("text-anchor", "middle");
             text.setAttribute("dominant-baseline", "middle");
-            text.setAttribute("fill", room.type === "corridor" ? "#4a6670" : "#c0dce8");
-            text.setAttribute("font-size", room.type === "corridor" ? "8" : "8.5");
-            text.setAttribute("letter-spacing", "0.3");
-            text.setAttribute("font-family", "monospace");
+            text.setAttribute("fill", room.type === "corridor" ? "#999" : "#333");
+            text.setAttribute("font-size", room.type === "corridor" ? "8" : "9");
+            text.setAttribute("font-weight", "600");
+            text.setAttribute("font-family", "sans-serif");
             if (vertical) text.setAttribute("transform", `rotate(-90,${cx},${cy})`);
             text.textContent = room.label;
             svg.appendChild(text);
@@ -105,9 +106,9 @@ export default function ExportPDF() {
               sub.setAttribute("y", String(cy + 10));
               sub.setAttribute("text-anchor", "middle");
               sub.setAttribute("dominant-baseline", "middle");
-              sub.setAttribute("fill", "#7ab8cc");
+              sub.setAttribute("fill", "#666");
               sub.setAttribute("font-size", "8");
-              sub.setAttribute("font-family", "monospace");
+              sub.setAttribute("font-family", "sans-serif");
               if (vertical) sub.setAttribute("transform", `rotate(-90,${cx},${cy + 10})`);
               sub.textContent = room.sublabel;
               svg.appendChild(sub);
@@ -115,7 +116,6 @@ export default function ExportPDF() {
           }
         }
 
-        // Direction labels
         if (plan.labels) {
           for (const label of plan.labels) {
             const t = document.createElementNS(svgNS, "text");
@@ -123,12 +123,12 @@ export default function ExportPDF() {
             t.setAttribute("y", String(label.y));
             t.setAttribute("text-anchor", label.anchor || "start");
             t.setAttribute("fill",
-              label.color === "green" ? "#22c55e" :
-              label.color === "amber" ? "#f59e0b" : "#7ab8cc"
+              label.color === "green" ? "#43a047" :
+              label.color === "amber" ? "#ef6c00" : "#1565c0"
             );
-            t.setAttribute("font-size", "9");
-            t.setAttribute("letter-spacing", "1");
-            t.setAttribute("font-family", "monospace");
+            t.setAttribute("font-size", "10");
+            t.setAttribute("font-weight", "600");
+            t.setAttribute("font-family", "sans-serif");
             t.textContent = label.text;
             svg.appendChild(t);
           }
@@ -138,7 +138,7 @@ export default function ExportPDF() {
         document.body.appendChild(container);
 
         const canvas = await html2canvas(container, {
-          backgroundColor: "#0a0f1a",
+          backgroundColor: "#ffffff",
           scale: 2,
         });
 
@@ -161,7 +161,7 @@ export default function ExportPDF() {
         document.body.removeChild(container);
       }
 
-      pdf.save("AWDC-KKD-Campus-Blueprint.pdf");
+      pdf.save("AWDC-KKD-Campus-Navigator.pdf");
       toast({ title: "PDF exported", description: "All floor plans saved to PDF." });
     } catch (err) {
       console.error(err);
@@ -171,16 +171,29 @@ export default function ExportPDF() {
     }
   };
 
+  if (iconOnly) {
+    return (
+      <button
+        onClick={handleExport}
+        disabled={exporting}
+        className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-primary transition-colors p-2"
+      >
+        {exporting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
+        <span className="text-[10px]">Export</span>
+      </button>
+    );
+  }
+
   return (
     <Button
       variant="outline"
       size="sm"
       onClick={handleExport}
       disabled={exporting}
-      className="text-[10px] tracking-wider border-cyan-dim text-cyan-dim hover:text-cyan hover:border-cyan h-7 px-2.5"
+      className="hidden sm:flex gap-1.5 h-9"
     >
-      {exporting ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Download className="h-3 w-3 mr-1" />}
-      {exporting ? "EXPORTING..." : "EXPORT PDF"}
+      {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+      <span className="text-xs">{exporting ? "Exporting..." : "Export"}</span>
     </Button>
   );
 }

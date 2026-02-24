@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,89 +6,104 @@
 
 @layer base {
   :root {
-    --background: 207 80% 3%;
-    --foreground: 195 50% 85%;
+    --background: 0 0% 98%;
+    --foreground: 220 20% 14%;
 
-    --card: 207 60% 5%;
-    --card-foreground: 195 50% 85%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 14%;
 
-    --popover: 207 60% 5%;
-    --popover-foreground: 195 50% 85%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 14%;
 
-    --primary: 193 100% 50%;
-    --primary-foreground: 207 80% 3%;
+    --primary: 230 80% 56%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 207 50% 12%;
-    --secondary-foreground: 195 50% 85%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 20% 30%;
 
-    --muted: 207 40% 10%;
-    --muted-foreground: 195 30% 35%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 10% 46%;
 
-    --accent: 37 100% 50%;
-    --accent-foreground: 207 80% 3%;
+    --accent: 220 14% 93%;
+    --accent-foreground: 220 20% 14%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 200 60% 16%;
-    --input: 200 60% 16%;
-    --ring: 193 100% 50%;
+    --border: 220 14% 90%;
+    --input: 220 14% 90%;
+    --ring: 230 80% 56%;
 
-    --radius: 0.25rem;
+    --radius: 0.75rem;
 
-    /* Custom campus tokens */
-    --cyan: 193 100% 50%;
-    --cyan-dim: 195 100% 23%;
-    --cyan-glow: 193 100% 50%;
-    --amber: 37 100% 50%;
-    --green: 152 100% 50%;
-    --purple: 270 100% 63%;
-    --grid-line: 200 60% 7%;
-    --surface: 207 60% 5%;
-    --text-dim: 195 40% 25%;
-    --text-mid: 195 35% 45%;
+    /* Room type colors — soft pastels for light theme */
+    --room-lab: 142 40% 92%;
+    --room-lab-stroke: 142 40% 68%;
+    --room-lab-text: 142 50% 30%;
 
-    --font-display: 'Rajdhani', sans-serif;
-    --font-mono: 'Share Tech Mono', monospace;
+    --room-class: 220 50% 93%;
+    --room-class-stroke: 220 50% 72%;
+    --room-class-text: 220 50% 35%;
 
-    /* Room type colors */
-    --room-lab: 145 100% 6%;
-    --room-lab-stroke: 152 80% 27%;
-    --room-class: 220 80% 8%;
-    --room-class-stroke: 220 60% 33%;
-    --room-hod: 270 60% 10%;
-    --room-hod-stroke: 270 60% 40%;
-    --room-stairs: 48 50% 6%;
-    --room-stairs-stroke: 48 60% 30%;
-    --room-lift: 220 80% 8%;
-    --room-lift-stroke: 220 80% 40%;
-    --room-wc: 180 60% 6%;
-    --room-wc-stroke: 180 60% 24%;
-    --room-exit: 120 80% 5%;
-    --room-exit-stroke: 120 60% 35%;
-    --room-corridor: 220 30% 4%;
-    --room-corridor-stroke: 220 20% 13%;
-    --room-staff: 150 60% 5%;
-    --room-staff-stroke: 150 60% 24%;
-    --room-innov: 270 60% 8%;
-    --room-innov-stroke: 270 60% 40%;
-    --room-open: 120 30% 4%;
-    --room-open-stroke: 120 30% 15%;
-    --room-canteen: 30 80% 5%;
-    --room-canteen-stroke: 30 80% 33%;
-    --room-dean: 290 60% 10%;
-    --room-dean-stroke: 290 60% 40%;
-    --room-court: 165 60% 6%;
-    --room-court-stroke: 165 60% 24%;
+    --room-hod: 270 45% 93%;
+    --room-hod-stroke: 270 45% 72%;
+    --room-hod-text: 270 45% 35%;
 
-    --sidebar-background: 207 60% 3%;
-    --sidebar-foreground: 195 50% 85%;
-    --sidebar-primary: 193 100% 50%;
-    --sidebar-primary-foreground: 207 80% 3%;
-    --sidebar-accent: 207 50% 8%;
-    --sidebar-accent-foreground: 195 50% 85%;
-    --sidebar-border: 200 60% 16%;
-    --sidebar-ring: 193 100% 50%;
+    --room-stairs: 40 60% 92%;
+    --room-stairs-stroke: 40 60% 65%;
+    --room-stairs-text: 40 60% 30%;
+
+    --room-lift: 210 55% 92%;
+    --room-lift-stroke: 210 55% 65%;
+    --room-lift-text: 210 55% 32%;
+
+    --room-wc: 180 40% 92%;
+    --room-wc-stroke: 180 40% 62%;
+    --room-wc-text: 180 40% 30%;
+
+    --room-exit: 145 55% 90%;
+    --room-exit-stroke: 145 55% 55%;
+    --room-exit-text: 145 55% 25%;
+
+    --room-corridor: 220 10% 95%;
+    --room-corridor-stroke: 220 10% 82%;
+    --room-corridor-text: 220 10% 55%;
+
+    --room-staff: 160 40% 92%;
+    --room-staff-stroke: 160 40% 62%;
+    --room-staff-text: 160 40% 28%;
+
+    --room-innov: 268 50% 93%;
+    --room-innov-stroke: 268 50% 68%;
+    --room-innov-text: 268 50% 32%;
+
+    --room-open: 120 30% 94%;
+    --room-open-stroke: 120 30% 68%;
+    --room-open-text: 120 30% 32%;
+
+    --room-canteen: 30 60% 92%;
+    --room-canteen-stroke: 30 60% 60%;
+    --room-canteen-text: 30 60% 28%;
+
+    --room-dean: 290 45% 93%;
+    --room-dean-stroke: 290 45% 65%;
+    --room-dean-text: 290 45% 30%;
+
+    --room-court: 170 45% 92%;
+    --room-court-stroke: 170 45% 60%;
+    --room-court-text: 170 45% 28%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 20% 14%;
+    --sidebar-primary: 230 80% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 220 20% 14%;
+    --sidebar-border: 220 14% 90%;
+    --sidebar-ring: 230 80% 56%;
+
+    --font-display: 'DM Sans', sans-serif;
+    --font-body: 'Inter', sans-serif;
   }
 }
 
@@ -98,63 +113,30 @@
   }
 
   body {
-    @apply bg-background text-foreground;
-    font-family: var(--font-mono);
-    cursor: crosshair;
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body);
   }
 
-  /* Grid background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(hsl(var(--grid-line)) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--grid-line)) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Scanline effect */
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.03) 2px,
-      rgba(0, 0, 0, 0.03) 4px
-    );
-    pointer-events: none;
-    z-index: 0;
+  /* Remove crosshair cursor */
+  body, * {
+    cursor: default;
   }
 }
 
 @layer utilities {
-  .text-glow-cyan {
-    text-shadow: 0 0 20px hsl(var(--cyan) / 0.5);
-  }
-  .text-glow-green {
-    text-shadow: 0 0 10px hsl(var(--green) / 0.5);
-  }
-  .text-glow-amber {
-    text-shadow: 0 0 10px hsl(var(--amber) / 0.5);
-  }
-  .glow-cyan {
-    box-shadow: 0 0 15px hsl(var(--cyan) / 0.1);
-  }
   .font-display {
     font-family: var(--font-display);
   }
-  .font-mono-tech {
-    font-family: var(--font-mono);
+  .font-body {
+    font-family: var(--font-body);
   }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  .shadow-soft {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  }
+  .shadow-card {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  }
+  .shadow-elevated {
+    box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
+  }
 }
