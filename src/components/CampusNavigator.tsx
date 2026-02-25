@@ -1,31 +1,39 @@
 import { useState, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
 import { allFloorPlans } from "@/data/floorPlans";
+import type { Room, RoomType } from "@/data/floorPlans";
 import CampusSidebar from "./CampusSidebar";
 import FloorPlanSVG from "./FloorPlanSVG";
 import SearchBar from "./SearchBar";
 import ExportPDF from "./ExportPDF";
 import RoomInfoPanel from "./RoomInfoPanel";
 import NavigationPanel from "./NavigationPanel";
-import type { Room } from "@/data/floorPlans";
-import { Menu, X, MapPin, Navigation2, Download } from "lucide-react";
+import CategoryChips from "./CategoryChips";
+import FavoritesPanel from "./FavoritesPanel";
+import { Menu, X, MapPin, Navigation2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 export default function CampusNavigator() {
   const [activeFloor, setActiveFloor] = useState("campus");
   const [highlightRoom, setHighlightRoom] = useState<string | undefined>();
   const [selectedRoom, setSelectedRoom] = useState<{ room: Room; floorId: string } | null>(null);
   const [showNav, setShowNav] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState<RoomType | null>(null);
   const isMobile = useIsMobile();
+
+  const [favorites, setFavorites] = useLocalStorage<string[]>("campus-favorites", []);
+  const [recentSearches, setRecentSearches] = useLocalStorage<string[]>("campus-recent", []);
 
   const plan = allFloorPlans[activeFloor];
 
   const handleNavigate = useCallback((floorId: string, roomId: string) => {
     setActiveFloor(floorId);
     setHighlightRoom(roomId);
-    setTimeout(() => setHighlightRoom(undefined), 4000);
+    setTimeout(() => setHighlightRoom(undefined), 6000);
   }, []);
 
   const handleRoomClick = useCallback((room: Room) => {
@@ -33,24 +41,34 @@ export default function CampusNavigator() {
     setSelectedRoom({ room, floorId: activeFloor });
   }, [activeFloor]);
 
-  const handleGetDirections = useCallback((room: Room) => {
+  const handleGetDirections = useCallback(() => {
     setSelectedRoom(null);
     setShowNav(true);
   }, []);
 
+  const toggleFavorite = useCallback((key: string) => {
+    setFavorites((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }, [setFavorites]);
+
+  const addRecent = useCallback((key: string) => {
+    setRecentSearches((prev) => {
+      const filtered = prev.filter((k) => k !== key);
+      return [key, ...filtered].slice(0, 10);
+    });
+  }, [setRecentSearches]);
+
   const mobileSidebarOpen = isMobile && sidebarOpen;
+
+  const selectedFavKey = selectedRoom ? `${selectedRoom.floorId}:${selectedRoom.room.id}` : "";
 
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card shadow-soft z-20 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden h-9 w-9"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
+          <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" onClick={() => setSidebarOpen(!sidebarOpen)}>
             {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
           <div className="flex items-center gap-2.5">
@@ -58,15 +76,26 @@ export default function CampusNavigator() {
               <MapPin className="h-4 w-4 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-display text-lg font-bold leading-tight text-foreground">
-                AWDC Campus
-              </h1>
+              <h1 className="font-display text-lg font-bold leading-tight text-foreground">AWDC Campus</h1>
               <p className="text-[11px] text-muted-foreground leading-none">Kakinada Navigator</p>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <SearchBar onNavigate={handleNavigate} />
+          <SearchBar
+            onNavigate={handleNavigate}
+            favorites={favorites}
+            onToggleFavorite={toggleFavorite}
+            onAddRecent={addRecent}
+          />
+          <Button
+            variant={showFavorites ? "default" : "outline"}
+            size="icon"
+            className="hidden sm:flex h-9 w-9"
+            onClick={() => setShowFavorites(!showFavorites)}
+          >
+            <Star className="h-3.5 w-3.5" />
+          </Button>
           <Button
             variant={showNav ? "default" : "outline"}
             size="sm"
@@ -80,14 +109,15 @@ export default function CampusNavigator() {
         </div>
       </header>
 
+      {/* Category chips */}
+      <div className="border-b border-border bg-card/50 px-4 flex-shrink-0 overflow-hidden">
+        <CategoryChips activeFilter={categoryFilter} onFilterChange={setCategoryFilter} />
+      </div>
+
       {/* Body */}
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Mobile overlay */}
         {mobileSidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/20 z-30 md:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
+          <div className="fixed inset-0 bg-black/20 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
         )}
 
         <CampusSidebar
@@ -104,29 +134,48 @@ export default function CampusNavigator() {
         <main className="flex-1 overflow-hidden relative bg-secondary/30">
           {plan && (
             <div className="h-full flex flex-col">
-              {/* Floor header */}
               <div className="flex items-center justify-between px-5 py-3 bg-card/80 backdrop-blur-sm border-b border-border">
                 <div className="flex items-center gap-3">
-                  <h2 className="font-display text-base font-semibold text-foreground">
-                    {plan.title}
-                  </h2>
+                  <h2 className="font-display text-base font-semibold text-foreground">{plan.title}</h2>
                   <span className="text-xs text-muted-foreground hidden sm:inline">{plan.subtitle}</span>
                 </div>
-                <span className="text-xs bg-primary/10 text-primary font-medium px-2.5 py-1 rounded-full">
-                  Floor {plan.code}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs bg-primary/10 text-primary font-medium px-2.5 py-1 rounded-full">
+                    Floor {plan.code}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {plan.rooms.filter(r => r.type !== "corridor").length} rooms
+                  </span>
+                </div>
               </div>
 
-              {/* Floor plan with zoom/pan */}
               <div className="flex-1 overflow-hidden">
                 <FloorPlanSVG
                   plan={plan}
                   highlightRoomId={highlightRoom}
                   onRoomClick={handleRoomClick}
+                  categoryFilter={categoryFilter}
                 />
               </div>
             </div>
           )}
+
+          {/* Favorites Panel */}
+          <AnimatePresence>
+            {showFavorites && (
+              <FavoritesPanel
+                favorites={favorites}
+                recentSearches={recentSearches}
+                onNavigate={(floorId, roomId) => {
+                  handleNavigate(floorId, roomId);
+                  setShowFavorites(false);
+                }}
+                onRemoveFavorite={(key) => toggleFavorite(key)}
+                onClearRecent={() => setRecentSearches([])}
+                onClose={() => setShowFavorites(false)}
+              />
+            )}
+          </AnimatePresence>
 
           {/* Room Info Panel */}
           <AnimatePresence>
@@ -136,6 +185,12 @@ export default function CampusNavigator() {
                 floorId={selectedRoom.floorId}
                 onClose={() => setSelectedRoom(null)}
                 onGetDirections={handleGetDirections}
+                isFavorite={favorites.includes(selectedFavKey)}
+                onToggleFavorite={() => toggleFavorite(selectedFavKey)}
+                onNavigate={(floorId, roomId) => {
+                  handleNavigate(floorId, roomId);
+                  setSelectedRoom(null);
+                }}
               />
             )}
           </AnimatePresence>
@@ -143,10 +198,7 @@ export default function CampusNavigator() {
           {/* Navigation Panel */}
           <AnimatePresence>
             {showNav && (
-              <NavigationPanel
-                onClose={() => setShowNav(false)}
-                onNavigate={handleNavigate}
-              />
+              <NavigationPanel onClose={() => setShowNav(false)} onNavigate={handleNavigate} />
             )}
           </AnimatePresence>
         </main>
@@ -160,6 +212,13 @@ export default function CampusNavigator() {
             >
               <MapPin className="h-5 w-5" />
               <span className="text-[10px]">Floors</span>
+            </button>
+            <button
+              onClick={() => setShowFavorites(!showFavorites)}
+              className={`flex flex-col items-center gap-0.5 transition-colors p-2 ${showFavorites ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+            >
+              <Star className="h-5 w-5" />
+              <span className="text-[10px]">Saved</span>
             </button>
             <button
               onClick={() => setShowNav(!showNav)}
