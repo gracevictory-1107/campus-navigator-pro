@@ -39,29 +39,75 @@ interface Props {
 
 export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categoryFilter, routeFromId, routeToId }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-  const [translate, setTranslate] = useState({ x: 0, y: 0 });
+  const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const lastPointer = useRef<{ x: number; y: number } | null>(null);
+  const pinch = useRef<{ distance: number; scale: number } | null>(null);
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
 
-  useEffect(() => { resetView(); }, [plan.id]);
+  const fitScale = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return 1;
+    return Math.min(
+      Math.max(0.05, (container.clientWidth - 40) / plan.svgWidth),
+      Math.max(0.05, (container.clientHeight - 40) / plan.svgHeight),
+      1.5
+    );
+  }, [plan.svgWidth, plan.svgHeight]);
+
+  // An undersized map is centered; an oversized map must cover the viewport.
+  const boundedView = useCallback((scale: number, x: number, y: number) => {
+    const container = containerRef.current;
+    if (!container) return { scale, x, y };
+    const width = plan.svgWidth * scale;
+    const height = plan.svgHeight * scale;
+    return {
+      scale,
+      x: width <= container.clientWidth ? (container.clientWidth - width) / 2 : Math.min(0, Math.max(container.clientWidth - width, x)),
+      y: height <= container.clientHeight ? (container.clientHeight - height) / 2 : Math.min(0, Math.max(container.clientHeight - height, y)),
+    };
+  }, [plan.svgWidth, plan.svgHeight]);
 
   const resetView = useCallback(() => {
-    if (!containerRef.current) return;
-    const { clientWidth: cw, clientHeight: ch } = containerRef.current;
-    const padding = 40;
-    const fitScale = Math.min((cw - padding * 2) / plan.svgWidth, (ch - padding * 2) / plan.svgHeight, 1.5);
-    setScale(fitScale);
-    setTranslate({ x: (cw - plan.svgWidth * fitScale) / 2, y: (ch - plan.svgHeight * fitScale) / 2 });
-  }, [plan.svgWidth, plan.svgHeight]);
+    const scale = fitScale();
+    const container = containerRef.current;
+    if (!container) return;
+    setView(boundedView(scale, (container.clientWidth - plan.svgWidth * scale) / 2, (container.clientHeight - plan.svgHeight * scale) / 2));
+  }, [fitScale, boundedView, plan.svgWidth, plan.svgHeight]);
 
   useEffect(() => {
     resetView();
     const ro = new ResizeObserver(resetView);
     if (containerRef.current) ro.observe(containerRef.current);
     return () => ro.disconnect();
-  }, [resetView]);
+  }, [resetView, plan.id]);
+
+  // Every zoom starts from the actual center of the plan, never the cursor or an old pan offset.
+  const zoomTo = useCallback((requestedScale: number) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const scale = Math.max(fitScale(), Math.min(4, requestedScale));
+    setView(boundedView(
+      scale,
+      (container.clientWidth - plan.svgWidth * scale) / 2,
+      (container.clientHeight - plan.svgHeight * scale) / 2
+    ));
+  }, [fitScale, boundedView, plan.svgWidth, plan.svgHeight]);
+
+  const scaleRef = useRef(view.scale);
+  scaleRef.current = view.scale;
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1);
+      zoomTo(scaleRef.current * Math.exp(-delta * 0.0015));
+    };
+    container.addEventListener("wheel", onWheel, { passive: false });
+    return () => container.removeEventListener("wheel", onWheel);
+  }, [zoomTo]);
 
   // Auto-zoom to highlighted room
   useEffect(() => {
@@ -69,44 +115,53 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
     const room = plan.rooms.find((r) => r.id === highlightRoomId);
     if (!room) return;
     const { clientWidth: cw, clientHeight: ch } = containerRef.current;
-    const targetScale = Math.min(2.5, Math.max(scale, 1.5));
+    const targetScale = Math.min(2.5, Math.max(fitScale(), 1.5));
     const cx = room.x + room.w / 2;
     const cy = room.y + room.h / 2;
-    setScale(targetScale);
-    setTranslate({ x: cw / 2 - cx * targetScale, y: ch / 2 - cy * targetScale });
-  }, [highlightRoomId]);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    const newScale = Math.max(0.3, Math.min(4, scale * delta));
-    const rect = containerRef.current!.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    setTranslate({ x: mx - (mx - translate.x) * (newScale / scale), y: my - (my - translate.y) * (newScale / scale) });
-    setScale(newScale);
-  }, [scale, translate]);
+    setView(boundedView(targetScale, cw / 2 - cx * targetScale, ch / 2 - cy * targetScale));
+  }, [highlightRoomId, plan.rooms, fitScale, boundedView]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    if (e.button !== 0) return;
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - translate.x, y: e.clientY - translate.y });
-    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-  }, [translate]);
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    e.currentTarget.setPointerCapture(e.pointerId);
+    if (pointers.current.size === 2) {
+      const [a, b] = [...pointers.current.values()];
+      pinch.current = { distance: Math.hypot(a.x - b.x, a.y - b.y), scale: scaleRef.current };
+      setIsDragging(false);
+    } else if (pointers.current.size === 1) {
+      lastPointer.current = { x: e.clientX, y: e.clientY };
+    }
+  }, []);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isDragging) return;
-    setTranslate({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-  }, [isDragging, dragStart]);
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 2 && pinch.current) {
+      const [a, b] = [...pointers.current.values()];
+      if (pinch.current.distance > 0) zoomTo(pinch.current.scale * Math.hypot(a.x - b.x, a.y - b.y) / pinch.current.distance);
+      return;
+    }
+    const last = lastPointer.current;
+    if (!last) return;
+    const dx = e.clientX - last.x;
+    const dy = e.clientY - last.y;
+    lastPointer.current = { x: e.clientX, y: e.clientY };
+    if (dx || dy) {
+      setIsDragging(true);
+      setView((previous) => boundedView(previous.scale, previous.x + dx, previous.y + dy));
+    }
+  }, [boundedView, zoomTo]);
 
-  const handlePointerUp = useCallback(() => setIsDragging(false), []);
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId);
+    pinch.current = null;
+    lastPointer.current = pointers.current.size === 1 ? [...pointers.current.values()][0] : null;
+    setIsDragging(false);
+  }, []);
 
   const zoom = (factor: number) => {
-    const newScale = Math.max(0.3, Math.min(4, scale * factor));
-    const c = containerRef.current!;
-    const cx = c.clientWidth / 2, cy = c.clientHeight / 2;
-    setTranslate({ x: cx - (cx - translate.x) * (newScale / scale), y: cy - (cy - translate.y) * (newScale / scale) });
-    setScale(newScale);
+    zoomTo(scaleRef.current * factor);
   };
 
   const isVerticalLabel = (room: Room) => room.h > room.w * 1.8;
@@ -142,8 +197,7 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
             if (room && containerRef.current) {
               const { clientWidth: cw, clientHeight: ch } = containerRef.current;
               const targetScale = 2;
-              setScale(targetScale);
-              setTranslate({ x: cw / 2 - (room.x + room.w / 2) * targetScale, y: ch / 2 - (room.y + room.h / 2) * targetScale });
+              setView(boundedView(targetScale, cw / 2 - (room.x + room.w / 2) * targetScale, ch / 2 - (room.y + room.h / 2) * targetScale));
             }
           }}>
             <LocateFixed className="h-4 w-4" />
@@ -153,7 +207,7 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
 
       {/* Zoom level */}
       <div className="absolute bottom-3 left-3 z-10 text-xs text-muted-foreground bg-card/90 px-2 py-1 rounded-md shadow-soft">
-        {Math.round(scale * 100)}%
+        {Math.round(view.scale * 100)}%
       </div>
 
       {/* Legend */}
@@ -163,10 +217,10 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
       <div
         ref={containerRef}
         className={`h-full w-full overflow-hidden ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-        onWheel={handleWheel}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         style={{ touchAction: "none" }}
       >
         <svg width="100%" height="100%" className="overflow-visible">
@@ -183,7 +237,11 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
               </feMerge>
             </filter>
           </defs>
-          <g transform={`translate(${translate.x}, ${translate.y}) scale(${scale})`}>
+          <g style={{
+            transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`,
+            transformOrigin: "0 0",
+            transition: isDragging || pinch.current ? "none" : "transform 180ms ease-out",
+          }}>
             {/* Labels */}
             {plan.labels?.map((label, i) => (
               <text

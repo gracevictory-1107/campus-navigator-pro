@@ -1,0 +1,2 @@
+Keep floor-plan geometry and navigation data in the existing floor-plan data module; viewer interactions must not change room or route coordinates.
+Use a single bounded SVG viewport transform for zoom and pan, with zoom centered on the plan: this prevents map drift while preserving drag exploration.
