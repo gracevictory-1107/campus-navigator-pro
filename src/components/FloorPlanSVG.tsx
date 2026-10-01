@@ -197,8 +197,7 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
             if (room && containerRef.current) {
               const { clientWidth: cw, clientHeight: ch } = containerRef.current;
               const targetScale = 2;
-              setScale(targetScale);
-              setTranslate({ x: cw / 2 - (room.x + room.w / 2) * targetScale, y: ch / 2 - (room.y + room.h / 2) * targetScale });
+              setView(boundedView(targetScale, cw / 2 - (room.x + room.w / 2) * targetScale, ch / 2 - (room.y + room.h / 2) * targetScale));
             }
           }}>
             <LocateFixed className="h-4 w-4" />
