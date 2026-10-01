@@ -81,7 +81,7 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
     const ro = new ResizeObserver(resetView);
     if (containerRef.current) ro.observe(containerRef.current);
     return () => ro.disconnect();
-  }, [resetView]);
+  }, [resetView, plan.id]);
 
   // Every zoom starts from the actual center of the plan, never the cursor or an old pan offset.
   const zoomTo = useCallback((requestedScale: number) => {
