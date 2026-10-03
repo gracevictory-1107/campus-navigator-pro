@@ -385,6 +385,59 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
                 </g>
               );
             })}
+
+            {/* Restricted zones */}
+            {restrictedRoomIds?.map((id) => {
+              const room = plan.rooms.find((r) => r.id === id);
+              if (!room) return null;
+              return (
+                <rect key={`rz-${id}`} x={room.x + 2} y={room.y + 2} width={room.w - 4} height={room.h - 4} rx={5}
+                  fill="hsl(var(--status-restricted) / 0.06)" stroke="hsl(var(--status-restricted) / 0.6)"
+                  strokeWidth={1.2} strokeDasharray="5 3" pointerEvents="none" />
+              );
+            })}
+
+            {/* Camera pins */}
+            {cameras?.map((cam) => {
+              const room = plan.rooms.find((r) => r.id === cam.roomId);
+              if (!room) return null;
+              const x = room.x + room.w - 12, y = room.y + 12;
+              return (
+                <g key={cam.id} className="cursor-pointer" onClick={(e) => { e.stopPropagation(); onCameraClick?.(cam.id); }}>
+                  {cam.highlighted && (
+                    <circle cx={x} cy={y} r={13} fill="none" stroke="hsl(var(--status-restricted))" strokeWidth={2}>
+                      <animate attributeName="r" values="9;14;9" dur="1.6s" repeatCount="indefinite" />
+                    </circle>
+                  )}
+                  <rect x={x - 9} y={y - 7} width={18} height={14} rx={3} fill="hsl(var(--foreground))" opacity={0.85} />
+                  <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="middle" fontSize={6} fontWeight={700} fill="hsl(var(--background))" pointerEvents="none">
+                    {cam.id.replace("CAM-", "C")}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Current-location person markers: colour = access status only */}
+            {markers?.map((m) => {
+              const room = plan.rooms.find((r) => r.id === m.roomId);
+              if (!room) return null;
+              const tone = m.access === "restricted" ? "--status-restricted" : "--status-authorized";
+              return (
+                <g key={m.id} className="cursor-pointer"
+                  style={{ transform: `translate(${room.x + room.w / 2}px, ${room.y + room.h / 2}px)`, transition: "transform 600ms ease-in-out" }}
+                  onClick={(e) => { e.stopPropagation(); onMarkerClick?.(m.id); }}>
+                  <circle r={14} fill={`hsl(var(${tone}) / 0.2)`}>
+                    <animate attributeName="r" values="10;16;10" dur="2s" repeatCount="indefinite" />
+                  </circle>
+                  <circle r={7} fill={`hsl(var(${tone}))`} stroke="hsl(var(--card))" strokeWidth={2} />
+                  <g transform="translate(0,-14)">
+                    <rect x={-44} y={-22} width={88} height={20} rx={4} fill="hsl(var(--card))" stroke={`hsl(var(${tone}))`} strokeWidth={1} />
+                    <text y={-14} textAnchor="middle" fontSize={7} fontWeight={700} fill="hsl(var(--foreground))" pointerEvents="none">{m.name}</text>
+                    <text y={-6} textAnchor="middle" fontSize={6} fill="hsl(var(--muted-foreground))" pointerEvents="none">{m.subtitle}</text>
+                  </g>
+                </g>
+              );
+            })}
           </g>
         </svg>
       </div>
