@@ -104,6 +104,57 @@
 
     --font-display: 'DM Sans', sans-serif;
     --font-body: 'Inter', sans-serif;
+
+    --status-authorized: 145 63% 36%;
+    --status-restricted: 0 74% 50%;
+    --status-warning: 36 92% 45%;
+  }
+
+  .dark {
+    --background: 222 22% 9%;
+    --foreground: 220 15% 92%;
+    --card: 222 20% 12%;
+    --card-foreground: 220 15% 92%;
+    --popover: 222 20% 12%;
+    --popover-foreground: 220 15% 92%;
+    --primary: 230 85% 66%;
+    --primary-foreground: 222 22% 9%;
+    --secondary: 222 16% 17%;
+    --secondary-foreground: 220 15% 85%;
+    --muted: 222 16% 17%;
+    --muted-foreground: 220 10% 64%;
+    --accent: 222 16% 20%;
+    --accent-foreground: 220 15% 92%;
+    --destructive: 0 70% 56%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 14% 22%;
+    --input: 222 14% 22%;
+    --ring: 230 85% 66%;
+
+    --room-lab: 142 25% 18%; --room-lab-stroke: 142 35% 42%; --room-lab-text: 142 50% 78%;
+    --room-class: 220 30% 19%; --room-class-stroke: 220 40% 48%; --room-class-text: 220 60% 82%;
+    --room-hod: 270 25% 20%; --room-hod-stroke: 270 35% 50%; --room-hod-text: 270 60% 84%;
+    --room-stairs: 40 30% 18%; --room-stairs-stroke: 40 50% 45%; --room-stairs-text: 40 70% 78%;
+    --room-lift: 210 30% 19%; --room-lift-stroke: 210 45% 48%; --room-lift-text: 210 60% 82%;
+    --room-wc: 180 25% 17%; --room-wc-stroke: 180 35% 42%; --room-wc-text: 180 50% 78%;
+    --room-exit: 145 30% 17%; --room-exit-stroke: 145 45% 42%; --room-exit-text: 145 55% 76%;
+    --room-corridor: 222 14% 15%; --room-corridor-stroke: 222 12% 28%; --room-corridor-text: 220 10% 60%;
+    --room-staff: 160 25% 17%; --room-staff-stroke: 160 35% 42%; --room-staff-text: 160 50% 78%;
+    --room-innov: 268 25% 20%; --room-innov-stroke: 268 35% 50%; --room-innov-text: 268 60% 84%;
+    --room-open: 120 18% 16%; --room-open-stroke: 120 25% 38%; --room-open-text: 120 35% 76%;
+    --room-canteen: 30 30% 18%; --room-canteen-stroke: 30 50% 45%; --room-canteen-text: 30 70% 78%;
+    --room-dean: 290 25% 20%; --room-dean-stroke: 290 35% 50%; --room-dean-text: 290 55% 84%;
+    --room-court: 170 25% 17%; --room-court-stroke: 170 35% 42%; --room-court-text: 170 50% 78%;
+
+    --sidebar-background: 222 20% 12%;
+    --sidebar-foreground: 220 15% 92%;
+    --sidebar-accent: 222 16% 17%;
+    --sidebar-accent-foreground: 220 15% 92%;
+    --sidebar-border: 222 14% 22%;
+
+    --status-authorized: 145 60% 48%;
+    --status-restricted: 0 80% 62%;
+    --status-warning: 36 92% 58%;
   }
 }
 

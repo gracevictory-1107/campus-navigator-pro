@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import type { FloorPlan, Room, RoomType } from "@/data/floorPlans";
-import { ZoomIn, ZoomOut, Maximize2, LocateFixed } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2, LocateFixed, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import RoomLegend from "./RoomLegend";
 
@@ -28,6 +28,20 @@ const roomTextColors: Record<RoomType, string> = {
   dean: "hsl(var(--room-dean-text))", court: "hsl(var(--room-court-text))",
 };
 
+export interface PersonMarker {
+  id: string;
+  roomId: string;
+  name: string;
+  subtitle: string;
+  access: "authorized" | "restricted";
+}
+
+export interface CameraPin {
+  id: string;
+  roomId: string;
+  highlighted?: boolean;
+}
+
 interface Props {
   plan: FloorPlan;
   highlightRoomId?: string;
@@ -35,9 +49,14 @@ interface Props {
   categoryFilter?: RoomType | null;
   routeFromId?: string;
   routeToId?: string;
+  markers?: PersonMarker[];
+  onMarkerClick?: (id: string) => void;
+  cameras?: CameraPin[];
+  onCameraClick?: (id: string) => void;
+  restrictedRoomIds?: string[];
 }
 
-export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categoryFilter, routeFromId, routeToId }: Props) {
+export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categoryFilter, routeFromId, routeToId, markers, onMarkerClick, cameras, onCameraClick, restrictedRoomIds }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -182,13 +201,16 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
     <div className="relative h-full w-full">
       {/* Zoom controls */}
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
-        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => zoom(1.3)}>
+        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => zoom(1.3)} aria-label="Zoom in" title="Zoom in">
           <ZoomIn className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => zoom(0.7)}>
+        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => zoom(0.7)} aria-label="Zoom out" title="Zoom out">
           <ZoomOut className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={resetView}>
+        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => zoomTo(1)} aria-label="Reset zoom" title="Reset (100%)">
+          <RotateCcw className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={resetView} aria-label="Fit to screen" title="Fit to screen">
           <Maximize2 className="h-4 w-4" />
         </Button>
         {highlightRoomId && (
@@ -360,6 +382,59 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
                   <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="8" fontWeight="700">
                     {idx === 0 ? "A" : "B"}
                   </text>
+                </g>
+              );
+            })}
+
+            {/* Restricted zones */}
+            {restrictedRoomIds?.map((id) => {
+              const room = plan.rooms.find((r) => r.id === id);
+              if (!room) return null;
+              return (
+                <rect key={`rz-${id}`} x={room.x + 2} y={room.y + 2} width={room.w - 4} height={room.h - 4} rx={5}
+                  fill="hsl(var(--status-restricted) / 0.06)" stroke="hsl(var(--status-restricted) / 0.6)"
+                  strokeWidth={1.2} strokeDasharray="5 3" pointerEvents="none" />
+              );
+            })}
+
+            {/* Camera pins */}
+            {cameras?.map((cam) => {
+              const room = plan.rooms.find((r) => r.id === cam.roomId);
+              if (!room) return null;
+              const x = room.x + room.w - 12, y = room.y + 12;
+              return (
+                <g key={cam.id} className="cursor-pointer" onClick={(e) => { e.stopPropagation(); onCameraClick?.(cam.id); }}>
+                  {cam.highlighted && (
+                    <circle cx={x} cy={y} r={13} fill="none" stroke="hsl(var(--status-restricted))" strokeWidth={2}>
+                      <animate attributeName="r" values="9;14;9" dur="1.6s" repeatCount="indefinite" />
+                    </circle>
+                  )}
+                  <rect x={x - 9} y={y - 7} width={18} height={14} rx={3} fill="hsl(var(--foreground))" opacity={0.85} />
+                  <text x={x} y={y + 1} textAnchor="middle" dominantBaseline="middle" fontSize={6} fontWeight={700} fill="hsl(var(--background))" pointerEvents="none">
+                    {cam.id.replace("CAM-", "C")}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Current-location person markers: colour = access status only */}
+            {markers?.map((m) => {
+              const room = plan.rooms.find((r) => r.id === m.roomId);
+              if (!room) return null;
+              const tone = m.access === "restricted" ? "--status-restricted" : "--status-authorized";
+              return (
+                <g key={m.id} className="cursor-pointer"
+                  style={{ transform: `translate(${room.x + room.w / 2}px, ${room.y + room.h / 2}px)`, transition: "transform 600ms ease-in-out" }}
+                  onClick={(e) => { e.stopPropagation(); onMarkerClick?.(m.id); }}>
+                  <circle r={14} fill={`hsl(var(${tone}) / 0.2)`}>
+                    <animate attributeName="r" values="10;16;10" dur="2s" repeatCount="indefinite" />
+                  </circle>
+                  <circle r={7} fill={`hsl(var(${tone}))`} stroke="hsl(var(--card))" strokeWidth={2} />
+                  <g transform="translate(0,-14)">
+                    <rect x={-44} y={-22} width={88} height={20} rx={4} fill="hsl(var(--card))" stroke={`hsl(var(${tone}))`} strokeWidth={1} />
+                    <text y={-14} textAnchor="middle" fontSize={7} fontWeight={700} fill="hsl(var(--foreground))" pointerEvents="none">{m.name}</text>
+                    <text y={-6} textAnchor="middle" fontSize={6} fill="hsl(var(--muted-foreground))" pointerEvents="none">{m.subtitle}</text>
+                  </g>
                 </g>
               );
             })}
