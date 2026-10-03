@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import type { FloorPlan, Room, RoomType } from "@/data/floorPlans";
-import { ZoomIn, ZoomOut, Maximize2, LocateFixed } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2, LocateFixed, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import RoomLegend from "./RoomLegend";
 
@@ -28,6 +28,20 @@ const roomTextColors: Record<RoomType, string> = {
   dean: "hsl(var(--room-dean-text))", court: "hsl(var(--room-court-text))",
 };
 
+export interface PersonMarker {
+  id: string;
+  roomId: string;
+  name: string;
+  subtitle: string;
+  access: "authorized" | "restricted";
+}
+
+export interface CameraPin {
+  id: string;
+  roomId: string;
+  highlighted?: boolean;
+}
+
 interface Props {
   plan: FloorPlan;
   highlightRoomId?: string;
@@ -35,9 +49,14 @@ interface Props {
   categoryFilter?: RoomType | null;
   routeFromId?: string;
   routeToId?: string;
+  markers?: PersonMarker[];
+  onMarkerClick?: (id: string) => void;
+  cameras?: CameraPin[];
+  onCameraClick?: (id: string) => void;
+  restrictedRoomIds?: string[];
 }
 
-export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categoryFilter, routeFromId, routeToId }: Props) {
+export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categoryFilter, routeFromId, routeToId, markers, onMarkerClick, cameras, onCameraClick, restrictedRoomIds }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -182,13 +201,16 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
     <div className="relative h-full w-full">
       {/* Zoom controls */}
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
-        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => zoom(1.3)}>
+        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => zoom(1.3)} aria-label="Zoom in" title="Zoom in">
           <ZoomIn className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => zoom(0.7)}>
+        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => zoom(0.7)} aria-label="Zoom out" title="Zoom out">
           <ZoomOut className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={resetView}>
+        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => zoomTo(1)} aria-label="Reset zoom" title="Reset (100%)">
+          <RotateCcw className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={resetView} aria-label="Fit to screen" title="Fit to screen">
           <Maximize2 className="h-4 w-4" />
         </Button>
         {highlightRoomId && (
