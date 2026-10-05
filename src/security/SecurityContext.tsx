@@ -29,7 +29,7 @@ interface Ctx extends State {
   registerVisitor: (v: Omit<Visitor, "id" | "checkIn" | "status" | "verified" | "returning">, existing?: Visitor) => Visitor;
   setVisitorStatus: (id: string, status: VisitorStatus) => void;
   simulateDetection: (cameraId: string, visitorId: string) => Promise<LocationEvent | null>;
-  authorizeIndoorRoute: (visitorId: string, route: IndoorRoute) => Promise<RouteAccessDecision>;
+  authorizeIndoorRoute: (visitorId: string | null, route: IndoorRoute, roleOverride?: Role) => Promise<RouteAccessDecision>;
   setAlertStatus: (id: string, status: AlertStatus) => void;
   setRule: (id: string, allowed: boolean) => void;
   setMuted: (m: boolean) => void;
@@ -272,8 +272,16 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     return event;
   }, []);
 
-  const authorizeIndoorRoute = useCallback(async (visitorId: string, route: IndoorRoute) => {
+  const authorizeIndoorRoute = useCallback(async (visitorId: string | null, route: IndoorRoute, roleOverride?: Role) => {
     const s = stateRef.current;
+    const activeRole = roleOverride ?? role;
+    const fullCampusRoles: Role[] = ["student", "faculty", "staff", "management", "admin", "security"];
+
+    if (fullCampusRoles.includes(activeRole)) {
+      return { allowed: true, deniedAreas: [], permittedAlternatives: securityLocations };
+    }
+
+    if (!visitorId) throw new Error("A registered visitor is required for visitor access checks.");
     const visitor = s.visitors.find((candidate) => candidate.id === visitorId);
     if (!visitor) throw new Error(`Visitor ${visitorId} was not found.`);
 
