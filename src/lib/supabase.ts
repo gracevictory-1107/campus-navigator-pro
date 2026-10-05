@@ -31,6 +31,7 @@ interface AccessRuleRow extends Record<string, unknown> {
 interface VisitorRow extends Record<string, unknown> {
   id: string;
   name: string;
+  email: string;
   mobile: string;
   person_type: string;
   visiting: string;
@@ -190,6 +191,7 @@ export async function loadSecuritySnapshot(): Promise<SupabaseSecuritySnapshot |
   const visitors = visitorsResult.data.map((row) => ({
     id: row.id,
     name: row.name,
+    email: row.email,
     mobile: row.mobile,
     type: row.person_type as PersonType,
     visiting: row.visiting,
@@ -240,6 +242,7 @@ export async function persistSecuritySnapshot(snapshot: SupabaseSecuritySnapshot
   const visitorRows = snapshot.visitors.map((visitor) => ({
     id: visitor.id,
     name: visitor.name,
+    email: visitor.email,
     mobile: visitor.mobile,
     person_type: visitor.type,
     visiting: visitor.visiting,
