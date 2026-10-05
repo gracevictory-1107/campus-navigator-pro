@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useSecurity } from "@/security/SecurityContext";
 import { securityLocations } from "@/security/data";
 import { faceVerificationService } from "@/security/services";
+import { compareBiometricEmbeddings, describeBiometricScore, type BiometricCaptureResult } from "@/security/biometrics";
+import { getBiometricEmbedding, recordBiometricVerificationEvent, saveBiometricEmbedding } from "@/lib/supabase";
 import { personTypes, type PersonType, type Visitor } from "@/security/types";
 import VisitorProfileCard from "./VisitorProfileCard";
 import DemoFaceVerification from "./DemoFaceVerification";
@@ -22,21 +24,72 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
   const [verificationComplete, setVerificationComplete] = useState(false);
   const [existing, setExisting] = useState<Visitor | undefined>();
   const [result, setResult] = useState<Visitor | null>(null);
+  const [biometricCapture, setBiometricCapture] = useState<BiometricCaptureResult | null>(null);
+  const [biometricMatch, setBiometricMatch] = useState<number | null>(null);
+  const [biometricEnrollment, setBiometricEnrollment] = useState<"new" | "enrolled" | null>(null);
 
   const close = (o: boolean) => {
     onOpenChange(o);
-    if (!o) { setStep("form"); setForm(empty); setVerificationComplete(false); setResult(null); setExisting(undefined); }
+    if (!o) { setStep("form"); setForm(empty); setVerificationComplete(false); setResult(null); setExisting(undefined); setBiometricCapture(null); setBiometricMatch(null); setBiometricEnrollment(null); }
   };
   const valid = form.name.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) && /^\d{10}$/.test(form.mobile) && form.visiting.trim() && form.purpose.trim() && form.expectedExit;
 
-  const completeVerification = async () => {
+  const completeVerification = async (capture: BiometricCaptureResult) => {
+    setBiometricCapture(capture);
     const res = await faceVerificationService.verify({ name: form.name, mobile: form.mobile }, visitors);
     setExisting(res.existing);
+
+    if (res.existing) {
+      const enrolled = await getBiometricEmbedding(res.existing.id);
+      if (enrolled) {
+        const match = await compareBiometricEmbeddings(capture.embedding, enrolled);
+        setBiometricMatch(match.similarity);
+        if (!match.matched) {
+          await recordBiometricVerificationEvent({
+            visitorId: res.existing.id,
+            result: "NOT_VERIFIED",
+            eventType: "visitor_face_verification",
+            destination: form.authorizedLocationId,
+            accessResult: "restricted",
+          });
+          throw new Error("Face does not match the enrolled visitor biometric. Similarity: " + describeBiometricScore(match.similarity) + ". Verification stopped.");
+        }
+        setBiometricEnrollment("enrolled");
+        await recordBiometricVerificationEvent({
+          visitorId: res.existing.id,
+          result: "VERIFIED",
+          eventType: "visitor_face_verification",
+          destination: form.authorizedLocationId,
+          accessResult: "authorized",
+        });
+      } else {
+        setBiometricEnrollment("new");
+        await recordBiometricVerificationEvent({
+          visitorId: res.existing.id,
+          result: "NO_ENROLLMENT",
+          eventType: "visitor_biometric_enrollment",
+          destination: form.authorizedLocationId,
+        });
+      }
+    } else {
+      setBiometricEnrollment("new");
+    }
+
     setVerificationComplete(true);
   };
 
-  const finish = () => {
-    setResult(registerVisitor({ ...form, email: form.email.trim().toLowerCase(), name: form.name.trim() }, existing));
+  const finish = async () => {
+    if (!biometricCapture) return;
+    const registered = registerVisitor({ ...form, email: form.email.trim().toLowerCase(), name: form.name.trim() }, existing);
+    await saveBiometricEmbedding(registered.id, biometricCapture.embedding);
+    await recordBiometricVerificationEvent({
+      visitorId: registered.id,
+      result: "VERIFIED",
+      eventType: "visitor_biometric_enrollment",
+      destination: form.authorizedLocationId,
+      accessResult: "authorized",
+    });
+    setResult(registered);
     setStep("done");
   };
 
@@ -90,11 +143,12 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
                 <div><span className="text-muted-foreground">Email:</span> {form.email}</div>
                 <div><span className="text-muted-foreground">Visitor ID:</span> {existing?.id ?? "Assigned on save"}</div>
                 <div><span className="text-muted-foreground">Visitor Type:</span> {form.type}</div>
-                <div><span className="text-muted-foreground">Profile:</span> {existing ? "Existing visitor — profile found, permissions loaded" : "New visitor"}</div>
+                <div><span className="text-muted-foreground">Profile:</span> {existing ? "Existing visitor — profile found" : "New visitor — biometric will be enrolled"}</div>
+                <div><span className="text-muted-foreground">Biometric:</span> {biometricEnrollment === "enrolled" ? "Enrolled face matched · " + describeBiometricScore(biometricMatch ?? 0) : "Liveness passed · biometric template ready for enrollment"}</div>
                 <div><span className="text-muted-foreground">Access:</span> {securityLocations.find((l) => l.id === form.authorizedLocationId)?.name} + {form.type} rules</div>
               </div>
             )}
-            {verificationComplete && <Button onClick={finish}><ShieldCheck className="h-4 w-4 mr-2" />Create Visitor Profile</Button>}
+            {verificationComplete && <Button onClick={() => void finish()}><ShieldCheck className="h-4 w-4 mr-2" />Create Visitor Profile &amp; Enroll Face</Button>}
           </div>
         )}
 
