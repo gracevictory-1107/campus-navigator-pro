@@ -14,7 +14,7 @@ interface ProfileRow extends Record<string, unknown> {
   auth_user_id: string | null;
   full_name: string;
   email: string;
-  role: "admin" | "faculty" | "security" | "student";
+  role: "admin" | "faculty" | "management" | "security" | "student";
   created_at: string;
   updated_at: string;
 }
@@ -197,7 +197,7 @@ export interface SupabaseSecuritySnapshot {
 
 export async function loadSecuritySnapshot(): Promise<SupabaseSecuritySnapshot | null> {
   const profile = await getSignedInProfile();
-  if (!profile || !supabase || (profile.role !== "admin" && profile.role !== "security")) return null;
+  if (!profile || !supabase || (profile.role !== "admin" && profile.role !== "security" && profile.role !== "management" && profile.role !== "management")) return null;
   const [rulesResult, visitorsResult, eventsResult, alertsResult] = await Promise.all([
     supabase.from("access_rules").select("*"),
     supabase.from("visitors").select("*"),
