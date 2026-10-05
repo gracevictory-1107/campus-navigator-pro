@@ -13,7 +13,10 @@ export default function VisitorProfileCard({ visitor }: { visitor: Visitor }) {
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-display font-semibold text-base text-foreground">{visitor.name}</p>
-          <p className="text-muted-foreground text-xs">{visitor.id} · {visitor.type}{visitor.returning ? " · Returning" : ""}</p>
+          <p className="text-muted-foreground text-xs">
+            {visitor.id} · {visitor.type}
+            {visitor.returning ? " · Face matched - " + visitor.name : ""}
+          </p>
         </div>
         <Badge variant={statusVariant}>{visitor.status}</Badge>
       </div>
