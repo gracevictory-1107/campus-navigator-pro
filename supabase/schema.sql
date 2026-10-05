@@ -293,3 +293,54 @@ from (values
 ) as l(location_id)
 on conflict (location_id, person_type)
 do update set allowed = excluded.allowed, updated_at = now();
+
+
+-- CCTV network configuration. The college can provide the IP address and optional browser/NVR stream URL later.
+CREATE TABLE IF NOT EXISTS public.camera_configs (
+  camera_id text PRIMARY KEY,
+  ip_address text NOT NULL DEFAULT '',
+  stream_url text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.camera_configs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS camera_configs_security_select ON public.camera_configs;
+CREATE POLICY camera_configs_security_select
+  ON public.camera_configs FOR SELECT TO authenticated
+  USING (public.current_campus_role() IN ('admin', 'management', 'security'));
+
+DROP POLICY IF EXISTS camera_configs_security_insert ON public.camera_configs;
+CREATE POLICY camera_configs_security_insert
+  ON public.camera_configs FOR INSERT TO authenticated
+  WITH CHECK (public.current_campus_role() IN ('admin', 'management', 'security'));
+
+DROP POLICY IF EXISTS camera_configs_security_update ON public.camera_configs;
+CREATE POLICY camera_configs_security_update
+  ON public.camera_configs FOR UPDATE TO authenticated
+  USING (public.current_campus_role() IN ('admin', 'management', 'security'))
+  WITH CHECK (public.current_campus_role() IN ('admin', 'management', 'security'));
+
+DROP POLICY IF EXISTS camera_configs_security_delete ON public.camera_configs;
+CREATE POLICY camera_configs_security_delete
+  ON public.camera_configs FOR DELETE TO authenticated
+  USING (public.current_campus_role() IN ('admin', 'management', 'security'));
+
+REVOKE ALL ON public.camera_configs FROM anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.camera_configs TO authenticated;
+
+DROP TRIGGER IF EXISTS camera_configs_set_updated_at ON public.camera_configs;
+CREATE TRIGGER camera_configs_set_updated_at
+  BEFORE UPDATE ON public.camera_configs
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+INSERT INTO public.camera_configs (camera_id, ip_address, stream_url)
+VALUES
+  ('CAM-01', '', ''),
+  ('CAM-02', '', ''),
+  ('CAM-03', '', ''),
+  ('CAM-04', '', ''),
+  ('CAM-05', '', ''),
+  ('CAM-06', '', '')
+ON CONFLICT (camera_id) DO NOTHING;
