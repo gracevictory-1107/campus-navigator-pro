@@ -691,7 +691,7 @@ export default function Security() {
             <TableRow key={v.id}>
               <TableCell><button className="grid gap-0.5 text-left hover:underline" onClick={() => setProfileOpen(v.id)}><span className="font-medium text-foreground">{v.name}</span><span className="font-mono text-[10px] text-muted-foreground">{v.id}</span></button></TableCell>
               <TableCell>{v.type}</TableCell>
-              <TableCell>{v.mobile || "Not available"}</TableCell>
+              <TableCell><div className="grid gap-0.5 text-xs"><span>{v.email || "Not available"}</span><span className="text-muted-foreground">{v.mobile || "Not available"}</span></div></TableCell>
               <TableCell className="whitespace-nowrap">{v.checkIn ? new Date(v.checkIn).toLocaleString() : "Not available"}</TableCell>
               <TableCell><Badge variant={v.status === "Blocked" || (lastEvent?.access === "restricted" && v.status === "Active") ? "destructive" : v.status === "Active" ? "default" : "secondary"}>{v.status}</Badge></TableCell>
               <TableCell>{locationEvent ? <span className="text-xs">{locationById(locationEvent.locationId)?.name ?? locationEvent.locationName ?? "Unknown location"}<span className="block text-muted-foreground">{locationById(locationEvent.locationId)?.floorLabel ?? allFloorPlans[locationEvent.floorId]?.title ?? "Unknown floor"}</span></span> : <span className="text-xs text-muted-foreground">Not available</span>}</TableCell>
@@ -800,426 +800,88 @@ export default function Security() {
         <Stat icon={Users} label="Active Visitors" value={activeVisitors.length} />
         <Stat icon={MapPin} label="Total Security Events" value={sec.events.length} />
         <Stat icon={CheckCircle2} label="Allowed Access Attempts" value={allowedEvents.length} />
-        <Stat icon={ShieldAlert} label="Restricted Access Attempts" value={restrictedEvents.length} alert />
-        <Stat icon={AlertTriangle} label="Active Alerts" value={activeAlerts.length} alert />
+        <Stat icon={ShieldAlert} label="Restricted Events" value={restrictedEvents.length} alert />
+        <Stat icon={Bell} label="Active Alerts" value={activeAlerts.length} alert />
+        <Stat icon={BellOff} label="Acknowledged Alerts" value={acknowledgedAlerts.length} />
         <Stat icon={CheckCircle2} label="Resolved Alerts" value={resolvedAlerts.length} />
       </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="rounded-xl border border-border bg-card p-4">
-          <h3 className="mb-4 text-sm font-semibold text-foreground">Visitor Category Activity</h3>
-          <div className="grid gap-3">
-            {categoryActivity.map(({ type, count }) => (
-              <div key={type} className="grid gap-1">
-                <div className="flex justify-between gap-3 text-xs"><span className="text-foreground">{type}</span><span className="font-medium text-muted-foreground">{count}</span></div>
-                <div className="h-2 overflow-hidden rounded-full bg-secondary" role="img" aria-label={`${type}: ${count} security events`}>
-                  <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${(count / categoryActivityMaximum) * 100}%` }} />
-                </div>
+      <section className="grid gap-2">
+        <h3 className="text-sm font-semibold text-foreground">Activity by Visitor Category</h3>
+        <div className="grid gap-2 rounded-xl border border-border bg-card p-4">
+          {categoryActivity.map((item) => (
+            <div key={item.type} className="grid grid-cols-[180px_1fr_40px] items-center gap-2 text-xs">
+              <span className="truncate text-muted-foreground">{item.type}</span>
+              <div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary" style={{ width: `${(item.count / categoryActivityMaximum) * 100}%` }} /></div>
+              <span className="text-right font-medium text-foreground">{item.count}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+      <section className="grid gap-2">
+        <h3 className="text-sm font-semibold text-foreground">Restricted Destinations</h3>
+        {restrictedDestinations.length ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {restrictedDestinations.slice(0, 8).map((item) => (
+              <div key={item.key} className="rounded-xl border border-border bg-card p-3">
+                <p className="text-sm font-medium text-foreground">{item.name}</p>
+                <p className="text-xs text-muted-foreground">{item.floor} · {item.count} restricted attempt{item.count === 1 ? "" : "s"}</p>
               </div>
             ))}
-            {sec.events.length === 0 && <p className="text-xs text-muted-foreground">No visitor activity has been recorded yet.</p>}
           </div>
-        </section>
-
-        <section className="rounded-xl border border-border bg-card p-4">
-          <h3 className="mb-4 text-sm font-semibold text-foreground">Access Outcomes</h3>
-          <div className="grid gap-4">
-            {[
-              { label: "Allowed", count: allowedEvents.length, color: "bg-[hsl(var(--status-authorized))]" },
-              { label: "Restricted", count: restrictedEvents.length, color: "bg-[hsl(var(--status-restricted))]" },
-            ].map(({ label, count, color }) => {
-              const total = allowedEvents.length + restrictedEvents.length;
-              const width = total ? (count / total) * 100 : 0;
-              return (
-                <div key={label} className="grid gap-1">
-                  <div className="flex justify-between text-xs"><span className="text-foreground">{label}</span><span className="font-medium text-muted-foreground">{count}</span></div>
-                  <div className="h-3 overflow-hidden rounded-full bg-secondary" role="img" aria-label={`${label}: ${count} of ${total} access attempts`}>
-                    <div className={`h-full rounded-full ${color}`} style={{ width: `${width}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-            {sec.events.length === 0 && <p className="text-xs text-muted-foreground">No access attempts have been recorded yet.</p>}
-          </div>
-        </section>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="grid content-start gap-3">
-          <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>
-          <div className="rounded-xl border border-border bg-card divide-y divide-border">
-            {sec.events.length === 0 && <p className="p-5 text-center text-sm text-muted-foreground">No recent activity.</p>}
-            {sec.events.slice(0, 12).map((event) => {
-              const relatedAlert = sec.alerts.find((item) => item.event.id === event.id);
-              const eventLocation = locationById(event.locationId)?.name ?? event.locationName ?? "Unknown location";
-              return (
-                <button key={event.id} type="button" onClick={() => relatedAlert ? setAlertOpen(relatedAlert.id) : setPersonOpen(event.personId)} className="flex w-full flex-wrap items-center justify-between gap-2 p-3 text-left transition-colors hover:bg-accent/40">
-                  <span className="grid gap-1">
-                    <span className="text-sm font-medium text-foreground">{event.personName} <span className="font-normal text-muted-foreground">· {event.personType}</span></span>
-                    <span className="text-xs text-muted-foreground">{event.source === "route" ? (event.access === "restricted" ? "Attempted destination" : "Route destination") : "Camera-reported location"}: {eventLocation} · {event.source === "route" ? "Route planner" : event.cameraId}</span>
-                  </span>
-                  <span className="flex flex-wrap items-center gap-2">
-                    <AccessPill access={event.access} />
-                    <span className="text-[11px] text-muted-foreground">{formatTime(event.at)}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="grid content-start gap-4">
-          <div className="grid gap-3">
-            <h3 className="text-sm font-semibold text-foreground">Most Restricted Destinations</h3>
-            <div className="rounded-xl border border-border bg-card p-4">
-              {restrictedDestinations.length === 0 ? <p className="text-sm text-muted-foreground">No restricted events recorded.</p> : (
-                <div className="grid gap-3">
-                  {restrictedDestinations.slice(0, 8).map(({ key, name, floor, count }) => (
-                    <div key={key} className="grid gap-1">
-                      <div className="flex justify-between gap-3 text-xs"><span className="text-foreground">{name} <span className="text-muted-foreground">· {floor}</span></span><span className={`font-semibold ${bad}`}>{count}</span></div>
-                      <div className="h-2 overflow-hidden rounded-full bg-secondary" role="img" aria-label={`${name}: ${count} restricted attempts`}>
-                        <div className="h-full rounded-full bg-[hsl(var(--status-restricted))]" style={{ width: `${(count / Math.max(1, restrictedDestinations[0].count)) * 100}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="grid gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-foreground">Recent Security Incidents</h3>
-              <span className="text-xs text-muted-foreground">{sec.alerts.length} recorded</span>
-            </div>
-            <AlertsList list={sec.alerts.slice(0, 5)} />
-          </div>
-        </section>
-      </div>
+        ) : <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">No restricted destinations recorded.</div>}
+      </section>
+      <section className="grid gap-2">
+        <h3 className="text-sm font-semibold text-foreground">Recent Events</h3>
+        <RecentEvents list={sec.events} />
+      </section>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-border bg-card shadow-soft">
-        <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="icon" className="h-9 w-9"><Link to="/" aria-label="Back to navigator"><ArrowLeft className="h-4 w-4" /></Link></Button>
-          <div>
-            <h1 className="font-display text-lg font-bold text-foreground leading-tight">Campus Security</h1>
-            <p className="text-[11px] text-muted-foreground">{roles.find((r) => r.id === role)?.label} view{!manage && !manageAccess ? " · read-only" : ""} · CCTV simulated</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {activeAlerts.length > 0 && <Badge variant="destructive" className="gap-1"><Bell className="h-3 w-3" />{activeAlerts.length}</Badge>}
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => sec.setMuted(!sec.muted)} aria-label={sec.muted ? "Unmute alerts" : "Mute alerts"} title={sec.muted ? "Unmute alerts" : "Mute alerts"}>
-            {sec.muted ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
-          </Button>
-          {manage && <Button size="sm" className="h-9" onClick={() => setRegisterOpen(true)}><UserPlus className="h-4 w-4 mr-1" />Register Visitor</Button>}
-          <span className="hidden text-xs font-medium text-muted-foreground sm:inline">{roles.find((item) => item.id === role)?.label}</span>
-          <Button size="sm" variant="outline" className="h-9" onClick={sec.signOut}><LogOut className="mr-1 h-4 w-4" /><span>Sign Out</span></Button>
-          <ThemeToggle />
-        </div>
+      <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border bg-card/95 px-4 py-3 shadow-soft backdrop-blur">
+        <div className="flex items-center gap-2"><Button asChild variant="ghost" size="icon"><Link to="/"><ArrowLeft className="h-4 w-4" /></Link></Button><div><h1 className="font-display text-lg font-bold text-foreground">Campus Security</h1><p className="text-[10px] text-muted-foreground">{role === "management" ? "Management" : role === "admin" ? "Admin" : "Security"} view</p></div></div>
+        <div className="flex items-center gap-2"><ThemeToggle /><Badge variant="outline">{roles.find((r) => r.id === role)?.label ?? role}</Badge><Button variant="outline" size="sm" onClick={() => { sec.signOut(); setSignInOpen(false); }}><LogOut className="mr-1.5 h-3.5 w-3.5" />Sign Out</Button></div>
       </header>
-
-      <main className="p-4 max-w-7xl mx-auto">
+      <main className="mx-auto grid max-w-7xl gap-5 p-4 md:p-6">
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="flex-wrap h-auto mb-4">
+          <TabsList className="flex h-auto flex-wrap justify-start gap-1">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="map">Live Security</TabsTrigger>
+            <TabsTrigger value="visitors">Visitors</TabsTrigger>
+            <TabsTrigger value="access">Access Control</TabsTrigger>
             <TabsTrigger value="cctv">CCTV</TabsTrigger>
-            <TabsTrigger value="alerts">Alerts{activeAlerts.length ? ` (${activeAlerts.length})` : ""}</TabsTrigger>
             {(can.manageSecurity(role) || can.viewManagement(role)) && <TabsTrigger value="reports">Reports</TabsTrigger>}
-            <TabsTrigger value="visitors">Visitor Management</TabsTrigger>
-            {can.viewSecurity(role) && <TabsTrigger value="access">Access Control</TabsTrigger>}
             {can.viewManagement(role) && <TabsTrigger value="management">Management</TabsTrigger>}
             {can.administer(role) && <TabsTrigger value="admin">Admin</TabsTrigger>}
           </TabsList>
-
-          <TabsContent value="dashboard" className="grid gap-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-              <Stat icon={Users} label="Total Visitors" value={sec.visitors.length} />
-              <Stat icon={Users} label="Active Visitors" value={activeVisitors.length} />
-              <Stat icon={ShieldAlert} label="Restricted Attempts" value={restrictedEvents.length} alert />
-              <Stat icon={MapPin} label="Security Events" value={sec.events.length} />
-              <Stat icon={Camera} label="Online Cameras" value={cameras.filter((c) => c.status === "online").length} />
-            </div>
-            <section className="grid gap-3">
-              <h2 className="text-sm font-semibold text-foreground">Security Alerts</h2>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <Stat icon={AlertTriangle} label="Active Alerts" value={activeAlerts.length} alert />
-                <Stat icon={Eye} label="Acknowledged" value={acknowledgedAlerts.length} />
-                <Stat icon={CheckCircle2} label="Resolved" value={resolvedAlerts.length} />
-                <Stat icon={ShieldAlert} label="Restricted Attempts" value={restrictedEvents.length} alert />
-              </div>
-              <AlertsList list={sec.alerts.slice(0, 5)} />
-            </section>
+          <TabsContent value="dashboard" className="grid gap-5 pt-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4"><Stat icon={Users} label="Active Visitors" value={activeVisitors.length} /><Stat icon={Camera} label="Cameras" value={cameras.length} /><Stat icon={MapPin} label="Detections" value={sec.events.length} /><Stat icon={AlertTriangle} label="Active Alerts" value={activeAlerts.length} alert /></div>
             {Simulator}
             {LiveMap}
             {CurrentVisitors}
-            <div className="grid lg:grid-cols-2 gap-4">
-              <div className="grid gap-2 content-start"><h2 className="text-sm font-semibold text-foreground">Active Alerts</h2><AlertsList list={activeAlerts} /></div>
-              <div className="grid gap-2 content-start"><h2 className="text-sm font-semibold text-foreground">Recent Security Events</h2><RecentEvents list={sec.events} /></div>
-            </div>
-            <h2 className="text-sm font-semibold text-foreground">Visitor List</h2>{VisitorTable}
-            <h2 className="text-sm font-semibold text-foreground">CCTV Cameras</h2>{CctvGrid}
+            <section className="grid gap-2"><div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-foreground">Recent Security Events</h2><Button size="sm" variant="outline" onClick={() => setTab("reports")}>Open Reports</Button></div><RecentEvents list={latestVisitorEvents} /></section>
           </TabsContent>
-          <TabsContent value="map" className="grid gap-4">{Simulator}{LiveMap}</TabsContent>
-          <TabsContent value="cctv" className="grid gap-4"><p className="text-xs text-muted-foreground">Camera feeds are simulated. No real college cameras are connected.</p>{Simulator}{CctvGrid}</TabsContent>
-          <TabsContent value="alerts" className="grid gap-4">
-            <section className="grid gap-3">
-              <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold text-foreground">Security Alerts · Active &amp; Acknowledged</h2><span className="text-xs text-muted-foreground">{activeAlerts.length} active · {acknowledgedAlerts.length} acknowledged</span></div>
-              <AlertsList list={[...activeAlerts, ...acknowledgedAlerts]} />
-            </section>
-            <section className="grid gap-3">
-              <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold text-foreground">Alert History</h2><span className="text-xs text-muted-foreground">{resolvedAlerts.length} resolved incident{resolvedAlerts.length === 1 ? "" : "s"}</span></div>
-              <AlertsList list={resolvedAlerts} />
-            </section>
-          </TabsContent>
-          {(can.manageSecurity(role) || can.viewManagement(role)) && <TabsContent value="reports">{SecurityReports}</TabsContent>}
-          <TabsContent value="visitors">{VisitorTable}</TabsContent>
-          <TabsContent value="access" className="grid gap-2">
-            {AccessControl}
-          </TabsContent>
-          {can.viewManagement(role) && (
-            <TabsContent value="management" className="grid gap-4">
-              <p className="text-xs text-muted-foreground">Management overview · read-only security visibility.</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <Stat icon={Users} label="Total Visitors" value={sec.visitors.length} />
-                {personTypes.map((type) => <Stat key={type} icon={Users} label={type} value={typeCount(type)} />)}
-                <Stat icon={AlertTriangle} label="Security Alerts" value={sec.alerts.length} alert />
-                <Stat icon={ShieldAlert} label="Restricted Events" value={restrictedEvents.length} alert />
-                <Stat icon={Camera} label="Cameras Online" value={cameras.length} />
-                <Stat icon={MapPin} label="Detections" value={sec.events.length} />
-              </div>
-              <h2 className="text-sm font-semibold text-foreground">Visitor Activity</h2><RecentEvents list={sec.events} />
-            </TabsContent>
-          )}
-          {can.administer(role) && (
-            <TabsContent value="admin" className="grid gap-4">
-              <AdminUsersPanel />
-              <h2 className="text-sm font-semibold text-foreground">Location Management</h2>
-              <div className="rounded-xl border border-border bg-card overflow-x-auto">
-                <Table>
-                  <TableHeader><TableRow><TableHead>Location</TableHead><TableHead>Floor</TableHead><TableHead>Mapped room</TableHead><TableHead>Camera</TableHead></TableRow></TableHeader>
-                  <TableBody>{securityLocations.map((l) => (
-                    <TableRow key={l.id}><TableCell>{l.name}</TableCell><TableCell>{l.floorLabel}</TableCell>
-                      <TableCell>{allFloorPlans[l.floorId]?.rooms.find((r) => r.id === l.roomId)?.label}</TableCell>
-                      <TableCell>{cameras.find((c) => c.locationId === l.id)?.id ?? "—"}</TableCell></TableRow>
-                  ))}</TableBody>
-                </Table>
-              </div>
-            </TabsContent>
-          )}
+          <TabsContent value="visitors" className="pt-4">{manageVisitors && <div className="mb-3 flex justify-end"><Button onClick={() => setRegisterOpen(true)}><UserPlus className="mr-2 h-4 w-4" />Register Visitor</Button></div>}{VisitorTable}</TabsContent>
+          <TabsContent value="access" className="grid gap-2 pt-4">{AccessControl}</TabsContent>
+          <TabsContent value="cctv" className="grid gap-4 pt-4"><div><h2 className="text-base font-semibold text-foreground">CCTV Monitoring</h2><p className="text-xs text-muted-foreground">Current cameras are simulation feeds. No live video stream is connected.</p></div>{CctvGrid}{Simulator}</TabsContent>
+          {(can.manageSecurity(role) || can.viewManagement(role)) && <TabsContent value="reports" className="pt-4">{SecurityReports}</TabsContent>}
+          {can.viewManagement(role) && <TabsContent value="management" className="grid gap-4 pt-4"><p className="text-xs text-muted-foreground">Management overview · read-only security visibility.</p><div className="grid grid-cols-2 md:grid-cols-4 gap-3"><Stat icon={Users} label="Total Visitors" value={sec.visitors.length} />{personTypes.map((type) => <Stat key={type} icon={Users} label={type} value={typeCount(type)} />)}<Stat icon={AlertTriangle} label="Security Alerts" value={sec.alerts.length} alert /><Stat icon={ShieldAlert} label="Restricted Events" value={restrictedEvents.length} alert /><Stat icon={Camera} label="Cameras Online" value={cameras.length} /><Stat icon={MapPin} label="Detections" value={sec.events.length} /></div><h2 className="text-sm font-semibold text-foreground">Visitor Activity</h2><RecentEvents list={sec.events} /></TabsContent>}
+          {can.administer(role) && <TabsContent value="admin" className="grid gap-4 pt-4"><AdminUsersPanel /><h2 className="text-sm font-semibold text-foreground">Location Management</h2><div className="rounded-xl border border-border bg-card overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Location</TableHead><TableHead>Floor</TableHead><TableHead>Mapped room</TableHead><TableHead>Camera</TableHead></TableRow></TableHeader><TableBody>{securityLocations.map((l) => <TableRow key={l.id}><TableCell>{l.name}</TableCell><TableCell>{l.floorLabel}</TableCell><TableCell>{allFloorPlans[l.floorId]?.rooms.find((r) => r.id === l.roomId)?.label}</TableCell><TableCell>{cameras.find((c) => c.locationId === l.id)?.id ?? "—"}</TableCell></TableRow>)}</TableBody></Table></div></TabsContent>}
         </Tabs>
       </main>
 
       <VisitorFlowDialog open={registerOpen} onOpenChange={setRegisterOpen} />
-      <SecuritySignInDialog
-        open={signInOpen}
-        onOpenChange={setSignInOpen}
-        onRoleChange={(selectedRole) => {
-          if (can.viewSecurity(selectedRole)) setSignInOpen(false);
-        }}
-      />
+      <SecuritySignInDialog open={signInOpen} onOpenChange={setSignInOpen} onRoleChange={(selectedRole) => { if (can.viewSecurity(selectedRole)) setSignInOpen(false); }} />
 
-      <Dialog open={!!camera} onOpenChange={(o) => !o && setCameraOpen(null)}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{camera?.name} · {camera && (locationById(camera.locationId)?.name ?? "Unknown location")}</DialogTitle>
-            <DialogDescription>
-              {camera?.id} · {camera?.status === "online" ? "Online" : "Offline"} · Simulation mode; no live video stream is connected.
-            </DialogDescription>
-          </DialogHeader>
-          {camera && <SimulatedFeed camId={camera.id} status={camera.status} />}
-          {camera && (
-            <section className="grid gap-2 rounded-xl border border-border bg-card p-3" aria-label="Latest camera event">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-foreground">Latest detection / event</h3>
-                {cameraEvent && <AccessPill access={cameraEvent.access} />}
-              </div>
-              {cameraEvent ? (
-                <>
-                  <p className="text-sm text-foreground"><b>{cameraEvent.personName}</b> · {cameraEvent.personType}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {locationById(cameraEvent.locationId)?.name ?? cameraEvent.locationName ?? "Location"} · {locationById(cameraEvent.locationId)?.floorLabel ?? allFloorPlans[cameraEvent.floorId]?.title} · {formatTime(cameraEvent.at)}
-                  </p>
-                  {cameraEventAlert && (
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
-                      <span className={`text-xs font-medium ${bad}`}>Restricted-access alert · {cameraEventAlert.severity}</span>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={cameraEventAlert.status === "Active" ? "destructive" : "secondary"}>{cameraEventAlert.status}</Badge>
-                        <Button size="sm" variant="outline" onClick={() => setAlertOpen(cameraEventAlert.id)}>View alert</Button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : <p className="text-sm text-muted-foreground">No event has been recorded for this camera.</p>}
-            </section>
-          )}
-        </DialogContent>
-      </Dialog>
+      <Dialog open={!!camera} onOpenChange={(o) => !o && setCameraOpen(null)}><DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto"><DialogHeader><DialogTitle>{camera?.name} · {camera && (locationById(camera.locationId)?.name ?? "Unknown location")}</DialogTitle><DialogDescription>{camera?.id} · {camera?.status === "online" ? "Online" : "Offline"} · Simulation mode; no live video stream is connected.</DialogDescription></DialogHeader>{camera && <SimulatedFeed camId={camera.id} status={camera.status} />}{camera && <section className="grid gap-2 rounded-xl border border-border bg-card p-3" aria-label="Latest camera event"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold text-foreground">Latest detection / event</h3>{cameraEvent && <AccessPill access={cameraEvent.access} />}</div>{cameraEvent ? <><p className="text-sm text-foreground"><b>{cameraEvent.personName}</b> · {cameraEvent.personType}</p><p className="text-xs text-muted-foreground">{locationById(cameraEvent.locationId)?.name ?? cameraEvent.locationName ?? "Location"} · {locationById(cameraEvent.locationId)?.floorLabel ?? allFloorPlans[cameraEvent.floorId]?.title} · {formatTime(cameraEvent.at)}</p>{cameraEventAlert && <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2"><span className={`text-xs font-medium ${bad}`}>Restricted-access alert · {cameraEventAlert.severity}</span><div className="flex items-center gap-2"><Badge variant={cameraEventAlert.status === "Active" ? "destructive" : "secondary"}>{cameraEventAlert.status}</Badge><Button size="sm" variant="outline" onClick={() => setAlertOpen(cameraEventAlert.id)}>View alert</Button></div></div>}</> : <p className="text-sm text-muted-foreground">No event has been recorded for this camera.</p>}</section>}</DialogContent></Dialog>
 
-      <Dialog open={!!selectedVisitor} onOpenChange={(o) => !o && setPersonOpen(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>{selectedVisitor?.name}</DialogTitle><DialogDescription>{selectedVisitor?.id} · {selectedVisitor?.type}</DialogDescription></DialogHeader>
-          {selectedVisitor && (
-            <div className="grid gap-1.5 text-sm">
-              <div>Visitor: {selectedVisitor.name}</div>
-              <div>Category: {selectedVisitor.type}</div>
-              <div>Camera-reported location: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.name ?? selectedVisitorLocation.locationName ?? "Location not mapped" : "No camera location recorded"}</div>
-              <div>Camera-reported floor: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.floorLabel ?? allFloorPlans[selectedVisitorLocation.floorId]?.title ?? "Unknown floor" : "Unknown until a camera event"}</div>
-              <div>Access status: {selectedAccess ? <Badge className={selectedAccess === "restricted" ? "" : "bg-emerald-600 text-white hover:bg-emerald-600"} variant={selectedAccess === "restricted" ? "destructive" : "default"}>{selectedAccess === "restricted" ? "Restricted" : "Allowed"}</Badge> : <Badge variant="secondary">No activity</Badge>}</div>
-              <div>Latest activity: {personLatestEvent ? `${personLatestEvent.source === "route" ? "Route planner" : personLatestEvent.cameraId} · ${personLatestEvent.access === "restricted" ? "Restricted" : "Allowed"}` : "No security event recorded"}</div>
-              <div>Destination / attempt: {personLatestEvent ? locationById(personLatestEvent.locationId)?.name ?? personLatestEvent.locationName ?? "Location" : "—"}</div>
-              <div>{personLatestEvent?.source === "route" ? "Destination floor" : "Activity floor"}: {personLatestEvent ? locationById(personLatestEvent.locationId)?.floorLabel ?? allFloorPlans[personLatestEvent.floorId]?.title ?? "Unknown floor" : "—"}</div>
-              <div>Latest event time: {personLatestEvent ? formatTime(personLatestEvent.at) : "—"}</div>
-              {personCamera && <div>Associated camera: {personCamera.name} ({personCamera.id})</div>}
-              {personLatestEvent && (
-                <div className="border-t border-border pt-2 text-xs text-muted-foreground">
-                  Related security event: {personLatestEvent.id} · {personLatestEvent.source === "route" ? "Route attempt" : "Camera detection"}
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <Dialog open={!!selectedVisitor} onOpenChange={(o) => !o && setPersonOpen(null)}><DialogContent className="max-w-sm"><DialogHeader><DialogTitle>{selectedVisitor?.name}</DialogTitle><DialogDescription>{selectedVisitor?.id} · {selectedVisitor?.type}</DialogDescription></DialogHeader>{selectedVisitor && <div className="grid gap-1.5 text-sm"><div>Visitor: {selectedVisitor.name}</div><div>Email: {selectedVisitor.email || "Not available"}</div><div>Category: {selectedVisitor.type}</div><div>Camera-reported location: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.name ?? selectedVisitorLocation.locationName ?? "Location not mapped" : "No camera location recorded"}</div><div>Camera-reported floor: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.floorLabel ?? allFloorPlans[selectedVisitorLocation.floorId]?.title ?? "Unknown floor" : "Unknown until a camera event"}</div><div>Access status: {selectedAccess ? <Badge className={selectedAccess === "restricted" ? "" : "bg-emerald-600 text-white hover:bg-emerald-600"} variant={selectedAccess === "restricted" ? "destructive" : "default"}>{selectedAccess === "restricted" ? "Restricted" : "Allowed"}</Badge> : <Badge variant="secondary">No activity</Badge>}</div><div>Latest activity: {personLatestEvent ? `${personLatestEvent.source === "route" ? "Route planner" : personLatestEvent.cameraId} · ${personLatestEvent.access === "restricted" ? "Restricted" : "Allowed"}` : "No security event recorded"}</div><div>Destination / attempt: {personLatestEvent ? locationById(personLatestEvent.locationId)?.name ?? personLatestEvent.locationName ?? "Location" : "—"}</div><div>{personLatestEvent?.source === "route" ? "Destination floor" : "Activity floor"}: {personLatestEvent ? locationById(personLatestEvent.locationId)?.floorLabel ?? allFloorPlans[personLatestEvent.floorId]?.title ?? "Unknown floor" : "—"}</div><div>Latest event time: {personLatestEvent ? formatTime(personLatestEvent.at) : "—"}</div>{personCamera && <div>Associated camera: {personCamera.name} ({personCamera.id})</div>}{personLatestEvent && <div className="border-t border-border pt-2 text-xs text-muted-foreground">Related security event: {personLatestEvent.id} · {personLatestEvent.source === "route" ? "Route attempt" : "Camera detection"}</div>}</div>}</DialogContent></Dialog>
 
-      <Dialog open={!!profile} onOpenChange={(o) => !o && setProfileOpen(null)}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-          <DialogHeader><DialogTitle>{profile?.name ?? "Visitor Details"}</DialogTitle><DialogDescription>{profile?.id} · {profile?.type}</DialogDescription></DialogHeader>
-          {profile && (() => {
-            const physicalEvent = currentVisitorLocations.get(profile.id);
-            const activity = sec.events.filter((event) => event.personId === profile.id).sort((left, right) => right.at - left.at);
-            const visitorAlerts = sec.alerts.filter((item) => item.event.personId === profile.id);
-            return (
-              <div className="grid gap-4">
-                <section className="grid gap-2 rounded-xl border border-border bg-card p-3 text-sm sm:grid-cols-2">
-                  <p><span className="text-muted-foreground">Name:</span> {profile.name}</p>
-                  <p><span className="text-muted-foreground">Category:</span> {profile.type}</p>
-                  <p><span className="text-muted-foreground">Contact:</span> {profile.mobile || "Not available"}</p>
-                  <p><span className="text-muted-foreground">Visit status:</span> <Badge variant={profile.status === "Blocked" ? "destructive" : profile.status === "Active" ? "default" : "secondary"}>{profile.status}</Badge></p>
-                  <p><span className="text-muted-foreground">Registration / visit start:</span> {profile.checkIn ? new Date(profile.checkIn).toLocaleString() : "Not available"}</p>
-                  <p><span className="text-muted-foreground">Checkout time:</span> {profile.checkedOutAt ? new Date(profile.checkedOutAt).toLocaleString() : profile.status === "Checked Out" ? "Not available" : "Not checked out"}</p>
-                  <p className="sm:col-span-2"><span className="text-muted-foreground">Current camera-reported location:</span> {physicalEvent ? `${locationById(physicalEvent.locationId)?.name ?? physicalEvent.locationName ?? "Unknown location"} · ${locationById(physicalEvent.locationId)?.floorLabel ?? allFloorPlans[physicalEvent.floorId]?.title ?? "Unknown floor"} · ${cameras.find((cameraItem) => cameraItem.id === physicalEvent.cameraId)?.name ?? physicalEvent.cameraId}` : "Not available"}</p>
-                  <p><span className="text-muted-foreground">Visiting:</span> {profile.visiting || "Not available"}</p>
-                  <p><span className="text-muted-foreground">Purpose:</span> {profile.purpose || "Not available"}</p>
-                </section>
+      <Dialog open={!!profile} onOpenChange={(o) => !o && setProfileOpen(null)}><DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto"><DialogHeader><DialogTitle>{profile?.name ?? "Visitor Details"}</DialogTitle><DialogDescription>{profile?.id} · {profile?.type}</DialogDescription></DialogHeader>{profile && <VisitorProfileCard visitor={profile} />}</DialogContent></Dialog>
 
-                <section className="grid gap-2">
-                  <h3 className="text-sm font-semibold text-foreground">Latest activity</h3>
-                  {activity[0] ? (
-                    <div className="rounded-lg border border-border bg-card p-3 text-sm">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span>{activity[0].source === "route" ? (activity[0].access === "restricted" ? "Restricted route attempt" : "Allowed route") : "Camera-reported activity"}</span>
-                        <AccessPill access={activity[0].access} />
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {activity[0].source === "route" ? "Destination / attempt: " : "Camera location: "}
-                        {locationById(activity[0].locationId)?.name ?? activity[0].locationName ?? "Unknown location"}
-                        {" · "}{activity[0].source === "route" ? "Route planner" : `${cameras.find((cameraItem) => cameraItem.id === activity[0].cameraId)?.name ?? activity[0].cameraId} · ${allFloorPlans[activity[0].floorId]?.title ?? activity[0].floorId}`}
-                        {" · "}{new Date(activity[0].at).toLocaleString()}
-                      </p>
-                    </div>
-                  ) : <p className="text-sm text-muted-foreground">No activity recorded.</p>}
-                </section>
+      <AlertDialog open={!!visitorForCheckout} onOpenChange={(open) => !open && setCheckoutVisitorId(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Check out {visitorForCheckout?.name}?</AlertDialogTitle><AlertDialogDescription>This ends the active visit and removes the visitor from active monitoring. Their historical events, alerts, and activity records will remain available.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setCheckoutVisitorId(null)}>Cancel</AlertDialogCancel><AlertDialogAction disabled={!manageVisitors || visitorForCheckout?.status !== "Active"} onClick={() => { if (!visitorForCheckout || !manageVisitors || visitorForCheckout.status !== "Active") return; sec.setVisitorStatus(visitorForCheckout.id, "Checked Out"); setCheckoutVisitorId(null); }}>Confirm checkout</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
 
-                <section className="grid gap-2">
-                  <h3 className="text-sm font-semibold text-foreground">Allowed / restricted route activity</h3>
-                  {activity.filter((event) => event.source === "route").length ? (
-                    <div className="rounded-lg border border-border divide-y divide-border">
-                      {activity.filter((event) => event.source === "route").map((event) => (
-                        <div key={event.id} className="flex flex-wrap items-center justify-between gap-2 p-2.5 text-xs">
-                          <span>{event.access === "restricted" ? "Attempted destination: " : "Route destination: "}{locationById(event.locationId)?.name ?? event.locationName ?? "Unknown location"} · {allFloorPlans[event.floorId]?.title ?? event.floorId}</span>
-                          <span className="flex items-center gap-2"><AccessPill access={event.access} />{new Date(event.at).toLocaleString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : <p className="text-sm text-muted-foreground">No route activity recorded.</p>}
-                </section>
-
-                <section className="grid gap-2">
-                  <h3 className="text-sm font-semibold text-foreground">Related security alerts</h3>
-                  {visitorAlerts.length ? visitorAlerts.map((item) => (
-                    <button key={item.id} type="button" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card p-2.5 text-left text-xs hover:bg-accent/40" onClick={() => setAlertOpen(item.id)}>
-                      <span>{item.event.source === "route" ? "Attempted destination: " : "Camera location: "}{locationById(item.event.locationId)?.name ?? item.event.locationName ?? "Unknown location"} · {item.severity} severity</span>
-                      <span className="flex items-center gap-2"><Badge variant={item.status === "Active" ? "destructive" : "secondary"}>{item.status}</Badge>{new Date(item.event.at).toLocaleString()}</span>
-                    </button>
-                  )) : <p className="text-sm text-muted-foreground">No related alerts.</p>}
-                </section>
-
-                {manageVisitors && profile.status !== "Checked Out" && (
-                  <div className="flex flex-wrap gap-2 border-t border-border pt-3">
-                    {(["Registered", "Active", "Blocked"] as const).filter((status) => status !== profile.status).map((status) => (
-                      <Button key={status} size="sm" variant="outline" onClick={() => sec.setVisitorStatus(profile.id, status)}>Set {status}</Button>
-                    ))}
-                    {profile.status === "Active" && <Button size="sm" variant="destructive" onClick={() => setCheckoutVisitorId(profile.id)}>Check Out</Button>}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={!!visitorForCheckout} onOpenChange={(open) => !open && setCheckoutVisitorId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Check out {visitorForCheckout?.name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This ends the active visit and removes the visitor from active monitoring. Their historical events, alerts, and activity records will remain available.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setCheckoutVisitorId(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={!manageVisitors || visitorForCheckout?.status !== "Active"}
-              onClick={() => {
-                if (!visitorForCheckout || !manageVisitors || visitorForCheckout.status !== "Active") return;
-                sec.setVisitorStatus(visitorForCheckout.id, "Checked Out");
-                setCheckoutVisitorId(null);
-              }}
-            >Confirm checkout</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <Dialog open={!!alert} onOpenChange={(o) => !o && setAlertOpen(null)}>
-        <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
-          <DialogHeader><DialogTitle>Incident {alert?.id}</DialogTitle><DialogDescription>{alert?.event.personName} · {alert?.event.personType} · {alert?.severity} severity</DialogDescription></DialogHeader>
-          {alert && (() => {
-            const eventLocation = locationById(alert.event.locationId);
-            const cameraLocation = sec.currentLocations.find((event) => event.personId === alert.event.personId);
-            const camera = alert.event.source !== "route" ? cameras.find((item) => item.id === alert.event.cameraId) : undefined;
-            const relatedActivity = sec.events.filter((event) => event.personId === alert.event.personId).slice(0, 8);
-            return (
-              <div className="grid gap-4">
-                <section className="grid gap-1 rounded-xl border border-border bg-card p-3 text-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold text-foreground">Incident details</span><Badge variant={alert.status === "Active" ? "destructive" : "secondary"}>{alert.status}</Badge></div>
-                  <p><span className="text-muted-foreground">Visitor:</span> {alert.event.personName} · {alert.event.personType}</p>
-                  <p><span className="text-muted-foreground">Attempted destination:</span> {eventLocation?.name ?? alert.event.locationName ?? "Location"}</p>
-                  <p><span className="text-muted-foreground">Floor:</span> {eventLocation?.floorLabel ?? allFloorPlans[alert.event.floorId]?.title ?? alert.event.floorId}</p>
-                  <p><span className="text-muted-foreground">Access status:</span> <span className={bad}>Restricted</span></p>
-                  <p><span className="text-muted-foreground">Source:</span> {alert.event.source === "route" ? "Route planner" : `${camera?.name ?? alert.event.cameraId} · ${eventLocation?.name ?? alert.event.locationName}`}</p>
-                  {alert.event.source === "route" && cameraLocation && <p><span className="text-muted-foreground">Latest camera-reported location:</span> {locationById(cameraLocation.locationId)?.name ?? cameraLocation.locationName} · {cameras.find((item) => item.id === cameraLocation.cameraId)?.name ?? cameraLocation.cameraId}</p>}
-                  <p><span className="text-muted-foreground">Date &amp; time:</span> {new Date(alert.event.at).toLocaleString()}</p>
-                  <p><span className="text-muted-foreground">Severity:</span> {alert.severity}</p>
-                </section>
-                <section className="grid gap-2">
-                  <h3 className="text-sm font-semibold text-foreground">Related visitor activity</h3>
-                  <RecentEvents list={relatedActivity} />
-                </section>
-                <section className="grid gap-2">
-                  <h3 className="text-sm font-semibold text-foreground">Alert lifecycle</h3>
-                  <ol className="grid gap-1 text-sm">
-                    {alert.history.map((entry, i) => <li key={`${entry.at}-${i}`} className="flex flex-wrap justify-between gap-2"><span>{entry.status}</span><span className="text-muted-foreground">{new Date(entry.at).toLocaleString()} · {entry.by}</span></li>)}
-                  </ol>
-                </section>
-                {manage && alert.status === "Active" && <Button variant="secondary" onClick={() => sec.setAlertStatus(alert.id, "Acknowledged")}>Acknowledge</Button>}
-                {manage && alert.status === "Acknowledged" && <Button onClick={() => sec.setAlertStatus(alert.id, "Resolved")}>Resolve</Button>}
-              </div>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+      <Dialog open={!!alert} onOpenChange={(o) => !o && setAlertOpen(null)}><DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto"><DialogHeader><DialogTitle>Incident {alert?.id}</DialogTitle><DialogDescription>{alert?.event.personName} · {alert?.event.personType} · {alert?.severity} severity</DialogDescription></DialogHeader>{alert && <div className="grid gap-4"><section className="grid gap-1 rounded-xl border border-border bg-card p-3 text-sm"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold text-foreground">Incident details</span><Badge variant={alert.status === "Active" ? "destructive" : "secondary"}>{alert.status}</Badge></div><p><span className="text-muted-foreground">Visitor:</span> {alert.event.personName} · {alert.event.personType}</p><p><span className="text-muted-foreground">Attempted destination:</span> {locationById(alert.event.locationId)?.name ?? alert.event.locationName ?? "Location"}</p><p><span className="text-muted-foreground">Floor:</span> {locationById(alert.event.locationId)?.floorLabel ?? allFloorPlans[alert.event.floorId]?.title ?? alert.event.floorId}</p><p><span className="text-muted-foreground">Access status:</span> <span className={bad}>Restricted</span></p><p><span className="text-muted-foreground">Source:</span> {alert.event.source === "route" ? "Route planner" : `${cameras.find((item) => item.id === alert.event.cameraId)?.name ?? alert.event.cameraId} · ${locationById(alert.event.locationId)?.name ?? alert.event.locationName}`}</p><p><span className="text-muted-foreground">Date &amp; time:</span> {new Date(alert.event.at).toLocaleString()}</p><p><span className="text-muted-foreground">Severity:</span> {alert.severity}</p></section><section className="grid gap-2"><h3 className="text-sm font-semibold text-foreground">Related visitor activity</h3><RecentEvents list={sec.events.filter((event) => event.personId === alert.event.personId).slice(0, 8)} /></section>{manage && alert.status === "Active" && <Button variant="secondary" onClick={() => sec.setAlertStatus(alert.id, "Acknowledged")}>Acknowledge</Button>}{manage && alert.status === "Acknowledged" && <Button onClick={() => sec.setAlertStatus(alert.id, "Resolved")}>Resolve</Button>}</div>}</DialogContent></Dialog>
     </div>
   );
 }
