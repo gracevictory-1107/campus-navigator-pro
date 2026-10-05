@@ -26,7 +26,10 @@ interface HumanInstance {
   load: () => Promise<void>;
   warmup: () => Promise<void>;
   detect: (input: HTMLVideoElement) => Promise<HumanResult>;
-  similarity: (first: number[], second: number[]) => number;
+  match: {
+    similarity: (first: number[], second: number[]) => number;
+  };
+  similarity?: (first: number[], second: number[]) => number;
 }
 
 interface HumanNamespace {
@@ -144,7 +147,13 @@ export async function captureBiometricSample(video: HTMLVideoElement): Promise<B
 
 export async function compareBiometricEmbeddings(current: number[], enrolled: number[]) {
   const human = await getHuman();
-  const similarity = human.similarity(current, enrolled);
+  // @vladmandic/human v3.3.6 exposes face matching helpers under human.match.
+  // Keep the legacy instance-level method as a fallback for compatibility.
+  const similarity = human.match?.similarity
+    ? human.match.similarity(current, enrolled)
+    : human.similarity
+      ? human.similarity(current, enrolled)
+      : (() => { throw new Error("Face matching engine is unavailable."); })();
   return {
     matched: similarity >= BIOMETRIC_MATCH_THRESHOLD,
     similarity,
