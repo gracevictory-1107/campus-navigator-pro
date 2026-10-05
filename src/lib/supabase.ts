@@ -430,6 +430,55 @@ export async function saveBiometricEmbedding(visitorId: string, embedding: numbe
   };
 }
 
+export async function loadAllBiometricEmbeddings(): Promise<Array<{ visitorId: string; embedding: number[] }>> {
+  const valid = (value: unknown): value is number[] =>
+    Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === "number" && Number.isFinite(item));
+
+  if (!supabase) {
+    const entries: Array<{ visitorId: string; embedding: number[] }> = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith("campus-biometric:")) continue;
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) ?? "null");
+        if (valid(parsed)) entries.push({ visitorId: key.slice("campus-biometric:".length), embedding: parsed });
+      } catch { /* ignore malformed local biometric records */ }
+    }
+    return entries;
+  }
+
+  const profile = await getSignedInProfile();
+  if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
+    const entries: Array<{ visitorId: string; embedding: number[] }> = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith("campus-biometric:")) continue;
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) ?? "null");
+        if (valid(parsed)) entries.push({ visitorId: key.slice("campus-biometric:".length), embedding: parsed });
+      } catch { /* ignore malformed local biometric records */ }
+    }
+    return entries;
+  }
+
+  const { data, error } = await supabase
+    .from("biometric_profiles")
+    .select("visitor_id, provider_reference, status")
+    .eq("status", "ENROLLED");
+
+  if (error) throw error;
+
+  return data.flatMap((row) => {
+    if (!row.visitor_id || !row.provider_reference) return [];
+    try {
+      const parsed = JSON.parse(row.provider_reference) as { embedding?: unknown };
+      return valid(parsed.embedding) ? [{ visitorId: row.visitor_id, embedding: parsed.embedding }] : [];
+    } catch {
+      return [];
+    }
+  });
+}
+
 export async function recordBiometricVerificationEvent(input: {
   visitorId: string;
   result: "VERIFIED" | "NOT_VERIFIED" | "NO_ENROLLMENT" | "VERIFICATION_ERROR";
