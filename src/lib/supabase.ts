@@ -75,6 +75,29 @@ interface AlertRow extends Record<string, unknown> {
   updated_at: string;
 }
 
+interface BiometricProfileRow extends Record<string, unknown> {
+  id: string;
+  visitor_id: string | null;
+  provider_reference: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BiometricVerificationEventRow extends Record<string, unknown> {
+  id: string;
+  profile_id: string | null;
+  visitor_id: string | null;
+  event_type: string;
+  verification_result: string;
+  destination: string | null;
+  access_result: string | null;
+  camera_id: string | null;
+  security_event_id: string | null;
+  occurred_at: number;
+  created_at: string;
+}
+
 interface Database {
   public: {
     Tables: {
@@ -83,6 +106,8 @@ interface Database {
       visitors: Table<VisitorRow, Omit<VisitorRow, "created_at" | "updated_at">>;
       security_events: Table<SecurityEventRow, Omit<SecurityEventRow, "created_at">>;
       alerts: Table<AlertRow, Omit<AlertRow, "created_at" | "updated_at">>;
+      biometric_profiles: Table<BiometricProfileRow, Omit<BiometricProfileRow, "created_at" | "updated_at">>;
+      biometric_verification_events: Table<BiometricVerificationEventRow, Omit<BiometricVerificationEventRow, "created_at">>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -293,4 +318,132 @@ export async function persistSecuritySnapshot(snapshot: SupabaseSecuritySnapshot
   if (rulesWrite.error) throw rulesWrite.error;
   const alertsWrite = alertRows.length ? await supabase.from("alerts").upsert(alertRows) : { error: null };
   if (alertsWrite.error) throw alertsWrite.error;
+}
+
+
+export interface BiometricStoredProfile {
+  id: string;
+  visitorId: string;
+  embedding: number[];
+  status: string;
+}
+
+function biometricLocalKey(visitorId: string) {
+  return "campus-biometric:" + visitorId;
+}
+
+export async function getBiometricEmbedding(visitorId: string): Promise<number[] | null> {
+  if (!supabase) {
+    try {
+      const raw = localStorage.getItem(biometricLocalKey(visitorId));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  const profile = await getSignedInProfile();
+  if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
+    throw new Error("A linked Supabase Security or Admin account is required to use visitor biometrics.");
+  }
+
+  const { data, error } = await supabase
+    .from("biometric_profiles")
+    .select("id, visitor_id, provider_reference, status")
+    .eq("visitor_id", visitorId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data?.provider_reference) return null;
+
+  try {
+    const parsed = JSON.parse(data.provider_reference) as { version?: number; embedding?: unknown };
+    return Array.isArray(parsed.embedding) && parsed.embedding.every((item) => typeof item === "number" && Number.isFinite(item))
+      ? parsed.embedding
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveBiometricEmbedding(visitorId: string, embedding: number[]): Promise<BiometricStoredProfile> {
+  if (!supabase) {
+    localStorage.setItem(biometricLocalKey(visitorId), JSON.stringify(embedding));
+    return { id: "LOCAL-" + visitorId, visitorId, embedding, status: "ENROLLED" };
+  }
+
+  const profile = await getSignedInProfile();
+  if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
+    throw new Error("A linked Supabase Security or Admin account is required to enroll visitor biometrics.");
+  }
+
+  const providerReference = JSON.stringify({ version: 1, embedding });
+  const { data: existing, error: existingError } = await supabase
+    .from("biometric_profiles")
+    .select("id")
+    .eq("visitor_id", visitorId)
+    .maybeSingle();
+  if (existingError) throw existingError;
+
+  if (existing?.id) {
+    const { data, error } = await supabase
+      .from("biometric_profiles")
+      .update({ provider_reference: providerReference, status: "ENROLLED" })
+      .eq("id", existing.id)
+      .select("id, visitor_id, provider_reference, status")
+      .single();
+    if (error) throw error;
+    return {
+      id: data.id,
+      visitorId,
+      embedding,
+      status: data.status,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("biometric_profiles")
+    .insert({
+      visitor_id: visitorId,
+      provider_reference: providerReference,
+      status: "ENROLLED",
+    })
+    .select("id, visitor_id, provider_reference, status")
+    .single();
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    visitorId,
+    embedding,
+    status: data.status,
+  };
+}
+
+export async function recordBiometricVerificationEvent(input: {
+  visitorId: string;
+  result: "VERIFIED" | "NOT_VERIFIED" | "NO_ENROLLMENT" | "VERIFICATION_ERROR";
+  eventType?: string;
+  destination?: string;
+  accessResult?: "authorized" | "restricted";
+  cameraId?: string;
+}) {
+  if (!supabase) return;
+
+  const profile = await getSignedInProfile();
+  if (!profile || (profile.role !== "admin" && profile.role !== "security")) return;
+
+  const { error } = await supabase.from("biometric_verification_events").insert({
+    visitor_id: input.visitorId,
+    event_type: input.eventType ?? "visitor_face_verification",
+    verification_result: input.result,
+    destination: input.destination ?? null,
+    access_result: input.accessResult ?? null,
+    camera_id: input.cameraId ?? null,
+    security_event_id: null,
+    occurred_at: Date.now(),
+  });
+  if (error) throw error;
 }
