@@ -49,17 +49,17 @@ export default function CampusNavigator() {
     setHighlightRoom(undefined);
   }, []);
 
-  const handleRouteAuthorization = useCallback(async (visitorId: string, route: IndoorRoute): Promise<RouteAccessDecision> => {
-    const decision = await security.authorizeIndoorRoute(visitorId, route);
-    const visitor = security.visitors.find((candidate) => candidate.id === visitorId);
+  const handleRouteAuthorization = useCallback(async (visitorId: string | null, route: IndoorRoute): Promise<RouteAccessDecision> => {
+    const decision = await security.authorizeIndoorRoute(visitorId, route, security.role);
+    const visitor = visitorId ? security.visitors.find((candidate) => candidate.id === visitorId) : undefined;
     if (decision.allowed) {
       setActiveRoute(route);
       setRestrictedRouteAreas([]);
-      setRouteAccessNotice({ allowed: true, visitorName: visitor?.name ?? "Visitor", destination: route.toLabel });
+      setRouteAccessNotice({ allowed: true, visitorName: visitor?.name ?? security.role.charAt(0).toUpperCase() + security.role.slice(1), destination: route.toLabel });
     } else {
       setActiveRoute(null);
       setRestrictedRouteAreas(decision.deniedAreas);
-      setRouteAccessNotice({ allowed: false, visitorName: visitor?.name ?? "Visitor", destination: route.toLabel });
+      setRouteAccessNotice({ allowed: false, visitorName: visitor?.name ?? security.role.charAt(0).toUpperCase() + security.role.slice(1), destination: route.toLabel });
     }
     return decision;
   }, [security]);
