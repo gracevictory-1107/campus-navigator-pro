@@ -150,6 +150,7 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
 
 const demoManagedProfiles: ManagedProfile[] = [
   { id: "demo-admin", full_name: "Admin", email: "admin@gmail.com", role: "admin" },
+  { id: "demo-management", full_name: "Management", email: "management@gmail.com", role: "management" },
   { id: "demo-faculty", full_name: "Faculty", email: "faculty@gmail.com", role: "faculty" },
   { id: "demo-security", full_name: "Security", email: "security@gmail.com", role: "security" },
   { id: "demo-student", full_name: "Student", email: "student@gmail.com", role: "student" },
@@ -157,6 +158,7 @@ const demoManagedProfiles: ManagedProfile[] = [
 const demoProfilesKey = "campus-demo-profiles-v1";
 const managedRoleOptions: { value: ManagedRole; label: string }[] = [
   { value: "admin", label: "Admin" },
+  { value: "management", label: "Management" },
   { value: "faculty", label: "Faculty" },
   { value: "security", label: "Security" },
   { value: "student", label: "Student" },
