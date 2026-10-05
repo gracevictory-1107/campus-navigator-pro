@@ -1002,7 +1002,7 @@ export default function Security() {
           <Button asChild variant="ghost" size="icon" className="h-9 w-9"><Link to="/" aria-label="Back to navigator"><ArrowLeft className="h-4 w-4" /></Link></Button>
           <div>
             <h1 className="font-display text-lg font-bold text-foreground leading-tight">Campus Security</h1>
-            <p className="text-[11px] text-muted-foreground">{roles.find((r) => r.id === role)?.label} view{!manage && !manageAccess ? " · read-only" : ""} · CCTV simulated</p>
+            <p className="text-[11px] text-muted-foreground">{roles.find((r) => r.id === role)?.label} view{!manage && !manageAccess ? " · read-only" : ""} · CCTV connection pending</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
