@@ -35,6 +35,7 @@ export interface Camera {
 export interface Visitor {
   id: string;
   name: string;
+  email: string;
   mobile: string;
   type: PersonType;
   visiting: string;
