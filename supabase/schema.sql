@@ -165,7 +165,7 @@ on conflict (email) do nothing;
 
 with categories(person_type, allowed_locations) as (
   values
-    ('Parent', array['main-gate', 'reception', 'meeting-room', 'library']::text[]),
+    ('Parent', array['reception', 'principal-office', 'cash-counter', 'canteen']::text[]),
     ('Product/Business Visitor', array['main-gate', 'reception', 'meeting-room', 'placement-cell']::text[]),
     ('Inspirational/Motivational Visitor', array['main-gate', 'reception', 'meeting-room', 'library']::text[]),
     ('Faculty/Staff', array['main-gate', 'reception', 'meeting-room', 'placement-cell', 'cse-lab', 'staff-room']::text[]),
@@ -272,3 +272,24 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.biometric_profiles TO authenticat
 GRANT SELECT, INSERT ON public.biometric_verification_events TO authenticated;
 
 COMMIT;
+
+-- Parent access policy: only Reception Office, Principal Office, Cash Counter and Canteen.
+insert into public.access_rules (id, location_id, person_type, allowed)
+select 'Parent:' || l.location_id,
+       l.location_id,
+       'Parent',
+       (l.location_id in ('reception', 'principal-office', 'cash-counter', 'canteen'))
+from (values
+  ('main-gate'),
+  ('reception'),
+  ('principal-office'),
+  ('cash-counter'),
+  ('canteen'),
+  ('meeting-room'),
+  ('library'),
+  ('placement-cell'),
+  ('cse-lab'),
+  ('staff-room')
+) as l(location_id)
+on conflict (location_id, person_type)
+do update set allowed = excluded.allowed, updated_at = now();
