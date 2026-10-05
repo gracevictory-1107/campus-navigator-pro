@@ -30,6 +30,10 @@ export interface Camera {
   status: "online" | "offline";
   /** Future integrations: "nvr" | "dvr" | "vms" | "onvif" | "vendor-api" | "vendor-sdk". */
   source: "simulated";
+  /** Filled in by the college when real CCTV integration is configured. */
+  ipAddress?: string;
+  /** Optional browser-accessible stream URL supplied by the college/NVR. */
+  streamUrl?: string;
 }
 
 export interface Visitor {
