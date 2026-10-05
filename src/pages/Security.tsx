@@ -100,15 +100,16 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
     }}>
       <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{faceSignInOpen ? "Security Face Sign-In" : "Sign In to Campus Security"}</DialogTitle>
+          <DialogTitle>{faceSignInOpen ? "Security Camera Liveness Check" : "Sign In to Campus Security"}</DialogTitle>
           <DialogDescription>
             {faceSignInOpen
-              ? "Continue through the existing demo camera verification flow."
+              ? "Live-face check only. It does not identify a security account."
               : "Use the configured campus account, the existing local demo role sign-in, or camera verification."}
           </DialogDescription>
         </DialogHeader>
         {faceSignInOpen ? (
           <DemoFaceVerification
+            identityRequired={false}
             onContinue={() => {
               sec.setRole("security");
               onRoleChange("security");
