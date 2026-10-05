@@ -42,7 +42,7 @@ export const defaultRules: AccessRule[] = personTypes.flatMap((type) =>
 
 export const seedVisitors: Visitor[] = [
   {
-    id: "VIS-1019", name: "Anita Sharma", mobile: "9000000011", type: "Recruiter", visiting: "Placement Officer",
+    id: "VIS-1019", name: "Anita Sharma", email: "anita.sharma@example.com", mobile: "9000000011", type: "Recruiter", visiting: "Placement Officer",
     purpose: "Campus recruitment drive", authorizedLocationId: "placement-cell", expectedExit: "16:00",
     checkIn: Date.now() - 1000 * 60 * 50, status: "Active", verified: true, returning: false,
   },
