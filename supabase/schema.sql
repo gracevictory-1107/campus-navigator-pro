@@ -172,7 +172,7 @@ with categories(person_type, allowed_locations) as (
     ('Recruiter', array['main-gate', 'reception', 'meeting-room', 'placement-cell']::text[]),
     ('General Visitor', array['main-gate', 'reception', 'library']::text[])
 ), locations(location_id) as (
-  values ('main-gate'), ('reception'), ('meeting-room'), ('library'), ('placement-cell'), ('cse-lab'), ('staff-room')
+  values ('main-gate'), ('reception'), ('principal-office'), ('cash-counter'), ('canteen'), ('meeting-room'), ('library'), ('placement-cell'), ('cse-lab'), ('staff-room')
 )
 insert into public.access_rules (id, location_id, person_type, allowed)
 select categories.person_type || ':' || locations.location_id, locations.location_id, categories.person_type, locations.location_id = any(categories.allowed_locations)
