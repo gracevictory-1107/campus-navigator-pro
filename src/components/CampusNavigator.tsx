@@ -259,6 +259,7 @@ export default function CampusNavigator() {
                 onCheckRoute={handleRouteAuthorization}
                 onRouteChanged={clearRouteAuthorization}
                 onFocusRestrictedArea={focusRestrictedArea}
+                accessRole={security.role}
               />
             )}
           </AnimatePresence>
