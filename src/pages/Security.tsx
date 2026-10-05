@@ -1006,6 +1006,16 @@ export default function Security() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Badge
+            variant="outline"
+            className={sec.backendReady
+              ? "border-[hsl(var(--status-authorized)/0.35)] text-[hsl(var(--status-authorized))]"
+              : "border-border text-muted-foreground"}
+            title={sec.backendReady ? "Security data is connected to Supabase." : "Using local browser state until an authorized Supabase session is connected."}
+          >
+            <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${sec.backendReady ? "bg-[hsl(var(--status-authorized))]" : "bg-muted-foreground"}`} />
+            {sec.backendReady ? "Database synced" : "Local demo"}
+          </Badge>
           {activeAlerts.length > 0 && <Badge variant="destructive" className="gap-1"><Bell className="h-3 w-3" />{activeAlerts.length}</Badge>}
           <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => sec.setMuted(!sec.muted)} aria-label={sec.muted ? "Unmute alerts" : "Mute alerts"} title={sec.muted ? "Unmute alerts" : "Mute alerts"}>
             {sec.muted ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
@@ -1037,7 +1047,11 @@ export default function Security() {
               <Stat icon={Users} label="Active Visitors" value={activeVisitors.length} />
               <Stat icon={ShieldAlert} label="Restricted Attempts" value={restrictedEvents.length} alert />
               <Stat icon={MapPin} label="Security Events" value={sec.events.length} />
-              <Stat icon={Camera} label="Online Cameras" value={cameras.filter((c) => c.status === "online").length} />
+              <Stat
+                icon={Camera}
+                label="Configured CCTV"
+                value={Object.values(cameraConfigs).filter((config) => Boolean(config.ipAddress?.trim() || config.streamUrl?.trim())).length}
+              />
             </div>
             <section className="grid gap-3">
               <h2 className="text-sm font-semibold text-foreground">Security Alerts</h2>
