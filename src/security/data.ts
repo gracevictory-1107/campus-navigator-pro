@@ -3,7 +3,10 @@ import { personTypes, type AccessRule, type Camera, type PersonType, type Securi
 // Every location points at an existing room in the floor-plan data module.
 export const securityLocations: SecurityLocation[] = [
   { id: "main-gate", name: "Main Gate", floorId: "mb-gf", roomId: "main-entrance", building: "Main Building", floorLabel: "Ground Floor" },
-  { id: "reception", name: "Reception", floorId: "mb-gf", roomId: "help-desk", building: "Main Building", floorLabel: "Ground Floor" },
+  { id: "reception", name: "Reception Office", floorId: "mb-gf", roomId: "help-desk", building: "Main Building", floorLabel: "Ground Floor" },
+  { id: "principal-office", name: "Principal Office", floorId: "mb-gf", roomId: "principal", building: "Main Building", floorLabel: "Ground Floor" },
+  { id: "cash-counter", name: "Cash Counter", floorId: "mb-gf", roomId: "cash", building: "Main Building", floorLabel: "Ground Floor" },
+  { id: "canteen", name: "Canteen", floorId: "mb-gf", roomId: "canteen", building: "Main Building", floorLabel: "Ground Floor" },
   { id: "meeting-room", name: "Meeting Room", floorId: "mb-gf", roomId: "board-room", building: "Main Building", floorLabel: "Ground Floor" },
   { id: "library", name: "Library", floorId: "mb-gf", roomId: "library", building: "Main Building", floorLabel: "Ground Floor" },
   { id: "placement-cell", name: "Placement Cell", floorId: "mb-gf", roomId: "director", building: "Main Building", floorLabel: "Ground Floor" },
@@ -23,7 +26,7 @@ export const cameras: Camera[] = [
 ];
 
 const allow: Record<PersonType, string[]> = {
-  Parent: ["main-gate", "reception", "meeting-room", "library"],
+  Parent: ["reception", "principal-office", "cash-counter", "canteen"],
   "Product/Business Visitor": ["main-gate", "reception", "meeting-room", "placement-cell"],
   "Inspirational/Motivational Visitor": ["main-gate", "reception", "meeting-room", "library"],
   "Faculty/Staff": ["main-gate", "reception", "meeting-room", "placement-cell", "cse-lab", "staff-room"],
