@@ -17,12 +17,12 @@ export const securityLocations: SecurityLocation[] = [
 export const locationById = (id: string) => securityLocations.find((l) => l.id === id);
 
 export const cameras: Camera[] = [
-  { id: "CAM-01", name: "CAM-01", locationId: "main-gate", status: "online", source: "simulated" },
-  { id: "CAM-02", name: "CAM-02", locationId: "reception", status: "online", source: "simulated" },
-  { id: "CAM-03", name: "CAM-03", locationId: "cse-lab", status: "online", source: "simulated" },
-  { id: "CAM-04", name: "CAM-04", locationId: "staff-room", status: "online", source: "simulated" },
-  { id: "CAM-05", name: "CAM-05", locationId: "library", status: "online", source: "simulated" },
-  { id: "CAM-06", name: "CAM-06", locationId: "placement-cell", status: "online", source: "simulated" },
+  { id: "CAM-01", name: "CAM-01", locationId: "main-gate", status: "online", source: "simulated", ipAddress: "", streamUrl: "" },
+  { id: "CAM-02", name: "CAM-02", locationId: "reception", status: "online", source: "simulated", ipAddress: "", streamUrl: "" },
+  { id: "CAM-03", name: "CAM-03", locationId: "cse-lab", status: "online", source: "simulated", ipAddress: "", streamUrl: "" },
+  { id: "CAM-04", name: "CAM-04", locationId: "staff-room", status: "online", source: "simulated", ipAddress: "", streamUrl: "" },
+  { id: "CAM-05", name: "CAM-05", locationId: "library", status: "online", source: "simulated", ipAddress: "", streamUrl: "" },
+  { id: "CAM-06", name: "CAM-06", locationId: "placement-cell", status: "online", source: "simulated", ipAddress: "", streamUrl: "" },
 ];
 
 const allow: Record<PersonType, string[]> = {
