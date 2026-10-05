@@ -148,7 +148,7 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
         <DialogHeader>
           <DialogTitle>{step === "form" ? "Register Visitor" : step === "face" ? "Face Verification" : "Registration Successful"}</DialogTitle>
           <DialogDescription>
-            {step === "face" ? "Demo Face Verification · Camera images remain local to this browser and are not uploaded or stored." : "Security / Reception desk"}
+            {step === "face" ? "AI face biometric verification · camera images remain local to this browser and are not uploaded or stored." : "Security / Reception desk"}
           </DialogDescription>
         </DialogHeader>
 
