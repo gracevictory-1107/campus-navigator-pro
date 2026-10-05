@@ -26,6 +26,7 @@ create table if not exists public.access_rules (
 create table if not exists public.visitors (
   id text primary key,
   name text not null,
+  email text not null default '',
   mobile text not null default '',
   person_type text not null check (person_type in (
     'Parent', 'Product/Business Visitor', 'Inspirational/Motivational Visitor',
@@ -43,6 +44,9 @@ create table if not exists public.visitors (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Safe for databases created before visitor email was added.
+alter table public.visitors add column if not exists email text not null default '';
 
 create table if not exists public.security_events (
   id text primary key,
