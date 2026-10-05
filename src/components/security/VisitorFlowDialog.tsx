@@ -37,11 +37,10 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
 
   const completeVerification = async (capture: BiometricCaptureResult) => {
     setBiometricCapture(capture);
-    const res = await faceVerificationService.verify({ name: form.name, mobile: form.mobile }, visitors);
-    setExisting(res.existing);
 
+    const formIdentity = await faceVerificationService.verify({ name: form.name, mobile: form.mobile }, visitors);
     const enrolledProfiles = await loadAllBiometricEmbeddings();
-    let biometricMatchVisitor: Visitor | null = null;
+    let matchedVisitor: Visitor | null = null;
     let bestSimilarity = -1;
 
     for (const profile of enrolledProfiles) {
@@ -50,92 +49,102 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
       const match = await compareBiometricEmbeddings(capture.embedding, profile.embedding);
       if (match.similarity > bestSimilarity) {
         bestSimilarity = match.similarity;
-        biometricMatchVisitor = match.matched ? candidate : null;
+        matchedVisitor = match.matched ? candidate : null;
       }
       if (match.matched) break;
     }
 
-    if (biometricMatchVisitor) {
-      setBiometricIdentity(biometricMatchVisitor);
+    if (matchedVisitor) {
+      setBiometricIdentity(matchedVisitor);
       setBiometricMatch(bestSimilarity);
-
-      if (!res.existing || res.existing.id !== biometricMatchVisitor.id) {
-        await recordBiometricVerificationEvent({
-          visitorId: biometricMatchVisitor.id,
-          result: "VERIFIED",
-          eventType: "duplicate_face_registration_blocked",
-          destination: form.authorizedLocationId,
-          accessResult: "restricted",
-        });
-        throw new Error(
-          "This face is already enrolled for " + biometricMatchVisitor.name +
-          ". Duplicate visitor registration is blocked. Use the existing visitor profile."
-        );
-      }
-
-      setExisting(biometricMatchVisitor);
+      setExisting(matchedVisitor);
       setBiometricEnrollment("enrolled");
+      setForm((previous) => ({
+        ...previous,
+        name: matchedVisitor.name,
+        email: matchedVisitor.email,
+        mobile: matchedVisitor.mobile,
+        type: matchedVisitor.type,
+      }));
+
       await recordBiometricVerificationEvent({
-        visitorId: biometricMatchVisitor.id,
+        visitorId: matchedVisitor.id,
         result: "VERIFIED",
-        eventType: "visitor_face_verification",
+        eventType: "returning_visitor_face_verification",
         destination: form.authorizedLocationId,
         accessResult: "authorized",
       });
+
       setVerificationComplete(true);
       return;
     }
 
-    if (res.existing) {
-      const enrolled = await getBiometricEmbedding(res.existing.id);
+    if (formIdentity.existing) {
+      const enrolled = await getBiometricEmbedding(formIdentity.existing.id);
       if (enrolled) {
         const match = await compareBiometricEmbeddings(capture.embedding, enrolled);
         setBiometricMatch(match.similarity);
         if (!match.matched) {
           await recordBiometricVerificationEvent({
-            visitorId: res.existing.id,
+            visitorId: formIdentity.existing.id,
             result: "NOT_VERIFIED",
             eventType: "visitor_face_verification",
             destination: form.authorizedLocationId,
             accessResult: "restricted",
           });
-          throw new Error("Face does not match the enrolled visitor biometric. Similarity: " + describeBiometricScore(match.similarity) + ". Verification stopped.");
+          throw new Error(
+            "Face does not match the stored biometric for " +
+            formIdentity.existing.name +
+            ". Verification stopped. Similarity: " +
+            describeBiometricScore(match.similarity) +
+            "."
+          );
         }
-        setBiometricEnrollment("enrolled");
-        await recordBiometricVerificationEvent({
-          visitorId: res.existing.id,
-          result: "VERIFIED",
-          eventType: "visitor_face_verification",
-          destination: form.authorizedLocationId,
-          accessResult: "authorized",
-        });
       } else {
         setBiometricEnrollment("new");
-        await recordBiometricVerificationEvent({
-          visitorId: res.existing.id,
-          result: "NO_ENROLLMENT",
-          eventType: "visitor_biometric_enrollment",
-          destination: form.authorizedLocationId,
-        });
       }
-    } else {
-      setBiometricEnrollment("new");
+      setExisting(formIdentity.existing);
+      setVerificationComplete(true);
+      return;
     }
 
+    setExisting(undefined);
+    setBiometricEnrollment("new");
     setVerificationComplete(true);
   };
 
   const finish = async () => {
     if (!biometricCapture) return;
-    const registered = registerVisitor({ ...form, email: form.email.trim().toLowerCase(), name: form.name.trim() }, existing);
-    await saveBiometricEmbedding(registered.id, biometricCapture.embedding);
-    await recordBiometricVerificationEvent({
-      visitorId: registered.id,
-      result: "VERIFIED",
-      eventType: "visitor_biometric_enrollment",
-      destination: form.authorizedLocationId,
-      accessResult: "authorized",
-    });
+
+    const visitorBeforeSave = existing ?? biometricIdentity;
+    const registered = registerVisitor(
+      {
+        ...form,
+        email: form.email.trim().toLowerCase(),
+        name: form.name.trim(),
+      },
+      visitorBeforeSave
+    );
+
+    if (!visitorBeforeSave || biometricEnrollment === "new") {
+      await saveBiometricEmbedding(registered.id, biometricCapture.embedding);
+      await recordBiometricVerificationEvent({
+        visitorId: registered.id,
+        result: "VERIFIED",
+        eventType: "visitor_biometric_enrollment",
+        destination: form.authorizedLocationId,
+        accessResult: "authorized",
+      });
+    } else {
+      await recordBiometricVerificationEvent({
+        visitorId: registered.id,
+        result: "VERIFIED",
+        eventType: "returning_visitor_check_in",
+        destination: form.authorizedLocationId,
+        accessResult: "authorized",
+      });
+    }
+
     setResult(registered);
     setStep("done");
   };
@@ -148,7 +157,9 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
         <DialogHeader>
           <DialogTitle>{step === "form" ? "Register Visitor" : step === "face" ? "Face Verification" : "Registration Successful"}</DialogTitle>
           <DialogDescription>
-            {step === "face" ? "AI face biometric verification · camera images remain local to this browser and are not uploaded or stored." : "Security / Reception desk"}
+            {step === "face"
+  ? "AI face biometric verification · stored biometric templates are used to recognize returning visitors."
+  : "Security / Reception desk"}
           </DialogDescription>
         </DialogHeader>
 
@@ -190,13 +201,18 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
                 <div><span className="text-muted-foreground">Email:</span> {form.email}</div>
                 <div><span className="text-muted-foreground">Visitor ID:</span> {existing?.id ?? "Assigned on save"}</div>
                 <div><span className="text-muted-foreground">Visitor Type:</span> {form.type}</div>
-                <div><span className="text-muted-foreground">Profile:</span> {existing ? "Existing visitor — profile found" : "New visitor — biometric will be enrolled"}</div>
-                <div><span className="text-muted-foreground">Biometric:</span> {biometricEnrollment === "enrolled" ? "Enrolled face matched · " + describeBiometricScore(biometricMatch ?? 0) : "Liveness passed · unique biometric template ready for enrollment"}</div>
-                {biometricIdentity && <div className="text-destructive"><span>Identity already enrolled:</span> {biometricIdentity.name} · duplicate registration blocked</div>}
+                <div><span className="text-muted-foreground">Profile:</span> {existing ? "Returning visitor — existing profile reused" : "New visitor — biometric will be enrolled"}</div>
+                <div><span className="text-muted-foreground">Biometric:</span> {biometricEnrollment === "enrolled" ? "Stored face recognized · " + describeBiometricScore(biometricMatch ?? 0) : "Live face passed · biometric template ready for enrollment"}</div>
+                {biometricIdentity && <div className="rounded-md bg-[hsl(var(--status-authorized)/0.10)] px-2 py-1 text-[hsl(var(--status-authorized))]">Returning visitor recognized: {biometricIdentity.name}. A new visitor profile will not be created.</div>}
                 <div><span className="text-muted-foreground">Access:</span> {securityLocations.find((l) => l.id === form.authorizedLocationId)?.name} + {form.type} rules</div>
               </div>
             )}
-            {verificationComplete && <Button onClick={() => void finish()}><ShieldCheck className="h-4 w-4 mr-2" />Create Visitor Profile &amp; Enroll Face</Button>}
+            {verificationComplete && (
+              <Button onClick={() => void finish()}>
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                {existing ? "Check In Returning Visitor" : "Create Visitor Profile & Enroll Face"}
+              </Button>
+            )}
           </div>
         )}
 
