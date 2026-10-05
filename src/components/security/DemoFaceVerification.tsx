@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, CheckCircle2, Loader2, ScanFace, X } from "lucide-react";
+import { Camera, CheckCircle2, Loader2, ScanFace, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { captureBiometricSample, describeBiometricScore, type BiometricCaptureResult } from "@/security/biometrics";
 
 interface Props {
-  onContinue: () => void | Promise<void>;
+  onContinue: (capture: BiometricCaptureResult) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -22,6 +23,7 @@ export default function DemoFaceVerification({ onContinue, onCancel }: Props) {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [capturedFrame, setCapturedFrame] = useState<string | null>(null);
+  const [captureResult, setCaptureResult] = useState<BiometricCaptureResult | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -35,6 +37,7 @@ export default function DemoFaceVerification({ onContinue, onCancel }: Props) {
   const requestCamera = useCallback(async () => {
     stopCamera();
     setCapturedFrame(null);
+    setCaptureResult(null);
     setCameraError(null);
     setPhase("requesting");
 
@@ -111,31 +114,36 @@ export default function DemoFaceVerification({ onContinue, onCancel }: Props) {
       return;
     }
 
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const context = canvas.getContext("2d");
-    if (!context) {
-      stopCamera();
-      setCameraError("Could not capture a camera frame. Retry camera access.");
-      setPhase("camera-error");
-      return;
-    }
-
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    setCapturedFrame(canvas.toDataURL("image/jpeg", 0.85));
-    stopCamera();
+    setCameraError(null);
     setPhase("verifying");
-    await new Promise((resolve) => window.setTimeout(resolve, 350));
-    setPhase("verified");
+
+    try {
+      const result = await captureBiometricSample(video);
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Could not capture the camera frame.");
+
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      setCapturedFrame(canvas.toDataURL("image/jpeg", 0.85));
+      setCaptureResult(result);
+      stopCamera();
+      setPhase("verified");
+    } catch (error) {
+      setCameraError(error instanceof Error ? error.message : "Biometric verification could not be completed.");
+      stopCamera();
+      setPhase("camera-error");
+    }
   };
 
   const continueAfterVerification = async () => {
+    if (!captureResult) return;
     try {
-      await onContinue();
+      await onContinue(captureResult);
       setPhase("complete");
     } catch (error) {
-      setCameraError(error instanceof Error ? error.message : "Could not continue after demo verification.");
+      setCameraError(error instanceof Error ? error.message : "Could not continue after biometric verification.");
       setPhase("verified");
     }
   };
@@ -146,7 +154,7 @@ export default function DemoFaceVerification({ onContinue, onCancel }: Props) {
         {capturedFrame ? (
           <img
             src={capturedFrame}
-            alt="Captured local demo verification frame"
+            alt="Captured local camera verification frame"
             className="h-full w-full rounded-lg object-contain"
           />
         ) : phase === "camera-ready" ? (
@@ -171,47 +179,61 @@ export default function DemoFaceVerification({ onContinue, onCancel }: Props) {
               {phase === "idle" && "Press Enable Camera to start"}
               {phase === "requesting" && "Requesting camera permission..."}
               {phase === "camera-denied" && "Camera permission denied or blocked"}
-              {phase === "camera-error" && "Camera unavailable"}
-              {phase === "verifying" && "Completing demo verification..."}
-              {(phase === "verified" || phase === "complete") && "Demo verification complete"}
+              {phase === "camera-error" && "Biometric check unavailable"}
+              {phase === "verifying" && "AI face biometric verification in progress..."}
+              {(phase === "verified" || phase === "complete") && "AI face biometric check passed"}
             </span>
           </>
         )}
       </div>
 
-      <div className="rounded-lg border border-border p-3 text-sm grid gap-1">
-        <p className="font-medium text-foreground">Camera + Demo Face Verification</p>
+      <div className="rounded-lg border border-border p-3 text-sm grid gap-2">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-primary" />
+          <p className="font-medium text-foreground">Real AI Face Biometric Verification</p>
+        </div>
         <p className="text-xs text-muted-foreground">
-          Camera capture is real browser camera access. This prototype does not perform biometric identity matching; the captured image remains in this component's memory and is not uploaded or stored.
+          The browser runs an on-device face embedding check plus anti-spoofing and liveness checks. Camera frames are processed locally and are not uploaded by the face engine.
         </p>
+        {captureResult && (
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="rounded border border-border p-2"><span className="text-muted-foreground block">Face</span>{describeBiometricScore(captureResult.faceScore)}</div>
+            <div className="rounded border border-border p-2"><span className="text-muted-foreground block">Anti-spoof</span>{describeBiometricScore(captureResult.antiSpoofScore)}</div>
+            <div className="rounded border border-border p-2"><span className="text-muted-foreground block">Liveness</span>{describeBiometricScore(captureResult.livenessScore)}</div>
+          </div>
+        )}
       </div>
 
-      {(phase === "camera-denied" || phase === "camera-error") && (
-        <p role="alert" className="text-sm text-destructive">{cameraError}</p>
-      )}
-      {phase === "verified" && cameraError && (
+      {(phase === "camera-denied" || phase === "camera-error" || (phase === "verified" && cameraError)) && (
         <p role="alert" className="text-sm text-destructive">{cameraError}</p>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {phase === "verified" ? (
-          <Button className="flex-1" onClick={continueAfterVerification}>
-            <CheckCircle2 className="h-4 w-4 mr-2" />Continue
-          </Button>
+          <>
+            <Button className="flex-1" onClick={() => void continueAfterVerification()} disabled={!captureResult}>
+              <CheckCircle2 className="h-4 w-4 mr-2" />Continue
+            </Button>
+            {cameraError && (
+              <Button variant="outline" onClick={() => void requestCamera()}>
+                <Camera className="h-4 w-4 mr-1" />Retry Face
+              </Button>
+            )}
+          </>
         ) : phase === "complete" ? (
-          <p className="flex-1 text-sm text-[hsl(var(--status-authorized))]">Verification complete.</p>
+          <p className="flex-1 text-sm text-[hsl(var(--status-authorized))]">Biometric verification complete.</p>
         ) : phase === "camera-denied" || phase === "camera-error" ? (
           <Button className="flex-1" onClick={() => void requestCamera()}>
             <Camera className="h-4 w-4 mr-2" />Enable Camera / Retry
           </Button>
         ) : phase === "camera-ready" ? (
           <Button className="flex-1" onClick={() => void capture()}>
-            <ScanFace className="h-4 w-4 mr-2" />Capture & Verify (Demo)
+            <ScanFace className="h-4 w-4 mr-2" />Scan Face & Verify
           </Button>
         ) : (
           <Button className="flex-1" onClick={() => void requestCamera()} disabled={phase === "requesting"}>
             {phase === "requesting" ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Requesting Camera</>
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Loading Camera</>
             ) : (
               <><Camera className="h-4 w-4 mr-2" />Enable Camera</>
             )}
