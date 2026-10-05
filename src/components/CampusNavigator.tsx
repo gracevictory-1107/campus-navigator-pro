@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
+import { Link } from "react-router-dom";
 import { allFloorPlans } from "@/data/floorPlans";
 import type { Room, RoomType } from "@/data/floorPlans";
 import CampusSidebar from "./CampusSidebar";
@@ -10,10 +11,13 @@ import RoomInfoPanel from "./RoomInfoPanel";
 import NavigationPanel from "./NavigationPanel";
 import CategoryChips from "./CategoryChips";
 import FavoritesPanel from "./FavoritesPanel";
-import { Menu, X, MapPin, Navigation2, Star } from "lucide-react";
+import { Menu, X, MapPin, Navigation2, Shield, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import type { IndoorRoute } from "@/lib/indoorRouting";
+import { useSecurity } from "@/security/SecurityContext";
+import type { RouteAccessDecision, RestrictedRouteArea } from "@/security/routeAccess";
 
 export default function CampusNavigator() {
   const [activeFloor, setActiveFloor] = useState("campus");
@@ -23,7 +27,11 @@ export default function CampusNavigator() {
   const [showFavorites, setShowFavorites] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState<RoomType | null>(null);
+  const [activeRoute, setActiveRoute] = useState<IndoorRoute | null>(null);
+  const [restrictedRouteAreas, setRestrictedRouteAreas] = useState<RestrictedRouteArea[]>([]);
+  const [routeAccessNotice, setRouteAccessNotice] = useState<{ allowed: boolean; visitorName: string; destination: string } | null>(null);
   const isMobile = useIsMobile();
+  const security = useSecurity();
 
   const [favorites, setFavorites] = useLocalStorage<string[]>("campus-favorites", []);
   const [recentSearches, setRecentSearches] = useLocalStorage<string[]>("campus-recent", []);
@@ -34,6 +42,32 @@ export default function CampusNavigator() {
     setActiveFloor(floorId);
     setHighlightRoom(roomId);
     setTimeout(() => setHighlightRoom(undefined), 6000);
+  }, []);
+
+  const focusRestrictedArea = useCallback((floorId: string) => {
+    setActiveFloor(floorId);
+    setHighlightRoom(undefined);
+  }, []);
+
+  const handleRouteAuthorization = useCallback(async (visitorId: string, route: IndoorRoute): Promise<RouteAccessDecision> => {
+    const decision = await security.authorizeIndoorRoute(visitorId, route);
+    const visitor = security.visitors.find((candidate) => candidate.id === visitorId);
+    if (decision.allowed) {
+      setActiveRoute(route);
+      setRestrictedRouteAreas([]);
+      setRouteAccessNotice({ allowed: true, visitorName: visitor?.name ?? "Visitor", destination: route.toLabel });
+    } else {
+      setActiveRoute(null);
+      setRestrictedRouteAreas(decision.deniedAreas);
+      setRouteAccessNotice({ allowed: false, visitorName: visitor?.name ?? "Visitor", destination: route.toLabel });
+    }
+    return decision;
+  }, [security]);
+
+  const clearRouteAuthorization = useCallback(() => {
+    setActiveRoute(null);
+    setRestrictedRouteAreas([]);
+    setRouteAccessNotice(null);
   }, []);
 
   const handleRoomClick = useCallback((room: Room) => {
@@ -66,8 +100,8 @@ export default function CampusNavigator() {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-card shadow-soft z-20 flex-shrink-0">
-        <div className="flex items-center gap-3">
+      <header className="flex flex-wrap items-center justify-between gap-y-2 px-4 py-3 border-b border-border bg-card shadow-soft z-40 flex-shrink-0">
+        <div className="flex min-w-0 items-center gap-3">
           <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" onClick={() => setSidebarOpen(!sidebarOpen)}>
             {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
@@ -81,7 +115,7 @@ export default function CampusNavigator() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full min-w-0 items-center justify-end gap-2 sm:w-auto">
           <SearchBar
             onNavigate={handleNavigate}
             favorites={favorites}
@@ -104,6 +138,12 @@ export default function CampusNavigator() {
           >
             <Navigation2 className="h-3.5 w-3.5" />
             <span className="text-xs">Directions</span>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="h-9 gap-1.5 px-2 sm:px-3" aria-label="Security Sign In">
+            <Link to="/security" aria-label="Security Sign In">
+              <Shield className="h-3.5 w-3.5" />
+              <span className="text-xs">Security</span>
+            </Link>
           </Button>
           <ExportPDF />
         </div>
@@ -149,12 +189,26 @@ export default function CampusNavigator() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden relative">
+                {routeAccessNotice && (
+                  <div className={`absolute top-3 left-3 z-10 rounded-lg border px-3 py-2 shadow-soft text-sm font-semibold ${
+                    routeAccessNotice.allowed
+                      ? "border-emerald-600/30 bg-card/95 text-emerald-700"
+                      : "border-red-600/40 bg-card/95 text-red-700"
+                  }`}>
+                    {routeAccessNotice.allowed ? "Access Allowed" : "Access Restricted"}
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      {routeAccessNotice.visitorName} · {routeAccessNotice.destination}
+                    </span>
+                  </div>
+                )}
                 <FloorPlanSVG
                   plan={plan}
                   highlightRoomId={highlightRoom}
                   onRoomClick={handleRoomClick}
                   categoryFilter={categoryFilter}
+                  routeLeg={activeRoute?.legs.find((leg) => leg.floorId === activeFloor)}
+                  restrictedRoomIds={restrictedRouteAreas.filter((area) => area.floorId === activeFloor).map((area) => area.roomId)}
                 />
               </div>
             </div>
@@ -198,7 +252,14 @@ export default function CampusNavigator() {
           {/* Navigation Panel */}
           <AnimatePresence>
             {showNav && (
-              <NavigationPanel onClose={() => setShowNav(false)} onNavigate={handleNavigate} />
+              <NavigationPanel
+                onClose={() => setShowNav(false)}
+                onNavigate={handleNavigate}
+                visitors={security.visitors}
+                onCheckRoute={handleRouteAuthorization}
+                onRouteChanged={clearRouteAuthorization}
+                onFocusRestrictedArea={focusRestrictedArea}
+              />
             )}
           </AnimatePresence>
         </main>

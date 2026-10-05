@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import type { FloorPlan, Room, RoomType } from "@/data/floorPlans";
+import type { RouteLeg } from "@/lib/indoorRouting";
 import { ZoomIn, ZoomOut, Maximize2, LocateFixed, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import RoomLegend from "./RoomLegend";
@@ -28,6 +29,32 @@ const roomTextColors: Record<RoomType, string> = {
   dean: "hsl(var(--room-dean-text))", court: "hsl(var(--room-court-text))",
 };
 
+function getRouteDots(points: RouteLeg["points"]) {
+  const segments = points.slice(1).map((point, index) => {
+    const start = points[index];
+    const dx = point.x - start.x;
+    const dy = point.y - start.y;
+    return { start, dx, dy, length: Math.hypot(dx, dy) };
+  });
+  const totalLength = segments.reduce((sum, segment) => sum + segment.length, 0);
+  const dots: { x: number; y: number }[] = [];
+  const spacing = 20;
+
+  for (let distance = 12; distance < totalLength - 12; distance += spacing) {
+    let remaining = distance;
+    const segment = segments.find((candidate) => {
+      if (remaining <= candidate.length) return true;
+      remaining -= candidate.length;
+      return false;
+    });
+    if (segment && segment.length > 0) {
+      const ratio = remaining / segment.length;
+      dots.push({ x: segment.start.x + segment.dx * ratio, y: segment.start.y + segment.dy * ratio });
+    }
+  }
+  return dots;
+}
+
 export interface PersonMarker {
   id: string;
   roomId: string;
@@ -49,6 +76,7 @@ interface Props {
   categoryFilter?: RoomType | null;
   routeFromId?: string;
   routeToId?: string;
+  routeLeg?: RouteLeg;
   markers?: PersonMarker[];
   onMarkerClick?: (id: string) => void;
   cameras?: CameraPin[];
@@ -56,7 +84,7 @@ interface Props {
   restrictedRoomIds?: string[];
 }
 
-export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categoryFilter, routeFromId, routeToId, markers, onMarkerClick, cameras, onCameraClick, restrictedRoomIds }: Props) {
+export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categoryFilter, routeFromId, routeToId, routeLeg, markers, onMarkerClick, cameras, onCameraClick, restrictedRoomIds }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -276,8 +304,8 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
               </text>
             ))}
 
-            {/* Route line */}
-            {routeLine && (
+            {/* Legacy route line */}
+            {!routeLeg && routeLine && (
               <g>
                 <line
                   x1={routeLine.x1} y1={routeLine.y1} x2={routeLine.x2} y2={routeLine.y2}
@@ -369,6 +397,40 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
               );
             })}
 
+            {routeLeg && (
+              <g pointerEvents="none">
+                {getRouteDots(routeLeg.points).map((point, index) => (
+                  <circle
+                    key={`route-dot-${index}`}
+                    cx={point.x}
+                    cy={point.y}
+                    r="2.8"
+                    fill="hsl(145, 65%, 36%)"
+                    stroke="white"
+                    strokeWidth="1"
+                  />
+                ))}
+                {[
+                  { id: routeLeg.startRoomId, label: routeLeg.startKind === "start" ? "S" : "T", kind: routeLeg.startKind },
+                  { id: routeLeg.endRoomId, label: routeLeg.endKind === "destination" ? "D" : "T", kind: routeLeg.endKind },
+                ].map((marker, index) => {
+                  const room = plan.rooms.find((item) => item.id === marker.id);
+                  if (!room) return null;
+                  const x = room.x + room.w / 2;
+                  const y = room.y - 13;
+                  const color = marker.kind === "destination" ? "hsl(145, 65%, 36%)" : marker.kind === "start" ? "hsl(145, 65%, 36%)" : "hsl(38, 90%, 48%)";
+                  return (
+                    <g key={`route-marker-${index}`}>
+                      <circle cx={x} cy={y} r="9" fill={color} stroke="white" strokeWidth="2" />
+                      <text x={x} y={y + 0.5} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="8" fontWeight="700">
+                        {marker.label}
+                      </text>
+                    </g>
+                  );
+                })}
+              </g>
+            )}
+
             {/* Route markers */}
             {[routeFromId, routeToId].map((id, idx) => {
               if (!id) return null;
@@ -390,10 +452,18 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
             {restrictedRoomIds?.map((id) => {
               const room = plan.rooms.find((r) => r.id === id);
               if (!room) return null;
+              const markerX = room.x + room.w - 10;
+              const markerY = room.y + 10;
               return (
-                <rect key={`rz-${id}`} x={room.x + 2} y={room.y + 2} width={room.w - 4} height={room.h - 4} rx={5}
-                  fill="hsl(var(--status-restricted) / 0.06)" stroke="hsl(var(--status-restricted) / 0.6)"
-                  strokeWidth={1.2} strokeDasharray="5 3" pointerEvents="none" />
+                <g key={`rz-${id}`} pointerEvents="none">
+                  <rect x={room.x + 2} y={room.y + 2} width={room.w - 4} height={room.h - 4} rx={5}
+                    fill="hsl(var(--status-restricted) / 0.2)" stroke="hsl(var(--status-restricted))"
+                    strokeWidth={2.5} strokeDasharray="5 3" />
+                  <circle cx={markerX} cy={markerY} r={9} fill="hsl(var(--status-restricted))" stroke="white" strokeWidth={1.5} />
+                  <text x={markerX} y={markerY + 0.5} textAnchor="middle" dominantBaseline="middle"
+                    fill="white" fontSize={11} fontWeight={800}>!</text>
+                  <title>{`${room.label || "Area"} — access restricted`}</title>
+                </g>
               );
             })}
 

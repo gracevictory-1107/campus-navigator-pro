@@ -1,8 +1,17 @@
 export type Role = "student" | "faculty" | "staff" | "management" | "security" | "admin";
-export type PersonType = "Parent" | "Visitor" | "Recruiter";
+export const personTypes = [
+  "Parent",
+  "Product/Business Visitor",
+  "Inspirational/Motivational Visitor",
+  "Faculty/Staff",
+  "Recruiter",
+  "General Visitor",
+] as const;
+export type PersonType = (typeof personTypes)[number];
 export type AccessStatus = "authorized" | "restricted";
-export type VisitorStatus = "Active" | "Checked Out" | "Blocked";
+export type VisitorStatus = "Registered" | "Active" | "Checked Out" | "Blocked";
 export type AlertStatus = "Active" | "Acknowledged" | "Resolved";
+export type AlertSeverity = "Critical" | "High" | "Medium" | "Low";
 
 /** A named security location mapped onto an existing floor-plan room (geometry is never copied). */
 export interface SecurityLocation {
@@ -33,6 +42,7 @@ export interface Visitor {
   authorizedLocationId: string;
   expectedExit: string;
   checkIn: number;
+  checkedOutAt?: number;
   status: VisitorStatus;
   verified: boolean;
   returning: boolean;
@@ -52,7 +62,9 @@ export interface LocationEvent {
   personName: string;
   personType: PersonType;
   cameraId: string;
+  source?: "route";
   locationId: string;
+  locationName?: string;
   building: string;
   floorId: string;
   roomId: string;
@@ -63,7 +75,7 @@ export interface LocationEvent {
 export interface SecurityAlert {
   id: string;
   event: LocationEvent;
-  severity: "HIGH";
+  severity: AlertSeverity;
   status: AlertStatus;
   history: { status: AlertStatus; at: number; by: Role }[];
 }

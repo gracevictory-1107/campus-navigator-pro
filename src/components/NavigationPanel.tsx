@@ -1,12 +1,19 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { getAllRooms, allFloorPlans, buildingSections } from "@/data/floorPlans";
-import { X, Navigation2, ArrowRight, Footprints } from "lucide-react";
+import { X, Navigation2, ArrowRight, Footprints, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { calculateIndoorRoute, type IndoorRoute } from "@/lib/indoorRouting";
+import type { RouteAccessDecision } from "@/security/routeAccess";
+import { personTypes, type PersonType, type SecurityLocation, type Visitor } from "@/security/types";
 
 interface Props {
   onClose: () => void;
   onNavigate: (floorId: string, roomId: string) => void;
+  visitors: Visitor[];
+  onCheckRoute: (visitorId: string, route: IndoorRoute) => Promise<RouteAccessDecision>;
+  onRouteChanged: () => void;
+  onFocusRestrictedArea: (floorId: string, roomId: string) => void;
 }
 
 function getFloorOrder(floorId: string): number {
@@ -27,14 +34,25 @@ function getBuilding(floorId: string): string {
   return "Campus";
 }
 
-export default function NavigationPanel({ onClose, onNavigate }: Props) {
+export default function NavigationPanel({ onClose, onNavigate, visitors, onCheckRoute, onRouteChanged, onFocusRestrictedArea }: Props) {
   const [fromQuery, setFromQuery] = useState("");
   const [toQuery, setToQuery] = useState("");
   const [fromRoom, setFromRoom] = useState<{ floorId: string; roomId: string; label: string } | null>(null);
   const [toRoom, setToRoom] = useState<{ floorId: string; roomId: string; label: string } | null>(null);
   const [activeInput, setActiveInput] = useState<"from" | "to" | null>(null);
+  const [visitorCategory, setVisitorCategory] = useState<PersonType>(visitors[0]?.type ?? "General Visitor");
+  const [visitorId, setVisitorId] = useState(visitors[0]?.id ?? "");
+  const [routeDecision, setRouteDecision] = useState<RouteAccessDecision | null>(null);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
 
   const allRooms = useMemo(() => getAllRooms(), []);
+  const categoryVisitors = visitors.filter((candidate) => candidate.type === visitorCategory);
+  const visitor = categoryVisitors.find((candidate) => candidate.id === visitorId) ?? categoryVisitors[0];
+  const route = useMemo(() => {
+    if (!fromRoom || !toRoom) return null;
+    return calculateIndoorRoute(fromRoom.floorId, fromRoom.roomId, toRoom.floorId, toRoom.roomId);
+  }, [fromRoom, toRoom]);
 
   const searchResults = useMemo(() => {
     const q = activeInput === "from" ? fromQuery : toQuery;
@@ -67,12 +85,17 @@ export default function NavigationPanel({ onClose, onNavigate }: Props) {
       const toFloor = getFloorOrder(toRoom.floorId);
       const direction = toFloor > fromFloor ? "up" : "down";
       const floors = Math.abs(toFloor - fromFloor);
-      steps.push({ text: `Head to the nearest staircase or lift`, icon: "🚶" });
-      steps.push({ text: `Go ${direction} ${floors} floor${floors > 1 ? 's' : ''} to ${toPlan?.title || toRoom.floorId}`, icon: direction === "up" ? "⬆️" : "⬇️" });
+      const sourceLeg = route?.legs[0];
+      const destinationLeg = route?.legs[route.legs.length - 1];
+      steps.push({ text: `Walk to ${sourceLeg?.endLabel || "the mapped stair or lift"}`, icon: "🚶" });
+      steps.push({ text: `Go ${direction} ${floors} floor${floors > 1 ? 's' : ''} to ${toPlan?.title || toRoom.floorId} via ${destinationLeg?.startLabel || "the corresponding connector"}`, icon: direction === "up" ? "⬆️" : "⬇️" });
       steps.push({ text: `Find ${toRoom.label} along the corridor`, icon: "🚶" });
     } else {
-      steps.push({ text: `Exit ${fromBuilding}`, icon: "🚪" });
-      steps.push({ text: `Walk to ${toBuilding} via the campus corridor`, icon: "🚶" });
+      const sourceLeg = route?.legs[0];
+      const destinationLeg = route?.legs[route.legs.length - 1];
+      steps.push({ text: `Exit ${fromBuilding} at ${sourceLeg?.endLabel || "a mapped entrance/exit"}`, icon: "🚪" });
+      steps.push({ text: `Continue outdoors to ${toBuilding}; no between-building route geometry is available`, icon: "🚶" });
+      steps.push({ text: `Enter ${toBuilding} at ${destinationLeg?.startLabel || "a mapped entrance/exit"}`, icon: "🚪" });
       const toFloorNum = getFloorOrder(toRoom.floorId) % 10;
       if (toFloorNum > 0) {
         steps.push({ text: `Take the stairs/lift to ${toPlan?.title || toRoom.floorId}`, icon: "⬆️" });
@@ -82,9 +105,12 @@ export default function NavigationPanel({ onClose, onNavigate }: Props) {
 
     steps.push({ text: `Arrive at ${toRoom.label}`, icon: "🏁" });
     return steps;
-  }, [fromRoom, toRoom]);
+  }, [fromRoom, toRoom, route]);
 
   const selectRoom = (floorId: string, roomId: string, label: string) => {
+    setRouteDecision(null);
+    setCheckError(null);
+    onRouteChanged();
     if (activeInput === "from") {
       setFromRoom({ floorId, roomId, label });
       setFromQuery(label);
@@ -93,6 +119,47 @@ export default function NavigationPanel({ onClose, onNavigate }: Props) {
       setToQuery(label);
     }
     setActiveInput(null);
+  };
+
+  const clearRouteCheck = () => {
+    setRouteDecision(null);
+    setCheckError(null);
+    onRouteChanged();
+  };
+
+  const selectAlternative = (location: SecurityLocation) => {
+    const room = allFloorPlans[location.floorId]?.rooms.find((candidate) => candidate.id === location.roomId);
+    if (!room) {
+      setCheckError(`The permitted location "${location.name}" is not mapped to a room.`);
+      return;
+    }
+    clearRouteCheck();
+    setToRoom({ floorId: location.floorId, roomId: room.id, label: room.label });
+    setToQuery(room.label);
+    setActiveInput(null);
+  };
+
+  const checkAndShowRoute = async () => {
+    if (!visitor || !route || !fromRoom || !toRoom) return;
+    setIsCheckingAccess(true);
+    setCheckError(null);
+    setRouteDecision(null);
+    try {
+      const decision = await onCheckRoute(visitor.id, route);
+      setRouteDecision(decision);
+      if (decision.allowed) {
+        onNavigate(fromRoom.floorId, fromRoom.roomId);
+        onClose();
+      } else {
+        const restrictedArea = decision.deniedAreas[0];
+        if (restrictedArea) onFocusRestrictedArea(restrictedArea.floorId, restrictedArea.roomId);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to verify route access.";
+      setCheckError(message);
+    } finally {
+      setIsCheckingAccess(false);
+    }
   };
 
   return (
@@ -117,10 +184,50 @@ export default function NavigationPanel({ onClose, onNavigate }: Props) {
       {/* From / To inputs */}
       <div className="p-4 space-y-3 border-b border-border relative">
         <div>
+          <label htmlFor="route-visitor-category" className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">Visitor Category</label>
+          <select
+            id="route-visitor-category"
+            value={visitorCategory}
+            onChange={(event) => {
+              setVisitorCategory(event.target.value as PersonType);
+              setVisitorId("");
+              clearRouteCheck();
+            }}
+            className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-secondary outline-none"
+          >
+            {personTypes.map((category) => <option key={category} value={category}>{category}</option>)}
+          </select>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Uses the existing {visitorCategory} access rules.
+          </p>
+        </div>
+        <div>
+          <label htmlFor="route-visitor" className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">Registered Visitor</label>
+          <select
+            id="route-visitor"
+            value={visitor?.id ?? ""}
+            onChange={(event) => {
+              setVisitorId(event.target.value);
+              clearRouteCheck();
+            }}
+            className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-secondary outline-none"
+          >
+            {categoryVisitors.length === 0 && <option value="">No registered visitors in this category</option>}
+            {categoryVisitors.map((candidate) => (
+              <option key={candidate.id} value={candidate.id}>{candidate.name} · {candidate.type}</option>
+            ))}
+          </select>
+          {visitor && (
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Existing {visitor.type} permissions · {visitor.status}
+            </p>
+          )}
+        </div>
+        <div>
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">From</label>
           <input
             value={fromQuery}
-            onChange={(e) => { setFromQuery(e.target.value); setActiveInput("from"); setFromRoom(null); }}
+            onChange={(e) => { clearRouteCheck(); setFromQuery(e.target.value); setActiveInput("from"); setFromRoom(null); }}
             onFocus={() => setActiveInput("from")}
             placeholder="Search starting room..."
             className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-secondary focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
@@ -135,7 +242,7 @@ export default function NavigationPanel({ onClose, onNavigate }: Props) {
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">To</label>
           <input
             value={toQuery}
-            onChange={(e) => { setToQuery(e.target.value); setActiveInput("to"); setToRoom(null); }}
+            onChange={(e) => { clearRouteCheck(); setToQuery(e.target.value); setActiveInput("to"); setToRoom(null); }}
             onFocus={() => setActiveInput("to")}
             placeholder="Search destination room..."
             className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-secondary focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
@@ -163,36 +270,74 @@ export default function NavigationPanel({ onClose, onNavigate }: Props) {
 
       {/* Directions */}
       <div className="flex-1 overflow-y-auto p-4">
-        {directions ? (
+        {directions && route && visitor ? (
           <div className="space-y-0">
-            {directions.map((step, i) => (
+            {!routeDecision && (
+              <p className="mb-3 rounded-lg border border-border bg-secondary/60 p-3 text-xs text-muted-foreground">
+                Check this visitor’s existing category permissions before generating directions.
+              </p>
+            )}
+
+            {routeDecision?.allowed && (
+              <div className="mb-3 rounded-lg border border-emerald-600/30 bg-emerald-500/5 p-3" role="status">
+                <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                  <ShieldCheck className="h-4 w-4" /> Access Allowed
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Approx. {route.distanceMeters.toFixed(1)} m mapped distance · {route.walkingMinutes} min walking
+                </p>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Estimate assumes 0.05 m per map unit; plans have no scale or walkable-path graph.
+                  {route.legs.length > 1 && " Vertical/outdoor transition distance is not included."}
+                </p>
+              </div>
+            )}
+
+            {routeDecision?.allowed && directions.map((step, i) => (
               <div key={i} className="flex gap-3 relative">
-                {/* Vertical line */}
-                {i < directions.length - 1 && (
-                  <div className="absolute left-[15px] top-8 bottom-0 w-px bg-border" />
-                )}
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-sm z-10">
-                  {step.icon}
-                </div>
-                <div className="pb-4 pt-1">
-                  <p className="text-sm text-foreground">{step.text}</p>
-                </div>
+                {i < directions.length - 1 && <div className="absolute left-[15px] top-8 bottom-0 w-px bg-border" />}
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-sm z-10">{step.icon}</div>
+                <div className="pb-4 pt-1"><p className="text-sm text-foreground">{step.text}</p></div>
               </div>
             ))}
 
-            {/* Navigate button */}
+            {routeDecision && !routeDecision.allowed && (
+              <div className="mb-3 rounded-lg border border-red-600/40 bg-red-500/5 p-3" role="alert">
+                <p className="flex items-center gap-2 text-sm font-semibold text-red-700">
+                  <ShieldAlert className="h-4 w-4" /> Access Restricted
+                </p>
+                <p className="mt-1 text-xs text-foreground">
+                  {visitor.name} ({visitor.type}) does not have permission to access {routeDecision.deniedAreas.map((area) => area.label).join(", ")}.
+                  No route was generated.
+                </p>
+                {routeDecision.permittedAlternatives.length > 0 && (
+                  <div className="mt-3">
+                    <label htmlFor="permitted-alternative" className="mb-1 block text-xs font-medium text-foreground">Choose a permitted destination instead</label>
+                    <select
+                      id="permitted-alternative"
+                      defaultValue=""
+                      onChange={(event) => {
+                        const alternative = routeDecision.permittedAlternatives.find((location) => location.id === event.target.value);
+                        if (alternative) selectAlternative(alternative);
+                      }}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="" disabled>Select an allowed location</option>
+                      {routeDecision.permittedAlternatives.map((location) => (
+                        <option key={location.id} value={location.id}>{location.name} · {location.floorLabel}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {checkError && <p className="mb-3 text-xs text-red-700" role="alert">{checkError}</p>}
+
             <div className="pt-2">
-              <Button
-                className="w-full gap-2"
-                onClick={() => {
-                  if (toRoom) {
-                    onNavigate(toRoom.floorId, toRoom.roomId);
-                    onClose();
-                  }
-                }}
-              >
+              <Button className="w-full gap-2" onClick={checkAndShowRoute} disabled={isCheckingAccess || !visitor}>
                 <Footprints className="h-4 w-4" />
-                Show on Map
+                {isCheckingAccess ? "Checking access..." : "Check Access & Generate Route"}
               </Button>
             </div>
           </div>

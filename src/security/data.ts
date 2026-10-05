@@ -1,4 +1,4 @@
-import type { AccessRule, Camera, PersonType, SecurityLocation, Visitor } from "./types";
+import { personTypes, type AccessRule, type Camera, type PersonType, type SecurityLocation, type Visitor } from "./types";
 
 // Every location points at an existing room in the floor-plan data module.
 export const securityLocations: SecurityLocation[] = [
@@ -24,11 +24,14 @@ export const cameras: Camera[] = [
 
 const allow: Record<PersonType, string[]> = {
   Parent: ["main-gate", "reception", "meeting-room", "library"],
-  Visitor: ["main-gate", "reception", "library"],
+  "Product/Business Visitor": ["main-gate", "reception", "meeting-room", "placement-cell"],
+  "Inspirational/Motivational Visitor": ["main-gate", "reception", "meeting-room", "library"],
+  "Faculty/Staff": ["main-gate", "reception", "meeting-room", "placement-cell", "cse-lab", "staff-room"],
   Recruiter: ["main-gate", "reception", "meeting-room", "placement-cell"],
+  "General Visitor": ["main-gate", "reception", "library"],
 };
 
-export const defaultRules: AccessRule[] = (Object.keys(allow) as PersonType[]).flatMap((type) =>
+export const defaultRules: AccessRule[] = personTypes.flatMap((type) =>
   securityLocations.map((loc) => ({
     id: `${type}:${loc.id}`,
     personType: type,
