@@ -110,7 +110,7 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
         {faceSignInOpen ? (
           <DemoFaceVerification
             identityRequired={false}
-            onContinue={() => {
+            onContinue={(_capture) => {
               sec.setRole("security");
               onRoleChange("security");
               setFaceSignInOpen(false);
