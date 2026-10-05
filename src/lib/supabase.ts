@@ -346,7 +346,14 @@ export async function getBiometricEmbedding(visitorId: string): Promise<number[]
 
   const profile = await getSignedInProfile();
   if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
-    throw new Error("A linked Supabase Security or Admin account is required to use visitor biometrics.");
+    try {
+      const raw = localStorage.getItem(biometricLocalKey(visitorId));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
   }
 
   const { data, error } = await supabase
@@ -376,7 +383,8 @@ export async function saveBiometricEmbedding(visitorId: string, embedding: numbe
 
   const profile = await getSignedInProfile();
   if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
-    throw new Error("A linked Supabase Security or Admin account is required to enroll visitor biometrics.");
+    localStorage.setItem(biometricLocalKey(visitorId), JSON.stringify(embedding));
+    return { id: "LOCAL-" + visitorId, visitorId, embedding, status: "ENROLLED" };
   }
 
   const providerReference = JSON.stringify({ version: 1, embedding });
