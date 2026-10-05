@@ -11,7 +11,7 @@ const visitor = (overrides: Partial<Visitor>): Visitor => ({
 
 describe("evaluateIndoorRouteAccess", () => {
   it("allows a recruiter to reach their explicitly authorized placement cell", async () => {
-    const route = calculateIndoorRoute("mb-gf", "principal", "mb-gf", "director");
+    const route = calculateIndoorRoute("mb-gf", "main-entrance", "mb-gf", "director");
     expect(route).not.toBeNull();
     const decision = await evaluateIndoorRouteAccess(
       visitor({ authorizedLocationId: "placement-cell" }),
@@ -33,8 +33,8 @@ describe("evaluateIndoorRouteAccess", () => {
     expect(decision.permittedAlternatives.some((location) => location.id === "placement-cell")).toBe(true);
   });
 
-  it("allows a parent category to reach the library under the existing access rules", async () => {
-    const route = calculateIndoorRoute("mb-gf", "board-room", "mb-gf", "library");
+  it("denies a parent category from reaching the library under the current visitor rules", async () => {
+    const route = calculateIndoorRoute("mb-gf", "main-entrance", "mb-gf", "library");
     expect(route).not.toBeNull();
     const decision = await evaluateIndoorRouteAccess(
       visitor({ type: "Parent", authorizedLocationId: undefined }),
@@ -42,8 +42,8 @@ describe("evaluateIndoorRouteAccess", () => {
       route!
     );
 
-    expect(decision.allowed).toBe(true);
-    expect(decision.deniedAreas).toEqual([]);
+    expect(decision.allowed).toBe(false);
+    expect(decision.deniedAreas[0]).toMatchObject({ roomId: "library", label: "Library" });
   });
 
   it("denies a route crossing a restricted staff room even when its destination is allowed", async () => {
