@@ -18,6 +18,8 @@ export default function VisitorProfileCard({ visitor }: { visitor: Visitor }) {
         <Badge variant={statusVariant}>{visitor.status}</Badge>
       </div>
       <div className="grid grid-cols-2 gap-2 text-xs">
+        <div><p className="text-muted-foreground">Email</p><p className="text-foreground break-all">{visitor.email || "Not available"}</p></div>
+        <div><p className="text-muted-foreground">Mobile</p><p className="text-foreground">{visitor.mobile || "Not available"}</p></div>
         <div><p className="text-muted-foreground">Visiting</p><p className="text-foreground">{visitor.visiting}</p></div>
         <div><p className="text-muted-foreground">Purpose</p><p className="text-foreground">{visitor.purpose}</p></div>
         <div><p className="text-muted-foreground">Check-in</p><p className="text-foreground">{formatTime(visitor.checkIn)}</p></div>
