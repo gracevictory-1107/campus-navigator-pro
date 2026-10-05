@@ -106,8 +106,8 @@ interface Database {
       visitors: Table<VisitorRow, Omit<VisitorRow, "created_at" | "updated_at">>;
       security_events: Table<SecurityEventRow, Omit<SecurityEventRow, "created_at">>;
       alerts: Table<AlertRow, Omit<AlertRow, "created_at" | "updated_at">>;
-      biometric_profiles: Table<BiometricProfileRow, Omit<BiometricProfileRow, "created_at" | "updated_at">>;
-      biometric_verification_events: Table<BiometricVerificationEventRow, Omit<BiometricVerificationEventRow, "created_at">>;
+      biometric_profiles: Table<BiometricProfileRow, Omit<BiometricProfileRow, "id" | "created_at" | "updated_at">>;
+      biometric_verification_events: Table<BiometricVerificationEventRow, Omit<BiometricVerificationEventRow, "id" | "created_at">>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
