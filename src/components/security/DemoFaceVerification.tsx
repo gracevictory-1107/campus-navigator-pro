@@ -6,6 +6,7 @@ import { captureBiometricSample, describeBiometricScore, type BiometricCaptureRe
 interface Props {
   onContinue: (capture: BiometricCaptureResult) => void | Promise<void>;
   onCancel: () => void;
+  identityRequired?: boolean;
 }
 
 type Phase =
@@ -18,7 +19,7 @@ type Phase =
   | "verified"
   | "complete";
 
-export default function DemoFaceVerification({ onContinue, onCancel }: Props) {
+export default function DemoFaceVerification({ onContinue, onCancel, identityRequired = true }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -190,10 +191,12 @@ export default function DemoFaceVerification({ onContinue, onCancel }: Props) {
       <div className="rounded-lg border border-border p-3 text-sm grid gap-2">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-primary" />
-          <p className="font-medium text-foreground">Real AI Face Biometric Verification</p>
+          <p className="font-medium text-foreground">{identityRequired ? "Real AI Face Biometric Verification" : "AI Camera Liveness Check"}</p>
         </div>
         <p className="text-xs text-muted-foreground">
-          The browser runs an on-device face embedding check plus anti-spoofing and liveness checks. Camera frames are processed locally and are not uploaded by the face engine.
+          {identityRequired
+            ? "The browser runs an on-device face embedding check plus anti-spoofing and liveness checks. Camera frames are processed locally and are not uploaded by the face engine."
+            : "This flow checks that a real live face is present, but it does not identify a security account. Use the campus account sign-in for identity authentication."}
         </p>
         {captureResult && (
           <div className="grid grid-cols-3 gap-2 text-xs">
