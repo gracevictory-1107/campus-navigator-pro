@@ -203,7 +203,7 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
                 <div><span className="text-muted-foreground">Visitor Type:</span> {form.type}</div>
                 <div><span className="text-muted-foreground">Profile:</span> {existing ? "Returning visitor — existing profile reused" : "New visitor — biometric will be enrolled"}</div>
                 <div><span className="text-muted-foreground">Biometric:</span> {biometricEnrollment === "enrolled" ? "Stored face recognized · " + describeBiometricScore(biometricMatch ?? 0) : "Live face passed · biometric template ready for enrollment"}</div>
-                {biometricIdentity && <div className="rounded-md bg-[hsl(var(--status-authorized)/0.10)] px-2 py-1 text-[hsl(var(--status-authorized))]">Returning visitor recognized: {biometricIdentity.name}. A new visitor profile will not be created.</div>}
+                {biometricIdentity && <div className="rounded-md bg-[hsl(var(--status-authorized)/0.10)] px-2 py-1 text-[hsl(var(--status-authorized))]">Face matched - {biometricIdentity.name}. Existing visitor profile reused; a new visitor profile will not be created.</div>}
                 <div><span className="text-muted-foreground">Access:</span> {securityLocations.find((l) => l.id === form.authorizedLocationId)?.name} + {form.type} rules</div>
               </div>
             )}
