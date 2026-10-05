@@ -5,7 +5,7 @@ import { X, Navigation2, ArrowRight, Footprints, ShieldAlert, ShieldCheck } from
 import { Button } from "@/components/ui/button";
 import { calculateIndoorRoute, type IndoorRoute } from "@/lib/indoorRouting";
 import type { RouteAccessDecision } from "@/security/routeAccess";
-import { personTypes, type PersonType, type SecurityLocation, type Visitor } from "@/security/types";
+import { personTypes, type PersonType, type Role, type SecurityLocation, type Visitor } from "@/security/types";
 
 interface Props {
   onClose: () => void;
@@ -14,6 +14,7 @@ interface Props {
   onCheckRoute: (visitorId: string, route: IndoorRoute) => Promise<RouteAccessDecision>;
   onRouteChanged: () => void;
   onFocusRestrictedArea: (floorId: string, roomId: string) => void;
+  accessRole: Role;
 }
 
 function getFloorOrder(floorId: string): number {
@@ -34,7 +35,7 @@ function getBuilding(floorId: string): string {
   return "Campus";
 }
 
-export default function NavigationPanel({ onClose, onNavigate, visitors, onCheckRoute, onRouteChanged, onFocusRestrictedArea }: Props) {
+export default function NavigationPanel({ onClose, onNavigate, visitors, onCheckRoute, onRouteChanged, onFocusRestrictedArea, accessRole }: Props) {
   const [fromQuery, setFromQuery] = useState("");
   const [toQuery, setToQuery] = useState("");
   const [fromRoom, setFromRoom] = useState<{ floorId: string; roomId: string; label: string } | null>(null);
@@ -47,8 +48,10 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
   const [checkError, setCheckError] = useState<string | null>(null);
 
   const allRooms = useMemo(() => getAllRooms(), []);
+  const fullAccessRole = ["student", "faculty", "staff", "management", "admin", "security"].includes(accessRole);
   const categoryVisitors = visitors.filter((candidate) => candidate.type === visitorCategory);
   const visitor = categoryVisitors.find((candidate) => candidate.id === visitorId) ?? categoryVisitors[0];
+  const activeAccessLabel = accessRole === "admin" ? "Admin" : accessRole.charAt(0).toUpperCase() + accessRole.slice(1);
   const route = useMemo(() => {
     if (!fromRoom || !toRoom) return null;
     return calculateIndoorRoute(fromRoom.floorId, fromRoom.roomId, toRoom.floorId, toRoom.roomId);
@@ -140,12 +143,12 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
   };
 
   const checkAndShowRoute = async () => {
-    if (!visitor || !route || !fromRoom || !toRoom) return;
+    if ((!fullAccessRole && !visitor) || !route || !fromRoom || !toRoom) return;
     setIsCheckingAccess(true);
     setCheckError(null);
     setRouteDecision(null);
     try {
-      const decision = await onCheckRoute(visitor.id, route);
+      const decision = await onCheckRoute(fullAccessRole ? null : visitor.id, route);
       setRouteDecision(decision);
       if (decision.allowed) {
         onNavigate(fromRoom.floorId, fromRoom.roomId);
@@ -184,8 +187,8 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
       {/* From / To inputs */}
       <div className="p-4 space-y-3 border-b border-border relative">
         <div>
-          <label htmlFor="route-visitor-category" className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">Visitor Category</label>
-          <select
+          {!fullAccessRole && <label htmlFor="route-visitor-category" className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">Visitor Category</label>}
+          {!fullAccessRole && <select
             id="route-visitor-category"
             value={visitorCategory}
             onChange={(event) => {
@@ -196,12 +199,12 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
             className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-secondary outline-none"
           >
             {personTypes.map((category) => <option key={category} value={category}>{category}</option>)}
-          </select>
-          <p className="mt-1 text-[10px] text-muted-foreground">
+          </select>}
+          {!fullAccessRole && <p className="mt-1 text-[10px] text-muted-foreground">
             Uses the existing {visitorCategory} access rules.
-          </p>
+          </p>}
         </div>
-        <div>
+        {!fullAccessRole && <div>
           <label htmlFor="route-visitor" className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">Registered Visitor</label>
           <select
             id="route-visitor"
@@ -222,7 +225,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
               Existing {visitor.type} permissions · {visitor.status}
             </p>
           )}
-        </div>
+        </div>}
         <div>
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">From</label>
           <input
@@ -274,7 +277,9 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
           <div className="space-y-0">
             {!routeDecision && (
               <p className="mb-3 rounded-lg border border-border bg-secondary/60 p-3 text-xs text-muted-foreground">
-                Check this visitor’s existing category permissions before generating directions.
+                {fullAccessRole
+                  ? `${activeAccessLabel} access: all mapped campus rooms are available.`
+                  : `Check this visitor’s existing category permissions before generating directions.`}
               </p>
             )}
 
@@ -335,7 +340,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
             {checkError && <p className="mb-3 text-xs text-red-700" role="alert">{checkError}</p>}
 
             <div className="pt-2">
-              <Button className="w-full gap-2" onClick={checkAndShowRoute} disabled={isCheckingAccess || !visitor}>
+              <Button className="w-full gap-2" onClick={checkAndShowRoute} disabled={isCheckingAccess || (!fullAccessRole && !visitor)}>
                 <Footprints className="h-4 w-4" />
                 {isCheckingAccess ? "Checking access..." : "Check Access & Generate Route"}
               </Button>
