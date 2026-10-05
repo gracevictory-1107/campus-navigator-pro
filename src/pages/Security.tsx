@@ -21,7 +21,7 @@ import { cameras, locationById, securityLocations } from "@/security/data";
 import { can, roles } from "@/security/permissions";
 import { formatTime, useSecurity } from "@/security/SecurityContext";
 import { personTypes, type LocationEvent, type PersonType, type Role, type SecurityAlert } from "@/security/types";
-import { loadAdminProfiles, signInWithSupabase, supabaseConfigured, updateManagedProfileRole, type ManagedProfile, type ManagedRole } from "@/lib/supabase";
+import { loadAdminProfiles, loadCameraConfigs, saveCameraConfig, signInWithSupabase, supabaseConfigured, updateManagedProfileRole, type CameraConfig, type ManagedProfile, type ManagedRole } from "@/lib/supabase";
 import { toast } from "sonner";
 
 const ok = "text-[hsl(var(--status-authorized))]";
@@ -299,6 +299,50 @@ export default function Security() {
   const [simPerson, setSimPerson] = useState("");
   const [signInOpen, setSignInOpen] = useState(false);
   const [tab, setTab] = useState(role === "management" ? "management" : "dashboard");
+  const [cameraConfigs, setCameraConfigs] = useState<Record<string, CameraConfig>>(() => Object.fromEntries(cameras.map((camera) => [camera.id, { cameraId: camera.id, ipAddress: camera.ipAddress ?? "", streamUrl: camera.streamUrl ?? "" }])));
+  const [cameraConfigSaving, setCameraConfigSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void loadCameraConfigs().then((loaded) => {
+      if (active && Object.keys(loaded).length) {
+        setCameraConfigs((current) => ({ ...current, ...loaded }));
+      }
+    }).catch((error) => {
+      if (active) toast.error("CCTV configuration could not be loaded", {
+        description: error instanceof Error ? error.message : "Camera configuration is available locally.",
+      });
+    });
+    return () => { active = false; };
+  }, []);
+
+  const updateCameraConfig = (cameraId: string, field: "ipAddress" | "streamUrl", value: string) => {
+    setCameraConfigs((current) => ({
+      ...current,
+      [cameraId]: {
+        ...(current[cameraId] ?? { cameraId, ipAddress: "", streamUrl: "" }),
+        cameraId,
+        [field]: value,
+      },
+    }));
+  };
+
+  const persistCameraConfig = async (cameraId: string) => {
+    const config = cameraConfigs[cameraId] ?? { cameraId, ipAddress: "", streamUrl: "" };
+    setCameraConfigSaving(cameraId);
+    try {
+      await saveCameraConfig(config);
+      toast.success(cameraId + " configuration saved", {
+        description: config.ipAddress ? "IP: " + config.ipAddress : "No IP entered yet.",
+      });
+    } catch (error) {
+      toast.error("Could not save " + cameraId, {
+        description: error instanceof Error ? error.message : "Check Supabase permissions and try again.",
+      });
+    } finally {
+      setCameraConfigSaving(null);
+    }
+  };
 
   const activeVisitors = sec.visitors.filter((v) => v.status === "Active");
   const manageVisitorEvents = useMemo(() => {
@@ -611,6 +655,55 @@ export default function Security() {
     </div>
   );
 
+  const CctvConfiguration = manage && (
+    <section className="grid gap-3 rounded-xl border border-border bg-card p-4">
+      <div>
+        <h2 className="text-base font-semibold text-foreground">CCTV Network Configuration</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Enter the camera IP address when the college provides it. An IP alone does not create a live browser stream. The college/NVR may also need to provide a browser-accessible stream URL, port, protocol, and network access.
+        </p>
+      </div>
+      <div className="grid gap-3">
+        {cameras.map((camera) => {
+          const config = cameraConfigs[camera.id] ?? { cameraId: camera.id, ipAddress: "", streamUrl: "" };
+          return (
+            <div key={camera.id} className="grid gap-2 rounded-lg border border-border p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{camera.id} · {locationById(camera.locationId)?.name}</p>
+                  <p className="text-[11px] text-muted-foreground">Details supplied by the college CCTV/NVR administrator.</p>
+                </div>
+                <Button size="sm" onClick={() => void persistCameraConfig(camera.id)} disabled={cameraConfigSaving === camera.id}>
+                  {cameraConfigSaving === camera.id ? "Saving..." : "Save Configuration"}
+                </Button>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                <div className="grid gap-1">
+                  <label className="text-xs font-medium text-foreground" htmlFor={"camera-ip-" + camera.id}>IP Address</label>
+                  <Input
+                    id={"camera-ip-" + camera.id}
+                    value={config.ipAddress}
+                    placeholder="e.g. 192.168.1.50"
+                    onChange={(event) => updateCameraConfig(camera.id, "ipAddress", event.target.value)}
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-xs font-medium text-foreground" htmlFor={"camera-stream-" + camera.id}>Stream / NVR URL (optional)</label>
+                  <Input
+                    id={"camera-stream-" + camera.id}
+                    value={config.streamUrl}
+                    placeholder="https://... or college NVR stream URL"
+                    onChange={(event) => updateCameraConfig(camera.id, "streamUrl", event.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+
   const CctvGrid = (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {cameras.map((c) => {
@@ -632,6 +725,7 @@ export default function Security() {
                 </span>
               </div>
               <p className="font-mono text-[11px] text-muted-foreground">Camera ID: {c.id}</p>
+              <p className="font-mono text-[11px] text-muted-foreground">CCTV IP: {cameraConfigs[c.id]?.ipAddress || "Pending from college"}</p>
               {last ? (
                 <div className="rounded-lg bg-secondary/60 p-2">
                   <div className="flex flex-wrap items-center justify-between gap-1">
@@ -963,10 +1057,10 @@ export default function Security() {
               <div className="grid gap-2 content-start"><h2 className="text-sm font-semibold text-foreground">Recent Security Events</h2><RecentEvents list={sec.events} /></div>
             </div>
             <h2 className="text-sm font-semibold text-foreground">Visitor List</h2>{VisitorTable}
-            <h2 className="text-sm font-semibold text-foreground">CCTV Cameras</h2>{CctvGrid}
+            <h2 className="text-sm font-semibold text-foreground">CCTV Cameras</h2>{CctvConfiguration}{CctvGrid}
           </TabsContent>
           <TabsContent value="map" className="grid gap-4">{Simulator}{LiveMap}</TabsContent>
-          <TabsContent value="cctv" className="grid gap-4"><p className="text-xs text-muted-foreground">Camera feeds are simulated. No real college cameras are connected.</p>{Simulator}{CctvGrid}</TabsContent>
+          <TabsContent value="cctv" className="grid gap-4"><p className="text-xs text-muted-foreground">Camera feeds remain simulated until the college provides reachable CCTV/NVR connection details.</p>{CctvConfiguration}{Simulator}{CctvGrid}</TabsContent>
           <TabsContent value="alerts" className="grid gap-4">
             <section className="grid gap-3">
               <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold text-foreground">Security Alerts · Active &amp; Acknowledged</h2><span className="text-xs text-muted-foreground">{activeAlerts.length} active · {acknowledgedAlerts.length} acknowledged</span></div>
