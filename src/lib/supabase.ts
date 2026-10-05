@@ -98,6 +98,14 @@ interface BiometricVerificationEventRow extends Record<string, unknown> {
   created_at: string;
 }
 
+interface CameraConfigRow extends Record<string, unknown> {
+  camera_id: string;
+  ip_address: string;
+  stream_url: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface Database {
   public: {
     Tables: {
@@ -108,6 +116,7 @@ interface Database {
       alerts: Table<AlertRow, Omit<AlertRow, "created_at" | "updated_at">>;
       biometric_profiles: Table<BiometricProfileRow, Omit<BiometricProfileRow, "id" | "created_at" | "updated_at">>;
       biometric_verification_events: Table<BiometricVerificationEventRow, Omit<BiometricVerificationEventRow, "id" | "created_at">>;
+      camera_configs: Table<CameraConfigRow, Omit<CameraConfigRow, "created_at" | "updated_at">>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -502,5 +511,70 @@ export async function recordBiometricVerificationEvent(input: {
     security_event_id: null,
     occurred_at: Date.now(),
   });
+  if (error) throw error;
+}
+
+
+export interface CameraConfig {
+  cameraId: string;
+  ipAddress: string;
+  streamUrl: string;
+}
+
+const CAMERA_CONFIG_LOCAL_KEY = "campus-camera-config-v1";
+
+function localCameraConfigs(): Record<string, CameraConfig> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CAMERA_CONFIG_LOCAL_KEY) ?? "{}");
+    return parsed && typeof parsed === "object" ? parsed as Record<string, CameraConfig> : {};
+  } catch {
+    return {};
+  }
+}
+
+export async function loadCameraConfigs(): Promise<Record<string, CameraConfig>> {
+  if (!supabase) return localCameraConfigs();
+
+  const profile = await getSignedInProfile();
+  if (!profile || !["admin", "management", "security"].includes(profile.role)) {
+    return localCameraConfigs();
+  }
+
+  const { data, error } = await supabase
+    .from("camera_configs")
+    .select("camera_id, ip_address, stream_url");
+
+  if (error) throw error;
+
+  return data.reduce<Record<string, CameraConfig>>((configs, row) => {
+    configs[row.camera_id] = {
+      cameraId: row.camera_id,
+      ipAddress: row.ip_address ?? "",
+      streamUrl: row.stream_url ?? "",
+    };
+    return configs;
+  }, {});
+}
+
+export async function saveCameraConfig(config: CameraConfig): Promise<void> {
+  const current = localCameraConfigs();
+  current[config.cameraId] = config;
+  localStorage.setItem(CAMERA_CONFIG_LOCAL_KEY, JSON.stringify(current));
+
+  if (!supabase) return;
+
+  const profile = await getSignedInProfile();
+  if (!profile || !["admin", "management", "security"].includes(profile.role)) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("camera_configs")
+    .upsert({
+      camera_id: config.cameraId,
+      ip_address: config.ipAddress.trim(),
+      stream_url: config.streamUrl.trim(),
+    });
+
   if (error) throw error;
 }
