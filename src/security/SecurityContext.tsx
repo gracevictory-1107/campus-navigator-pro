@@ -351,7 +351,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
       });
     }
     return decision;
-  }, []);
+  }, [role]);
 
   const setAlertStatus = useCallback((id: string, status: AlertStatus) => {
     setState((s) => ({
