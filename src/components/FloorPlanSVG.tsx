@@ -304,19 +304,6 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
               </text>
             ))}
 
-            {/* Legacy route line */}
-            {!routeLeg && routeLine && (
-              <g>
-                <line
-                  x1={routeLine.x1} y1={routeLine.y1} x2={routeLine.x2} y2={routeLine.y2}
-                  stroke="hsl(var(--primary))" strokeWidth="3" strokeDasharray="8 4"
-                  markerEnd="url(#arrowhead)" opacity="0.7"
-                >
-                  <animate attributeName="stroke-dashoffset" from="24" to="0" dur="1s" repeatCount="indefinite" />
-                </line>
-              </g>
-            )}
-
             {/* Rooms */}
             {plan.rooms.map((room) => {
               const isHighlighted = highlightRoomId === room.id;
