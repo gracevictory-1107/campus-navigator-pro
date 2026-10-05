@@ -26,7 +26,7 @@ export const cameras: Camera[] = [
 ];
 
 const allow: Record<PersonType, string[]> = {
-  Parent: ["reception", "principal-office", "cash-counter", "canteen"],
+  Parent: ["main-gate", "reception", "principal-office", "cash-counter", "canteen"],
   "Product/Business Visitor": ["main-gate", "reception", "meeting-room", "placement-cell"],
   "Inspirational/Motivational Visitor": ["main-gate", "reception", "meeting-room", "library"],
   "Faculty/Staff": ["main-gate", "reception", "meeting-room", "placement-cell", "cse-lab", "staff-room"],
