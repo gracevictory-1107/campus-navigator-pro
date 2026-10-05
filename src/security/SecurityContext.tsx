@@ -21,6 +21,8 @@ interface State {
 
 interface Ctx extends State {
   role: Role;
+  /** True when the current security session has loaded and can persist data through Supabase. */
+  backendReady: boolean;
   signedIn: boolean;
   setRole: (r: Role) => void;
   signOut: () => void;
@@ -392,7 +394,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   }, [state.events, state.visitors]);
 
   const value: Ctx = {
-    ...state, role, signedIn, setRole, signOut, highlightedCameraId, setHighlightedCameraId, registerVisitor, setVisitorStatus,
+    ...state, role, backendReady, signedIn, setRole, signOut, highlightedCameraId, setHighlightedCameraId, registerVisitor, setVisitorStatus,
     simulateDetection, authorizeIndoorRoute, setAlertStatus, setRule, setMuted, currentLocations,
   };
   return <SecurityCtx.Provider value={value}>{children}</SecurityCtx.Provider>;
