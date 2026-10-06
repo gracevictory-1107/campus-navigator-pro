@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShieldCheck } from "lucide-react";
+import { CheckCircle2, LogIn, LogOut, ShieldCheck, UserRoundCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ type Step = "form" | "face" | "done";
 const empty = { name: "", email: "", mobile: "", type: "Parent" as PersonType, visiting: "", purpose: "", authorizedLocationId: "reception", expectedExit: "" };
 
 export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { visitors, registerVisitor } = useSecurity();
+  const { visitors, registerVisitor, setVisitorStatus } = useSecurity();
   const [step, setStep] = useState<Step>("form");
   const [form, setForm] = useState(empty);
   const [verificationComplete, setVerificationComplete] = useState(false);
@@ -104,6 +104,10 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
         setBiometricEnrollment("new");
       }
       setExisting(formIdentity.existing);
+      if (enrolled) {
+        setBiometricIdentity(formIdentity.existing);
+        setBiometricEnrollment("enrolled");
+      }
       setVerificationComplete(true);
       return;
     }
@@ -146,6 +150,24 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
     }
 
     setResult(registered);
+    setStep("done");
+  };
+
+  const checkOutExistingVisitor = async () => {
+    const visitor = existing ?? biometricIdentity;
+    if (!visitor) return;
+
+    setVisitorStatus(visitor.id, "Checked Out");
+    const checkedOutAt = Date.now();
+    await recordBiometricVerificationEvent({
+      visitorId: visitor.id,
+      result: "VERIFIED",
+      eventType: "returning_visitor_check_out",
+      destination: form.authorizedLocationId,
+      accessResult: "authorized",
+    });
+
+    setResult({ ...visitor, status: "Checked Out", checkedOutAt });
     setStep("done");
   };
 
@@ -196,22 +218,53 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
               onCancel={() => { setVerificationComplete(false); setStep("form"); }}
             />
             {verificationComplete && (
-              <div className="rounded-lg border border-border p-3 text-sm grid gap-1">
-                <div><span className="text-muted-foreground">Name:</span> {form.name}</div>
-                <div><span className="text-muted-foreground">Email:</span> {form.email}</div>
-                <div><span className="text-muted-foreground">Visitor ID:</span> {existing?.id ?? "Assigned on save"}</div>
-                <div><span className="text-muted-foreground">Visitor Type:</span> {form.type}</div>
-                <div><span className="text-muted-foreground">Profile:</span> {existing ? "Returning visitor — existing profile reused" : "New visitor — biometric will be enrolled"}</div>
-                <div><span className="text-muted-foreground">Biometric:</span> {biometricEnrollment === "enrolled" ? "Stored face recognized · " + describeBiometricScore(biometricMatch ?? 0) : "Live face passed · biometric template ready for enrollment"}</div>
-                {biometricIdentity && <div className="rounded-md bg-[hsl(var(--status-authorized)/0.10)] px-2 py-1 text-[hsl(var(--status-authorized))]">Face matched - {biometricIdentity.name}. Existing visitor profile reused; a new visitor profile will not be created.</div>}
-                <div><span className="text-muted-foreground">Access:</span> {securityLocations.find((l) => l.id === form.authorizedLocationId)?.name} + {form.type} rules</div>
+              <div className="rounded-lg border border-[hsl(var(--status-authorized)/0.35)] bg-[hsl(var(--status-authorized)/0.05)] p-3 text-sm grid gap-3">
+                <div className="flex items-center gap-2 text-[hsl(var(--status-authorized))]">
+                  <UserRoundCheck className="h-4 w-4" />
+                  <p className="font-semibold">{biometricIdentity ? "Same face detected" : "New face detected"}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div><span className="text-muted-foreground block">Name</span>{form.name}</div>
+                  <div><span className="text-muted-foreground block">Visitor ID</span>{existing?.id ?? "Assigned on check-in"}</div>
+                  <div><span className="text-muted-foreground block">Email</span><span className="break-all">{form.email}</span></div>
+                  <div><span className="text-muted-foreground block">Visitor Type</span>{form.type}</div>
+                </div>
+
+                {biometricIdentity && (
+                  <div className="rounded-md border border-border bg-card p-2.5">
+                    <div className="flex items-center gap-2 font-medium text-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-[hsl(var(--status-authorized))]" />
+                      Existing visitor profile found
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {biometricIdentity.name} · {biometricIdentity.id} · {biometricIdentity.status}
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid gap-1 text-xs">
+                  <div><span className="text-muted-foreground">Face match:</span> {biometricEnrollment === "enrolled" ? "Stored face recognized · " + describeBiometricScore(biometricMatch ?? 0) : "Live face verified · ready for enrollment"}</div>
+                  <div><span className="text-muted-foreground">Access:</span> {securityLocations.find((l) => l.id === form.authorizedLocationId)?.name} + {form.type} rules</div>
+                </div>
               </div>
             )}
+
             {verificationComplete && (
-              <Button onClick={() => void finish()}>
-                <ShieldCheck className="h-4 w-4 mr-2" />
-                {existing ? "Check In Returning Visitor" : "Create Visitor Profile & Enroll Face"}
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button onClick={() => void finish()} disabled={!!existing && existing.status === "Active"}>
+                  <LogIn className="h-4 w-4 mr-2" />
+                  {existing?.status === "Active" ? "Already Checked In" : "Check In"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => void checkOutExistingVisitor()}
+                  disabled={!existing || existing.status !== "Active"}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  {existing?.status === "Checked Out" ? "Already Checked Out" : "Check Out"}
+                </Button>
+              </div>
             )}
           </div>
         )}
