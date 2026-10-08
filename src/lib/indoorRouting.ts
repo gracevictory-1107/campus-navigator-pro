@@ -47,117 +47,61 @@ function appendPoint(points: RoutePoint[], point: RoutePoint) {
   if (!last || distance(last, point) > 0.01) points.push(point);
 }
 
-const WALKABLE_TYPES = new Set<Room["type"]>([
-  "corridor",
-  "open",
-  "exit",
-  "court",
-  "stairs",
-  "lift",
-]);
-
-const WALKABLE_GAP = 8;
-
-function rectGap(a: Room, b: Room): number {
-  const gapX = Math.max(a.x - (b.x + b.w), b.x - (a.x + a.w), 0);
-  const gapY = Math.max(a.y - (b.y + b.h), b.y - (a.y + a.h), 0);
-  return Math.hypot(gapX, gapY);
+function corridorBoundaryPoint(corridor: Room, toward: RoutePoint): RoutePoint {
+  return {
+    x: Math.min(Math.max(toward.x, corridor.x), corridor.x + corridor.w),
+    y: Math.min(Math.max(toward.y, corridor.y), corridor.y + corridor.h),
+  };
 }
 
-function nearestPointsBetweenRooms(a: Room, b: Room): { a: RoutePoint; b: RoutePoint; gap: number } {
-  const overlapLeft = Math.max(a.x, b.x);
-  const overlapRight = Math.min(a.x + a.w, b.x + b.w);
-  const overlapTop = Math.max(a.y, b.y);
-  const overlapBottom = Math.min(a.y + a.h, b.y + b.h);
-
-  if (overlapLeft <= overlapRight && overlapTop <= overlapBottom) {
-    const point = {
-      x: (overlapLeft + overlapRight) / 2,
-      y: (overlapTop + overlapBottom) / 2,
-    };
-    return { a: point, b: point, gap: 0 };
+function appendCorridorPath(points: RoutePoint[], corridor: Room, from: RoutePoint, to: RoutePoint) {
+  const corridorCenter = center(corridor);
+  if (corridor.w >= corridor.h) {
+    appendPoint(points, { x: from.x, y: corridorCenter.y });
+    appendPoint(points, { x: to.x, y: corridorCenter.y });
+  } else {
+    appendPoint(points, { x: corridorCenter.x, y: from.y });
+    appendPoint(points, { x: corridorCenter.x, y: to.y });
   }
-
-  const aPoint = {
-    x: Math.min(Math.max(center(b).x, a.x), a.x + a.w),
-    y: Math.min(Math.max(center(b).y, a.y), a.y + a.h),
-  };
-  const bPoint = {
-    x: Math.min(Math.max(center(a).x, b.x), b.x + b.w),
-    y: Math.min(Math.max(center(a).y, b.y), b.y + b.h),
-  };
-  return { a: aPoint, b: bPoint, gap: distance(aPoint, bPoint) };
-}
-
-function buildWalkableRoute(plan: FloorPlan, from: Room, to: Room): RoutePoint[] | null {
-  if (from.id === to.id) return [center(from)];
-
-  const walkable = plan.rooms.filter((room) => WALKABLE_TYPES.has(room.type));
-  if (walkable.length === 0) return null;
-
-  const nodes = [from, ...walkable.filter((room) => room.id !== from.id && room.id !== to.id), to];
-  const startIndex = 0;
-  const destinationIndex = nodes.length - 1;
-  const distances = new Array(nodes.length).fill(Number.POSITIVE_INFINITY);
-  const previous = new Array<number>(nodes.length).fill(-1);
-  const visited = new Set<number>();
-  distances[startIndex] = 0;
-
-  while (visited.size < nodes.length) {
-    let current = -1;
-    let best = Number.POSITIVE_INFINITY;
-    for (let index = 0; index < nodes.length; index += 1) {
-      if (!visited.has(index) && distances[index] < best) {
-        current = index;
-        best = distances[index];
-      }
-    }
-    if (current === -1) break;
-    visited.add(current);
-    if (current === destinationIndex) break;
-
-    for (let next = 0; next < nodes.length; next += 1) {
-      if (next === current || visited.has(next)) continue;
-      const link = nearestPointsBetweenRooms(nodes[current], nodes[next]);
-      if (link.gap > WALKABLE_GAP) continue;
-
-      const centerDistance = distance(center(nodes[current]), center(nodes[next]));
-      const cost = link.gap + centerDistance * 0.05;
-      const candidate = distances[current] + cost;
-      if (candidate < distances[next]) {
-        distances[next] = candidate;
-        previous[next] = current;
-      }
-    }
-  }
-
-  if (!Number.isFinite(distances[destinationIndex])) return null;
-
-  const nodePath: number[] = [];
-  for (let current = destinationIndex; current !== -1; current = previous[current]) {
-    nodePath.unshift(current);
-  }
-  if (nodePath[0] !== startIndex) return null;
-
-  const points: RoutePoint[] = [center(from)];
-  for (let index = 1; index < nodePath.length; index += 1) {
-    const fromRoom = nodes[nodePath[index - 1]];
-    const toRoom = nodes[nodePath[index]];
-    const link = nearestPointsBetweenRooms(fromRoom, toRoom);
-    appendPoint(points, link.a);
-    appendPoint(points, link.b);
-  }
-  appendPoint(points, center(to));
-  return points.length >= 2 ? points : null;
+  appendPoint(points, to);
 }
 
 function routeSegment(plan: FloorPlan, from: Room, to: Room): RoutePoint[] {
-  const graphRoute = buildWalkableRoute(plan, from, to);
-  if (graphRoute) return graphRoute;
+  const start = center(from);
+  const end = center(to);
+  const corridors = plan.rooms.filter((room) => room.type === "corridor");
 
-  // Some concept maps contain disconnected regions without a walkable connector.
-  // Keep those routes explicitly approximate rather than inventing a path through rooms.
-  return [center(from), center(to)];
+  if (corridors.length === 0) return [start, end];
+
+  const nearestCorridor = (point: RoutePoint) =>
+    corridors.reduce((nearest, corridor) =>
+      distance(point, corridorBoundaryPoint(corridor, point)) <
+      distance(point, corridorBoundaryPoint(nearest, point))
+        ? corridor
+        : nearest
+    );
+
+  const startCorridor = nearestCorridor(start);
+  const endCorridor = nearestCorridor(end);
+  const startBoundary = corridorBoundaryPoint(startCorridor, start);
+  const endBoundary = corridorBoundaryPoint(endCorridor, end);
+  const points: RoutePoint[] = [start];
+
+  appendPoint(points, startBoundary);
+
+  if (startCorridor.id === endCorridor.id) {
+    appendCorridorPath(points, startCorridor, startBoundary, endBoundary);
+  } else {
+    // Complex plans can contain multiple disconnected corridors/open areas.
+    // Keep the transition explicit rather than drawing a misleading shortcut
+    // through mapped rooms. Same-building transition logic remains approximate.
+    appendPoint(points, center(startCorridor));
+    appendPoint(points, center(endCorridor));
+  }
+
+  appendPoint(points, endBoundary);
+  appendPoint(points, end);
+  return points;
 }
 
 function routeLeg(
