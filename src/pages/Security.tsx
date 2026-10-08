@@ -18,6 +18,7 @@ import VisitorProfileCard from "@/components/security/VisitorProfileCard";
 import DemoFaceVerification from "@/components/security/DemoFaceVerification";
 import { allFloorPlans } from "@/data/floorPlans";
 import { cameras, locationById, securityLocations } from "@/security/data";
+import { cctvEvidence, cctvEvidenceCaptureCounts, identifiedCctvEvidence } from "@/security/cctvInventory";
 import { can, roles } from "@/security/permissions";
 import { formatTime, useSecurity } from "@/security/SecurityContext";
 import { personTypes, type LocationEvent, type PersonType, type Role, type SecurityAlert } from "@/security/types";
@@ -704,6 +705,52 @@ export default function Security() {
     </section>
   );
 
+  const CctvEvidenceSummary = (
+    <section className="grid gap-3">
+      <div>
+        <h2 className="text-base font-semibold text-foreground">Verified CCTV Survey Evidence</h2>
+        <p className="text-xs text-muted-foreground">
+          {cctvEvidenceCaptureCounts.total} evidence captures reviewed. These are CCTV exports, not a verified unique-camera count.
+          Only labelled locations are mapped; unlabeled views are intentionally not guessed.
+        </p>
+      </div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat icon={Camera} label="CCTV captures" value={cctvEvidenceCaptureCounts.total} />
+        <Stat icon={Camera} label="Main Building" value={cctvEvidenceCaptureCounts.mainBuilding} />
+        <Stat icon={Camera} label="Block B" value={cctvEvidenceCaptureCounts.blockB} />
+        <Stat icon={MapPin} label="Labelled evidence" value={identifiedCctvEvidence.length} />
+      </div>
+      <div className="rounded-xl border border-border bg-card overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Building</TableHead>
+              <TableHead>Floor</TableHead>
+              <TableHead>Area</TableHead>
+              <TableHead>Camera / view</TableHead>
+              <TableHead>Mapping status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {cctvEvidence.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell className="font-medium">{item.building}</TableCell>
+                <TableCell>{item.floorLabel ?? "Not confirmed yet"}</TableCell>
+                <TableCell>{item.area}</TableCell>
+                <TableCell>{item.cameraLabel}</TableCell>
+                <TableCell>
+                  <span className={item.confidence === "confirmed" ? ok : "text-muted-foreground"}>
+                    {item.confidence === "confirmed" ? "Confirmed" : item.confidence === "area-confirmed" ? "Area confirmed" : "Floor unconfirmed"}
+                  </span>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </section>
+  );
+
   const CctvGrid = (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {cameras.map((c) => {
@@ -1074,7 +1121,7 @@ export default function Security() {
             <h2 className="text-sm font-semibold text-foreground">CCTV Cameras</h2>{CctvConfiguration}{CctvGrid}
           </TabsContent>
           <TabsContent value="map" className="grid gap-4">{Simulator}{LiveMap}</TabsContent>
-          <TabsContent value="cctv" className="grid gap-4"><p className="text-xs text-muted-foreground">Camera feeds remain simulated until the college provides reachable CCTV/NVR connection details.</p>{CctvConfiguration}{Simulator}{CctvGrid}</TabsContent>
+          <TabsContent value="cctv" className="grid gap-4"><p className="text-xs text-muted-foreground">Camera feeds remain simulated until the college provides reachable CCTV/NVR connection details.</p>{CctvEvidenceSummary}{CctvConfiguration}{Simulator}{CctvGrid}</TabsContent>
           <TabsContent value="alerts" className="grid gap-4">
             <section className="grid gap-3">
               <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold text-foreground">Security Alerts · Active &amp; Acknowledged</h2><span className="text-xs text-muted-foreground">{activeAlerts.length} active · {acknowledgedAlerts.length} acknowledged</span></div>
