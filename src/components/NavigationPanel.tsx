@@ -80,7 +80,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
       .filter(({ score }) => Number.isFinite(score))
       .sort((a, b) => a.score - b.score || a.item.room.label.localeCompare(b.item.room.label))
       .map(({ item }) => item)
-      .slice(0, 10);
+      .slice(0, 20);
   }, [fromQuery, toQuery, activeInput, allRooms]);
 
   const directions = useMemo(() => {
