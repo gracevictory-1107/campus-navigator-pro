@@ -23,6 +23,7 @@ export function rankRoomSearchResults(query: string, rooms: SearchableRoom[]): S
   const queryTokens = normalizedQuery.split(" ").filter(Boolean);
 
   return rooms
+    .filter((item) => item.floorId !== "campus")
     .map((item) => {
       const label = normalizeSearchText(item.room.label);
       const id = normalizeSearchText(item.room.id);
