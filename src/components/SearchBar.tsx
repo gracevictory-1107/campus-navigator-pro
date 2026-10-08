@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { getAllRooms } from "@/data/floorPlans";
-import type { RoomType } from "@/data/floorPlans";
+import { rankRoomSearchResults } from "@/lib/roomSearch";
 import { Search, X, Star } from "lucide-react";
 
 const typeIcons: Record<string, string> = {
@@ -23,18 +23,7 @@ export default function SearchBar({ onNavigate, favorites = [], onToggleFavorite
 
   const allRooms = useMemo(() => getAllRooms(), []);
 
-  const results = useMemo(() => {
-    if (!query.trim()) return [];
-    const q = query.toLowerCase();
-    return allRooms
-      .filter(
-        (r) =>
-          r.room.label.toLowerCase().includes(q) ||
-          r.room.sublabel?.toLowerCase().includes(q) ||
-          r.room.description?.toLowerCase().includes(q)
-      )
-      .slice(0, 10);
-  }, [query, allRooms]);
+  const results = useMemo(() => rankRoomSearchResults(query, allRooms), [query, allRooms]);
 
   // Group results by floor
   const grouped = useMemo(() => {
@@ -87,9 +76,16 @@ export default function SearchBar({ onNavigate, favorites = [], onToggleFavorite
           </button>
         )}
       </div>
-      {open && results.length > 0 && (
-        <div className="absolute top-full right-0 mt-2 w-96 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-xl z-50 max-h-80 overflow-y-auto shadow-elevated">
+      {open && query.trim() && (
+        <div className="absolute top-full right-0 mt-2 w-96 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-xl z-50 max-h-[min(70vh,28rem)] overflow-y-auto shadow-elevated">
           <div className="p-1.5">
+            {results.length === 0 && (
+              <div className="px-3 py-8 text-center">
+                <Search className="mx-auto h-5 w-5 text-muted-foreground/50" />
+                <p className="mt-2 text-sm font-medium text-foreground">No destinations found</p>
+                <p className="mt-1 text-xs text-muted-foreground">Try a room number, lab name, floor, or building.</p>
+              </div>
+            )}
             {Array.from(grouped.entries()).map(([floorTitle, rooms]) => (
               <div key={floorTitle}>
                 <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -125,11 +121,13 @@ export default function SearchBar({ onNavigate, favorites = [], onToggleFavorite
               </div>
             ))}
           </div>
-          <div className="border-t border-border px-3 py-2">
-            <p className="text-[10px] text-muted-foreground text-center">
-              {results.length} result{results.length !== 1 ? 's' : ''} found
-            </p>
-          </div>
+          {results.length > 0 && (
+            <div className="border-t border-border px-3 py-2 sticky bottom-0 bg-card/95 backdrop-blur">
+              <p className="text-[10px] text-muted-foreground text-center">
+                {results.length} destination{results.length !== 1 ? 's' : ''} found
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
