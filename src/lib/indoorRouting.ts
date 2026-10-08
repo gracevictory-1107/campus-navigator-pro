@@ -48,13 +48,22 @@ function appendPoint(points: RoutePoint[], point: RoutePoint) {
 }
 
 function corridorBoundaryPoint(corridor: Room, toward: RoutePoint): RoutePoint {
-  const c = center(corridor);
-  const dx = toward.x - c.x;
-  const dy = toward.y - c.y;
-  if (Math.abs(dx / Math.max(corridor.w, 1)) > Math.abs(dy / Math.max(corridor.h, 1))) {
-    return { x: dx < 0 ? corridor.x : corridor.x + corridor.w, y: c.y };
+  return {
+    x: Math.min(Math.max(toward.x, corridor.x), corridor.x + corridor.w),
+    y: Math.min(Math.max(toward.y, corridor.y), corridor.y + corridor.h),
+  };
+}
+
+function appendCorridorPath(points: RoutePoint[], corridor: Room, from: RoutePoint, to: RoutePoint) {
+  const corridorCenter = center(corridor);
+  if (corridor.w >= corridor.h) {
+    appendPoint(points, { x: from.x, y: corridorCenter.y });
+    appendPoint(points, { x: to.x, y: corridorCenter.y });
+  } else {
+    appendPoint(points, { x: corridorCenter.x, y: from.y });
+    appendPoint(points, { x: corridorCenter.x, y: to.y });
   }
-  return { x: c.x, y: dy < 0 ? corridor.y : corridor.y + corridor.h };
+  appendPoint(points, to);
 }
 
 function routeSegment(plan: FloorPlan, from: Room, to: Room): RoutePoint[] {
@@ -66,7 +75,10 @@ function routeSegment(plan: FloorPlan, from: Room, to: Room): RoutePoint[] {
 
   const nearestCorridor = (point: RoutePoint) =>
     corridors.reduce((nearest, corridor) =>
-      distance(point, center(corridor)) < distance(point, center(nearest)) ? corridor : nearest
+      distance(point, corridorBoundaryPoint(corridor, point)) <
+      distance(point, corridorBoundaryPoint(nearest, point))
+        ? corridor
+        : nearest
     );
 
   const startCorridor = nearestCorridor(start);
@@ -76,19 +88,17 @@ function routeSegment(plan: FloorPlan, from: Room, to: Room): RoutePoint[] {
   const points: RoutePoint[] = [start];
 
   appendPoint(points, startBoundary);
+
   if (startCorridor.id === endCorridor.id) {
-    const c = center(startCorridor);
-    if (startCorridor.w >= startCorridor.h) {
-      appendPoint(points, { x: c.x, y: startBoundary.y });
-      appendPoint(points, { x: c.x, y: endBoundary.y });
-    } else {
-      appendPoint(points, { x: startBoundary.x, y: c.y });
-      appendPoint(points, { x: endBoundary.x, y: c.y });
-    }
+    appendCorridorPath(points, startCorridor, startBoundary, endBoundary);
   } else {
+    // Complex plans can contain multiple disconnected corridors/open areas.
+    // Keep the transition explicit rather than drawing a misleading shortcut
+    // through mapped rooms. Same-building transition logic remains approximate.
     appendPoint(points, center(startCorridor));
     appendPoint(points, center(endCorridor));
   }
+
   appendPoint(points, endBoundary);
   appendPoint(points, end);
   return points;
