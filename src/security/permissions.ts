@@ -11,9 +11,9 @@ export const roles: { id: Role; label: string }[] = [
 
 export const can = {
   viewSecurity: (r: Role) => r === "security" || r === "admin" || r === "management",
-  manageSecurity: (r: Role) => r === "security" || r === "management" || r === "admin",
-  manageAccessControl: (r: Role) => r === "security" || r === "management" || r === "admin",
-  manageVisitors: (r: Role) => r === "security" || r === "management" || r === "admin",
+  manageSecurity: (r: Role) => r === "security" || r === "admin",
+  manageAccessControl: (r: Role) => r === "security" || r === "admin",
+  manageVisitors: (r: Role) => r === "security" || r === "admin",
   viewManagement: (r: Role) => r === "management" || r === "admin",
   administer: (r: Role) => r === "admin",
 };
