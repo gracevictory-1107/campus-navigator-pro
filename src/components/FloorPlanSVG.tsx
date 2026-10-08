@@ -38,7 +38,7 @@ function getRouteDots(points: RouteLeg["points"]) {
   });
   const totalLength = segments.reduce((sum, segment) => sum + segment.length, 0);
   const dots: { x: number; y: number }[] = [];
-  const spacing = 20;
+  const spacing = 14;
 
   for (let distance = 12; distance < totalLength - 12; distance += spacing) {
     let remaining = distance;
@@ -391,10 +391,10 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
                     key={`route-dot-${index}`}
                     cx={point.x}
                     cy={point.y}
-                    r="2.8"
+                    r="3.1"
                     fill="hsl(145, 65%, 36%)"
                     stroke="white"
-                    strokeWidth="1"
+                    strokeWidth="1.2"
                   />
                 ))}
                 {[
