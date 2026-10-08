@@ -66,8 +66,8 @@ export default function SearchBar({ onNavigate, favorites = [], onToggleFavorite
   };
 
   return (
-    <div className="relative" ref={wrapperRef}>
-      <div className="flex items-center gap-2 border border-border bg-secondary rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 transition-all">
+    <div className="search-bar-shell relative w-full sm:w-auto" ref={wrapperRef}>
+      <div className="search-field flex items-center gap-2 border border-border bg-secondary/70 rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all">
         <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         <input
           ref={inputRef}
@@ -78,8 +78,8 @@ export default function SearchBar({ onNavigate, favorites = [], onToggleFavorite
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          placeholder="Search rooms, labs, offices..."
-          className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-36 sm:w-52 font-body"
+          placeholder="Find a room, lab or office..."
+          className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full sm:w-60 lg:w-72 font-body" aria-label="Search campus rooms, labs and offices"
         />
         {query && (
           <button onClick={() => { setQuery(""); inputRef.current?.focus(); }} className="text-muted-foreground hover:text-foreground">
