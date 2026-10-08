@@ -270,7 +270,7 @@ export async function loadSecuritySnapshot(): Promise<SupabaseSecuritySnapshot |
 
 export async function persistSecuritySnapshot(snapshot: SupabaseSecuritySnapshot): Promise<void> {
   const profile = await getSignedInProfile();
-  if (!profile || !supabase || (profile.role !== "admin" && profile.role !== "security" && profile.role !== "management")) {
+  if (!profile || !supabase || (profile.role !== "admin" && profile.role !== "security")) {
     throw new Error("A linked Supabase Security or Admin account is required to save campus security data.");
   }
   const visitorRows = snapshot.visitors.map((visitor) => ({
@@ -391,7 +391,7 @@ export async function saveBiometricEmbedding(visitorId: string, embedding: numbe
   }
 
   const profile = await getSignedInProfile();
-  if (!profile || (profile.role !== "admin" && profile.role !== "security" && profile.role !== "management")) {
+  if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
     localStorage.setItem(biometricLocalKey(visitorId), JSON.stringify(embedding));
     return { id: "LOCAL-" + visitorId, visitorId, embedding, status: "ENROLLED" };
   }
@@ -499,7 +499,7 @@ export async function recordBiometricVerificationEvent(input: {
   if (!supabase) return;
 
   const profile = await getSignedInProfile();
-  if (!profile || (profile.role !== "admin" && profile.role !== "security" && profile.role !== "management")) return;
+  if (!profile || (profile.role !== "admin" && profile.role !== "security")) return;
 
   const { error } = await supabase.from("biometric_verification_events").insert({
     visitor_id: input.visitorId,
@@ -564,7 +564,7 @@ export async function saveCameraConfig(config: CameraConfig): Promise<void> {
   if (!supabase) return;
 
   const profile = await getSignedInProfile();
-  if (!profile || !["admin", "management", "security"].includes(profile.role)) {
+  if (!profile || !["admin", "security"].includes(profile.role)) {
     return;
   }
 

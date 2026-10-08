@@ -154,7 +154,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   useEffect(() => {
-    if (!backendReady) return;
+    if (!backendReady || !can.manageSecurity(role)) return;
     const timer = window.setTimeout(() => {
       void persistSecuritySnapshot(state).catch((error: unknown) => {
         setBackendReady(false);
@@ -164,7 +164,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
       });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [backendReady, state]);
+  }, [backendReady, role, state]);
   const setRole = useCallback((r: Role) => {
     const applyDemoRole = () => {
       localStorage.setItem(ROLE_KEY, r);
