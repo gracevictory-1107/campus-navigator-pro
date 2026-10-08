@@ -11,6 +11,7 @@ import RoomInfoPanel from "./RoomInfoPanel";
 import NavigationPanel from "./NavigationPanel";
 import CategoryChips from "./CategoryChips";
 import FavoritesPanel from "./FavoritesPanel";
+import CampusMasterMap from "./CampusMasterMap";
 import { Menu, X, MapPin, Navigation2, Shield, Star, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -27,6 +28,7 @@ export default function CampusNavigator() {
   const [showNav, setShowNav] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showFloorExplorer, setShowFloorExplorer] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<RoomType | null>(null);
   const [activeRoute, setActiveRoute] = useState<IndoorRoute | null>(null);
   const [restrictedRouteAreas, setRestrictedRouteAreas] = useState<RestrictedRouteArea[]>([]);
@@ -174,10 +176,18 @@ export default function CampusNavigator() {
       {/* Category chips */}
       <div className="campus-category-strip border-b border-border bg-card/70 px-3 sm:px-4 flex-shrink-0 overflow-hidden">
         <div className="mx-auto flex max-w-[1600px] items-center gap-2">
-          <div className="hidden lg:flex shrink-0 items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            Explore
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowFloorExplorer((previous) => !previous)}
+            className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider transition-all ${showFloorExplorer
+              ? "border-primary bg-primary text-primary-foreground shadow-soft"
+              : "border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-primary"
+            }`}
+            aria-pressed={showFloorExplorer}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {showFloorExplorer ? "Campus Overview" : "Explore Floors"}
+          </button>
           <CategoryChips activeFilter={categoryFilter} onFilterChange={setCategoryFilter} />
         </div>
       </div>
@@ -188,19 +198,31 @@ export default function CampusNavigator() {
           <div className="fixed inset-0 bg-black/20 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
         )}
 
-        <CampusSidebar
-          activeFloor={activeFloor}
-          onSelectFloor={(id) => {
-            setActiveFloor(id);
-            setHighlightRoom(undefined);
-            if (isMobile) setSidebarOpen(false);
-          }}
-          isOpen={isMobile ? sidebarOpen : true}
-          isMobile={!!isMobile}
-        />
+        {showFloorExplorer && (
+          <CampusSidebar
+            activeFloor={activeFloor}
+            onSelectFloor={(id) => {
+              setActiveFloor(id);
+              setHighlightRoom(undefined);
+              if (isMobile) setSidebarOpen(false);
+            }}
+            isOpen={isMobile ? sidebarOpen : true}
+            isMobile={!!isMobile}
+          />
+        )}
 
         <main className="campus-content-stage flex-1 overflow-hidden relative bg-secondary/20">
-          {plan && (
+          {!showFloorExplorer ? (
+            <CampusMasterMap
+              activeFloor={activeFloor}
+              onSelectFloor={(id) => {
+                setActiveFloor(id);
+                setHighlightRoom(undefined);
+              }}
+              onOpenFloorExplorer={() => setShowFloorExplorer(true)}
+            />
+          ) : (
+            plan && (
             <div className="h-full flex flex-col">
               <div className="campus-map-toolbar flex items-center justify-between gap-3 px-4 sm:px-5 py-3 bg-card/85 backdrop-blur-xl border-b border-border">
                 <div className="flex items-center gap-3">
@@ -240,6 +262,7 @@ export default function CampusNavigator() {
                 />
               </div>
             </div>
+          )}
           )}
 
           {/* Favorites Panel */}
