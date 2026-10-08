@@ -705,6 +705,32 @@ export default function Security() {
     </section>
   );
 
+  const CctvAccessPolicy = (
+    <section className="grid gap-3 rounded-xl border border-border bg-card p-4">
+      <div>
+        <h2 className="text-base font-semibold text-foreground">CCTV Access Policy</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Camera visibility is role-based. A camera does not grant physical access to the area it covers.
+          Visitor movement remains governed by the location access rules.
+        </p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        <div className="rounded-lg border border-border bg-secondary/40 p-3">
+          <p className="text-xs font-medium text-foreground">Security</p>
+          <p className="mt-1 text-xs text-[hsl(var(--status-authorized))]">View + manage CCTV configuration</p>
+        </div>
+        <div className="rounded-lg border border-border bg-secondary/40 p-3">
+          <p className="text-xs font-medium text-foreground">Management</p>
+          <p className="mt-1 text-xs text-muted-foreground">View only</p>
+        </div>
+        <div className="rounded-lg border border-border bg-secondary/40 p-3">
+          <p className="text-xs font-medium text-foreground">Faculty / Student / Visitors</p>
+          <p className="mt-1 text-xs text-muted-foreground">No CCTV dashboard access</p>
+        </div>
+      </div>
+    </section>
+  );
+
   const CctvEvidenceSummary = (
     <section className="grid gap-3">
       <div>
@@ -1121,7 +1147,7 @@ export default function Security() {
             <h2 className="text-sm font-semibold text-foreground">CCTV Cameras</h2>{CctvConfiguration}{CctvGrid}
           </TabsContent>
           <TabsContent value="map" className="grid gap-4">{Simulator}{LiveMap}</TabsContent>
-          <TabsContent value="cctv" className="grid gap-4"><p className="text-xs text-muted-foreground">Camera feeds remain simulated until the college provides reachable CCTV/NVR connection details.</p>{CctvEvidenceSummary}{CctvConfiguration}{Simulator}{CctvGrid}</TabsContent>
+          <TabsContent value="cctv" className="grid gap-4"><p className="text-xs text-muted-foreground">Camera feeds remain simulated until the college provides reachable CCTV/NVR connection details.</p>{CctvAccessPolicy}{CctvEvidenceSummary}{CctvConfiguration}{Simulator}{CctvGrid}</TabsContent>
           <TabsContent value="alerts" className="grid gap-4">
             <section className="grid gap-3">
               <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold text-foreground">Security Alerts · Active &amp; Acknowledged</h2><span className="text-xs text-muted-foreground">{activeAlerts.length} active · {acknowledgedAlerts.length} acknowledged</span></div>
