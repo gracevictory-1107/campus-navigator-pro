@@ -354,17 +354,9 @@ export async function getBiometricEmbedding(visitorId: string): Promise<number[]
   }
 
   const profile = await getSignedInProfile();
-  if (!profile || (profile.role !== "admin" && profile.role !== "security" && profile.role !== "management")) {
-    try {
-      const raw = localStorage.getItem(biometricLocalKey(visitorId));
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : null;
-    } catch {
-      return null;
-    }
+  if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
+    return null;
   }
-
   const { data, error } = await supabase
     .from("biometric_profiles")
     .select("id, visitor_id, provider_reference, status")
@@ -392,8 +384,7 @@ export async function saveBiometricEmbedding(visitorId: string, embedding: numbe
 
   const profile = await getSignedInProfile();
   if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
-    localStorage.setItem(biometricLocalKey(visitorId), JSON.stringify(embedding));
-    return { id: "LOCAL-" + visitorId, visitorId, embedding, status: "ENROLLED" };
+    throw new Error("A linked Supabase Security or Admin account is required for biometric enrollment.");
   }
 
   const providerReference = JSON.stringify({ version: 1, embedding });
@@ -457,19 +448,9 @@ export async function loadAllBiometricEmbeddings(): Promise<Array<{ visitorId: s
   }
 
   const profile = await getSignedInProfile();
-  if (!profile || (profile.role !== "admin" && profile.role !== "security" && profile.role !== "management")) {
-    const entries: Array<{ visitorId: string; embedding: number[] }> = [];
-    for (let index = 0; index < localStorage.length; index += 1) {
-      const key = localStorage.key(index);
-      if (!key?.startsWith("campus-biometric:")) continue;
-      try {
-        const parsed = JSON.parse(localStorage.getItem(key) ?? "null");
-        if (valid(parsed)) entries.push({ visitorId: key.slice("campus-biometric:".length), embedding: parsed });
-      } catch { /* ignore malformed local biometric records */ }
-    }
-    return entries;
+  if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
+    return []; 
   }
-
   const { data, error } = await supabase
     .from("biometric_profiles")
     .select("visitor_id, provider_reference, status")
@@ -537,7 +518,7 @@ export async function loadCameraConfigs(): Promise<Record<string, CameraConfig>>
 
   const profile = await getSignedInProfile();
   if (!profile || !["admin", "management", "security"].includes(profile.role)) {
-    return localCameraConfigs();
+    return {};
   }
 
   const { data, error } = await supabase
@@ -557,24 +538,27 @@ export async function loadCameraConfigs(): Promise<Record<string, CameraConfig>>
 }
 
 export async function saveCameraConfig(config: CameraConfig): Promise<void> {
-  const current = localCameraConfigs();
-  current[config.cameraId] = config;
-  localStorage.setItem(CAMERA_CONFIG_LOCAL_KEY, JSON.stringify(current));
-
-  if (!supabase) return;
-
-  const profile = await getSignedInProfile();
-  if (!profile || !["admin", "security"].includes(profile.role)) {
+  if (!supabase) {
+    const current = localCameraConfigs();
+    current[config.cameraId] = config;
+    localStorage.setItem(CAMERA_CONFIG_LOCAL_KEY, JSON.stringify(current));
     return;
   }
 
-  const { error } = await supabase
-    .from("camera_configs")
-    .upsert({
-      camera_id: config.cameraId,
-      ip_address: config.ipAddress.trim(),
-      stream_url: config.streamUrl.trim(),
-    });
+  const profile = await getSignedInProfile();
+  if (!profile || !["admin", "management"].includes(profile.role)) {
+    throw new Error("A linked Supabase Management or Admin account is required to change CCTV configuration.");
+  }
 
+  const cleaned = {
+    camera_id: config.cameraId,
+    ip_address: config.ipAddress.trim(),
+    stream_url: config.streamUrl.trim(),
+  };
+  const { error } = await supabase.from("camera_configs").upsert(cleaned);
   if (error) throw error;
+
+  const current = localCameraConfigs();
+  current[config.cameraId] = { cameraId: config.cameraId, ipAddress: cleaned.ip_address, streamUrl: cleaned.stream_url };
+  localStorage.setItem(CAMERA_CONFIG_LOCAL_KEY, JSON.stringify(current));
 }
