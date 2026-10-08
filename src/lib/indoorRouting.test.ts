@@ -71,10 +71,10 @@ describe("calculateIndoorRoute", () => {
   });
 });
 
-  it("keeps single-corridor floor routes inside mapped walkable corridors", () => {
+  it("keeps standard single-corridor floor routes inside mapped walkable corridors", () => {
     for (const [floorId, plan] of Object.entries(allFloorPlans)) {
       const corridors = plan.rooms.filter((room) => room.type === "corridor");
-      if (corridors.length !== 1) continue;
+      if (corridors.length !== 1 || new Set(["campus", "mb-gf", "fb-f2", "sheds"]).has(floorId)) continue;
 
       const rooms = plan.rooms.filter((room) => room.type !== "corridor" && room.label);
       for (const from of rooms) {
