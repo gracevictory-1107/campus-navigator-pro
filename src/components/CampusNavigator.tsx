@@ -11,13 +11,14 @@ import RoomInfoPanel from "./RoomInfoPanel";
 import NavigationPanel from "./NavigationPanel";
 import CategoryChips from "./CategoryChips";
 import FavoritesPanel from "./FavoritesPanel";
-import { Menu, X, MapPin, Navigation2, Shield, Star } from "lucide-react";
+import { Menu, X, MapPin, Navigation2, Shield, Star, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { IndoorRoute } from "@/lib/indoorRouting";
 import { useSecurity } from "@/security/SecurityContext";
 import type { RouteAccessDecision, RestrictedRouteArea } from "@/security/routeAccess";
+import ThemeToggle from "./ThemeToggle";
 
 export default function CampusNavigator() {
   const [activeFloor, setActiveFloor] = useState("campus");
@@ -98,59 +99,85 @@ export default function CampusNavigator() {
   const selectedFavKey = selectedRoom ? `${selectedRoom.floorId}:${selectedRoom.room.id}` : "";
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="campus-shell h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="flex flex-wrap items-center justify-between gap-y-2 px-4 py-3 border-b border-border bg-card shadow-soft z-40 flex-shrink-0">
+      <header className="campus-header relative z-40 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3.5 sm:px-5 flex-shrink-0">
         <div className="flex min-w-0 items-center gap-3">
-          <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" onClick={() => setSidebarOpen(!sidebarOpen)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden h-9 w-9 rounded-xl"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label={sidebarOpen ? "Close floor menu" : "Open floor menu"}
+          >
             {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <MapPin className="h-4 w-4 text-primary-foreground" />
+
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="campus-logo-mark flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-primary to-indigo-500 shadow-lg shadow-primary/20 ring-4 ring-primary/10">
+              <MapPin className="h-5 w-5 text-primary-foreground" />
             </div>
-            <div>
-              <h1 className="font-display text-lg font-bold leading-tight text-foreground">AWDC Campus</h1>
-              <p className="text-[11px] text-muted-foreground leading-none">Kakinada Navigator</p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h1 className="font-display text-[17px] sm:text-lg font-bold leading-tight text-foreground truncate">AWDC Campus</h1>
+                <span className="hidden sm:inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live Map
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">Kakinada · Find your way with confidence</p>
             </div>
           </div>
         </div>
-        <div className="flex w-full min-w-0 items-center justify-end gap-2 sm:w-auto">
+
+        <div className="flex w-full min-w-0 items-center justify-end gap-1.5 sm:w-auto">
           <SearchBar
             onNavigate={handleNavigate}
             favorites={favorites}
             onToggleFavorite={toggleFavorite}
             onAddRecent={addRecent}
           />
+          <ThemeToggle />
+
           <Button
             variant={showFavorites ? "default" : "outline"}
             size="icon"
-            className="hidden sm:flex h-9 w-9"
+            className="hidden sm:flex h-9 w-9 rounded-xl"
             onClick={() => setShowFavorites(!showFavorites)}
+            aria-label="Saved places"
+            title="Saved places"
           >
             <Star className="h-3.5 w-3.5" />
           </Button>
+
           <Button
             variant={showNav ? "default" : "outline"}
             size="sm"
-            className="hidden sm:flex gap-1.5 h-9"
+            className="hidden sm:flex gap-1.5 h-9 rounded-xl px-3"
             onClick={() => setShowNav(!showNav)}
           >
             <Navigation2 className="h-3.5 w-3.5" />
             <span className="text-xs">Directions</span>
           </Button>
-          <Button asChild variant="outline" size="sm" className="h-9 gap-1.5 px-2 sm:px-3" aria-label="Security Sign In">
+
+          <Button asChild variant="outline" size="sm" className="h-9 rounded-xl gap-1.5 px-2 sm:px-3" aria-label="Security Sign In">
             <Link to="/security" aria-label="Security Sign In">
               <Shield className="h-3.5 w-3.5" />
-              <span className="text-xs">Security</span>
+              <span className="text-xs hidden sm:inline">Security</span>
             </Link>
           </Button>
+
           <ExportPDF />
         </div>
       </header>
 
       {/* Category chips */}
-      <div className="border-b border-border bg-card/50 px-4 flex-shrink-0 overflow-hidden">
+      <div className="campus-category-strip border-b border-border bg-card/70 px-3 sm:px-4 flex-shrink-0 overflow-hidden">
+        <div className="mx-auto flex max-w-[1600px] items-center gap-2">
+          <div className="hidden lg:flex shrink-0 items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            Explore
+          </div>
         <CategoryChips activeFilter={categoryFilter} onFilterChange={setCategoryFilter} />
       </div>
 
@@ -171,17 +198,17 @@ export default function CampusNavigator() {
           isMobile={!!isMobile}
         />
 
-        <main className="flex-1 overflow-hidden relative bg-secondary/30">
+        <main className="campus-content-stage flex-1 overflow-hidden relative bg-secondary/20">
           {plan && (
             <div className="h-full flex flex-col">
-              <div className="flex items-center justify-between px-5 py-3 bg-card/80 backdrop-blur-sm border-b border-border">
+              <div className="campus-map-toolbar flex items-center justify-between gap-3 px-4 sm:px-5 py-3 bg-card/85 backdrop-blur-xl border-b border-border">
                 <div className="flex items-center gap-3">
-                  <h2 className="font-display text-base font-semibold text-foreground">{plan.title}</h2>
-                  <span className="text-xs text-muted-foreground hidden sm:inline">{plan.subtitle}</span>
+                  <div className="min-w-0"><p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-primary/80">You are viewing</p><h2 className="font-display text-base sm:text-[17px] font-semibold text-foreground truncate mt-0.5">{plan.title}</h2></div>
+                  <span className="text-xs text-muted-foreground hidden sm:inline truncate">{plan.subtitle}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs bg-primary/10 text-primary font-medium px-2.5 py-1 rounded-full">
-                    Floor {plan.code}
+                  <span className="rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
+                    {plan.code}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
                     {plan.rooms.filter(r => r.type !== "corridor").length} rooms
@@ -189,7 +216,7 @@ export default function CampusNavigator() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-hidden relative">
+              <div className="campus-map-stage flex-1 overflow-hidden relative">
                 {routeAccessNotice && (
                   <div className={`absolute top-3 left-3 z-10 rounded-lg border px-3 py-2 shadow-soft text-sm font-semibold ${
                     routeAccessNotice.allowed
@@ -267,7 +294,7 @@ export default function CampusNavigator() {
 
         {/* Mobile bottom bar */}
         {isMobile && (
-          <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border flex items-center justify-around py-2 z-20 shadow-elevated">
+          <div className="campus-mobile-bar fixed bottom-0 left-0 right-0 flex items-center justify-around py-2 z-20">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-primary transition-colors p-2"
