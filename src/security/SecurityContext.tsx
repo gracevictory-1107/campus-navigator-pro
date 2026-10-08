@@ -356,6 +356,10 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   }, [role]);
 
   const setAlertStatus = useCallback((id: string, status: AlertStatus) => {
+    if (!can.manageSecurity(role)) {
+      toast.error("You do not have permission to update security alerts.");
+      return;
+    }
     setState((s) => ({
       ...s,
       alerts: s.alerts.map((a) => (a.id === id ? { ...a, status, history: [...a.history, { status, at: Date.now(), by: role }] } : a)),
