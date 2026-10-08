@@ -58,9 +58,13 @@ function normalizeAlertSeverity(value: unknown): AlertSeverity {
   return "High";
 }
 
+function emptySecurityState(): State {
+  return { visitors: [], rules: defaultRules, events: [], alerts: [], muted: false };
+}
+
 function load(): State {
   if (supabaseConfigured) {
-    return { visitors: [], rules: defaultRules, events: [], alerts: [], muted: false };
+    return emptySecurityState();
   }
   try {
     const raw = localStorage.getItem(STORE_KEY);
@@ -120,11 +124,13 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           setRoleState("student");
           setSignedIn(false);
           setBackendReady(false);
+          if (supabaseConfigured) setState(emptySecurityState());
           return;
         }
         localStorage.setItem(ROLE_KEY, authenticatedRole);
         setRoleState(authenticatedRole);
         setSignedIn(true);
+        if (supabaseConfigured) setState(emptySecurityState());
         const remote = await loadSecuritySnapshot();
         if (!active || !remote) return;
         setState((local) => ({
@@ -151,6 +157,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           setBackendReady(false);
           setRoleState("student");
           setSignedIn(false);
+          setState(emptySecurityState());
           localStorage.removeItem(ROLE_KEY);
           if (supabaseConfigured) {
             localStorage.removeItem(STORE_KEY);
@@ -216,6 +223,16 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(ROLE_KEY);
     setRoleState("student");
     setSignedIn(false);
+    setBackendReady(false);
+    setState(emptySecurityState());
+    if (supabaseConfigured) {
+      localStorage.removeItem(STORE_KEY);
+      localStorage.removeItem("campus-camera-config-v1");
+      for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+        const key = localStorage.key(index);
+        if (key?.startsWith("campus-biometric:")) localStorage.removeItem(key);
+      }
+    }
   }, []);
 
   const registerVisitor: Ctx["registerVisitor"] = useCallback((input, existing) => {
