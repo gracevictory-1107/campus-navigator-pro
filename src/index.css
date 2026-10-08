@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -102,7 +102,7 @@
     --sidebar-border: 220 14% 81%;
     --sidebar-ring: 230 80% 56%;
 
-    --font-display: 'DM Sans', sans-serif;
+    --font-display: 'Plus Jakarta Sans', sans-serif;
     --font-body: 'Inter', sans-serif;
 
     --status-authorized: 145 63% 36%;
@@ -166,6 +166,7 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-body);
+    font-feature-settings: 'cv11' 1, 'ss01' 1;
   }
 
   /* Remove crosshair cursor */
@@ -177,6 +178,8 @@
 @layer utilities {
   .font-display {
     font-family: var(--font-display);
+    letter-spacing: -0.02em;
+    font-feature-settings: 'ss01' 1, 'cv02' 1;
   }
   .font-body {
     font-family: var(--font-body);
