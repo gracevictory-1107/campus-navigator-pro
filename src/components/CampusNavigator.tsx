@@ -42,12 +42,14 @@ export default function CampusNavigator() {
   const plan = allFloorPlans[activeFloor];
 
   const handleNavigate = useCallback((floorId: string, roomId: string) => {
+    setShowFloorExplorer(true);
     setActiveFloor(floorId);
     setHighlightRoom(roomId);
     setTimeout(() => setHighlightRoom(undefined), 6000);
   }, []);
 
   const focusRestrictedArea = useCallback((floorId: string) => {
+    setShowFloorExplorer(true);
     setActiveFloor(floorId);
     setHighlightRoom(undefined);
   }, []);
@@ -55,6 +57,7 @@ export default function CampusNavigator() {
   const handleRouteAuthorization = useCallback(async (visitorId: string | null, route: IndoorRoute): Promise<RouteAccessDecision> => {
     const decision = await security.authorizeIndoorRoute(visitorId, route, security.role);
     const visitor = visitorId ? security.visitors.find((candidate) => candidate.id === visitorId) : undefined;
+    setShowFloorExplorer(true);
     if (decision.allowed) {
       setActiveRoute(route);
       setRestrictedRouteAreas([]);
