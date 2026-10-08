@@ -801,10 +801,16 @@ export default function Security() {
                   <p className="text-sm font-semibold text-foreground">{c.name}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">{loc?.name ?? "Unknown location"}</p>
                 </div>
-                <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${c.status === "online" ? ok : "text-muted-foreground"}`}>
-                  <span className={`h-2 w-2 rounded-full ${c.status === "online" ? "bg-[hsl(var(--status-authorized))]" : "bg-muted-foreground"}`} />
-                  {c.status === "online" ? "Online" : "Offline"}
-                </span>
+                {(() => {
+                  const configured = Boolean(cameraConfigs[c.id]?.ipAddress?.trim() || cameraConfigs[c.id]?.streamUrl?.trim());
+                  const label = c.source === "simulated" ? (configured ? "Configured · Simulation" : "Simulation") : (configured ? "Configured" : "Unavailable");
+                  return (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                      <span className={`h-2 w-2 rounded-full ${configured && c.source !== "simulated" ? "bg-[hsl(var(--status-authorized))]" : "bg-amber-500"}`} />
+                      {label}
+                    </span>
+                  );
+                })()}
               </div>
               <p className="font-mono text-[11px] text-muted-foreground">Camera ID: {c.id}</p>
               <p className="font-mono text-[11px] text-muted-foreground">CCTV IP: {cameraConfigs[c.id]?.ipAddress || "Pending from college"}</p>
