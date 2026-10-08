@@ -204,6 +204,10 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const registerVisitor: Ctx["registerVisitor"] = useCallback((input, existing) => {
+    if (!can.manageVisitors(role)) {
+      toast.error("You do not have permission to manage visitor records.");
+      throw new Error("You do not have permission to manage visitor records.");
+    }
     const nextNum = 1020 + stateRef.current.visitors.length + Math.floor(Math.random() * 10);
     const visitor: Visitor = {
       ...input,
@@ -215,7 +219,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     };
     setState((s) => ({ ...s, visitors: [visitor, ...s.visitors.filter((v) => v.id !== visitor.id)] }));
     return visitor;
-  }, []);
+  }, [role]);
 
   const setVisitorStatus = useCallback((id: string, status: VisitorStatus) => {
     if (!can.manageVisitors(role)) {
