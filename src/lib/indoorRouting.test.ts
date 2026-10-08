@@ -2,6 +2,34 @@ import { describe, expect, it } from "vitest";
 import { allFloorPlans } from "@/data/floorPlans";
 import { calculateIndoorRoute } from "./indoorRouting";
 
+function pointInside(point: { x: number; y: number }, room: { x: number; y: number; w: number; h: number }) {
+  return point.x >= room.x && point.x <= room.x + room.w && point.y >= room.y && point.y <= room.y + room.h;
+}
+
+function segmentIntersectsRoom(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  room: { x: number; y: number; w: number; h: number }
+) {
+  if (pointInside(a, room) || pointInside(b, room)) return true;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  let minimum = 0;
+  let maximum = 1;
+  for (const [p, q] of [[-dx, a.x - room.x], [dx, room.x + room.w - a.x], [-dy, a.y - room.y], [dy, room.y + room.h - a.y]] as [number, number][]) {
+    if (p === 0) {
+      if (q < 0) return false;
+      continue;
+    }
+    const ratio = q / p;
+    if (p < 0) minimum = Math.max(minimum, ratio);
+    else maximum = Math.min(maximum, ratio);
+    if (minimum > maximum) return false;
+  }
+  return true;
+}
+
+
 describe("calculateIndoorRoute", () => {
   it("creates a measurable visual route between rooms on the same floor", () => {
     const route = calculateIndoorRoute("mb-gf", "principal", "mb-gf", "library");
@@ -42,3 +70,32 @@ describe("calculateIndoorRoute", () => {
     expect(calculateIndoorRoute("mb-gf", "not-a-room", "mb-gf", "library")).toBeNull();
   });
 });
+
+  it("keeps single-corridor floor routes inside mapped walkable corridors", () => {
+    for (const [floorId, plan] of Object.entries(allFloorPlans)) {
+      const corridors = plan.rooms.filter((room) => room.type === "corridor");
+      if (corridors.length !== 1) continue;
+
+      const rooms = plan.rooms.filter((room) => room.type !== "corridor" && room.label);
+      for (const from of rooms) {
+        for (const to of rooms) {
+          if (from.id === to.id) continue;
+          const route = calculateIndoorRoute(floorId, from.id, floorId, to.id);
+          expect(route).not.toBeNull();
+
+          for (const leg of route!.legs) {
+            for (const room of plan.rooms.filter((candidate) =>
+              candidate.type !== "corridor" &&
+              candidate.id !== leg.startRoomId &&
+              candidate.id !== leg.endRoomId
+            )) {
+              for (let index = 1; index < leg.points.length; index += 1) {
+                expect(segmentIntersectsRoom(leg.points[index - 1], leg.points[index], room)).toBe(false);
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+\n
