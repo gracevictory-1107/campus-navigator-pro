@@ -1,7 +1,8 @@
 import type { AccessRule, AccessStatus, Visitor } from "./types";
 
 /**
- * Service seams. No backend exists yet, so each service has a simulated adapter.
+ * Service seams. No NVR / VMS / ONVIF or face-verification provider backend is
+ * integrated yet, so each service has a simulated adapter.
  * A real API / NVR / VMS / ONVIF / face-verification provider replaces the adapter
  * and becomes the source of truth; the UI only consumes these interfaces.
  * Never put camera credentials, private IPs or API keys in this file.

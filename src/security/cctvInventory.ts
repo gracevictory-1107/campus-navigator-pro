@@ -1,5 +1,3 @@
-import type { Camera } from "./types";
-
 export type CctvEvidenceStatus = "identified" | "unlabeled";
 export type CctvMappingConfidence = "confirmed" | "area-confirmed" | "floor-unconfirmed";
 
@@ -91,16 +89,3 @@ export const cctvEvidenceCaptureCounts = {
 };
 
 export const identifiedCctvEvidence = cctvEvidence.filter((item) => item.status === "identified");
-
-export const cctvEvidenceFloorGroups = [
-  { building: "Main Building", floorId: "mb-gf", label: "Ground Floor" },
-  { building: "Main Building", floorId: "mb-f1", label: "Floor 1" },
-  { building: "Main Building", floorId: "mb-f2", label: "Floor 2" },
-  { building: "Main Building", floorId: "mb-f3", label: "Floor 3" },
-  { building: "Main Building", floorId: "mb-f4", label: "Floor 4" },
-  { building: "Main Building", floorId: "mb-f5", label: "Floor 5" },
-  { building: "Block B", floorId: "bb-f2", label: "Floor 2 (CCTV evidence; plan pending)" },
-  { building: "Block B", floorId: "bb-f3", label: "Floor 3" },
-  { building: "Block B", floorId: "bb-f4", label: "Floor 4" },
-  { building: "Block B", floorId: "bb-f5", label: "Floor 5" },
-];

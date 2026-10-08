@@ -1,5 +1,3 @@
-import type { Visitor } from "./types";
-
 export const BIOMETRIC_MATCH_THRESHOLD = 0.58;
 export const BIOMETRIC_CONFIDENCE_THRESHOLD = 0.6;
 
@@ -166,8 +164,4 @@ export function isValidEmbedding(value: unknown): value is number[] {
 
 export function describeBiometricScore(value: number) {
   return String(Math.round(value * 100)) + "%";
-}
-
-export function visitorBiometricLabel(visitor: Visitor) {
-  return visitor.verified ? "AI face biometric verified" : "Biometric not verified";
 }
