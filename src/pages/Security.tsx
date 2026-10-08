@@ -284,6 +284,8 @@ export default function Security() {
   const { role } = sec;
   const manage = can.manageSecurity(role);
   const manageAccess = can.manageAccessControl(role);
+  const viewCCTV = can.viewCCTV(role);
+  const manageCCTV = can.manageCCTV(role);
   const manageVisitors = can.manageVisitors(role);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [cameraOpen, setCameraOpen] = useState<string | null>(null);
@@ -597,7 +599,7 @@ export default function Security() {
     </section>
   );
 
-  const Simulator = manage && (
+  const Simulator = manageCCTV && (
     <div className="rounded-xl border border-dashed border-border bg-card p-4 grid gap-3">
       <div className="flex items-center gap-2"><Radio className="h-4 w-4 text-primary" /><p className="text-sm font-semibold text-foreground">CCTV Event Simulator</p><Badge variant="secondary" className="text-[10px]">Demo</Badge></div>
       <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-2">
@@ -656,12 +658,15 @@ export default function Security() {
     </div>
   );
 
-  const CctvConfiguration = manage && (
+  const CctvConfiguration = viewCCTV && (
     <section className="grid gap-3 rounded-xl border border-border bg-card p-4">
       <div>
         <h2 className="text-base font-semibold text-foreground">CCTV Network Configuration</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Enter the camera IP address when the college provides it. An IP alone does not create a live browser stream. The college/NVR may also need to provide a browser-accessible stream URL, port, protocol, and network access.
+          {manageCCTV
+            ? "Management can update the camera IP address and stream/NVR URL supplied by the college CCTV/NVR administrator."
+            : "Security has view-only access to the configured CCTV details. Camera settings can be changed only by Management or Admin."}
+          An IP alone does not create a live browser stream. The college/NVR may also need to provide a browser-accessible stream URL, port, protocol, and network access.
         </p>
       </div>
       <div className="grid gap-3">
@@ -674,9 +679,11 @@ export default function Security() {
                   <p className="text-sm font-semibold text-foreground">{camera.id} · {locationById(camera.locationId)?.name}</p>
                   <p className="text-[11px] text-muted-foreground">Details supplied by the college CCTV/NVR administrator.</p>
                 </div>
-                <Button size="sm" onClick={() => void persistCameraConfig(camera.id)} disabled={cameraConfigSaving === camera.id}>
-                  {cameraConfigSaving === camera.id ? "Saving..." : "Save Configuration"}
-                </Button>
+                {manageCCTV && (
+                  <Button size="sm" onClick={() => void persistCameraConfig(camera.id)} disabled={cameraConfigSaving === camera.id}>
+                    {cameraConfigSaving === camera.id ? "Saving..." : "Save Configuration"}
+                  </Button>
+                )}
               </div>
               <div className="grid gap-2 md:grid-cols-2">
                 <div className="grid gap-1">
@@ -686,6 +693,7 @@ export default function Security() {
                     value={config.ipAddress}
                     placeholder="e.g. 192.168.1.50"
                     onChange={(event) => updateCameraConfig(camera.id, "ipAddress", event.target.value)}
+                    disabled={!manageCCTV}
                   />
                 </div>
                 <div className="grid gap-1">
@@ -695,6 +703,7 @@ export default function Security() {
                     value={config.streamUrl}
                     placeholder="https://... or college NVR stream URL"
                     onChange={(event) => updateCameraConfig(camera.id, "streamUrl", event.target.value)}
+                    disabled={!manageCCTV}
                   />
                 </div>
               </div>
@@ -717,11 +726,11 @@ export default function Security() {
       <div className="grid gap-2 sm:grid-cols-3">
         <div className="rounded-lg border border-border bg-secondary/40 p-3">
           <p className="text-xs font-medium text-foreground">Security</p>
-          <p className="mt-1 text-xs text-[hsl(var(--status-authorized))]">View + manage CCTV configuration</p>
+          <p className="mt-1 text-xs text-[hsl(var(--status-authorized))]">View CCTV only</p>
         </div>
         <div className="rounded-lg border border-border bg-secondary/40 p-3">
           <p className="text-xs font-medium text-foreground">Management</p>
-          <p className="mt-1 text-xs text-muted-foreground">View only</p>
+          <p className="mt-1 text-xs text-[hsl(var(--status-authorized))]">View + manage CCTV configuration</p>
         </div>
         <div className="rounded-lg border border-border bg-secondary/40 p-3">
           <p className="text-xs font-medium text-foreground">Faculty / Student / Visitors</p>
