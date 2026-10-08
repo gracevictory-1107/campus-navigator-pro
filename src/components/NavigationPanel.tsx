@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { calculateIndoorRoute, type IndoorRoute } from "@/lib/indoorRouting";
 import type { RouteAccessDecision } from "@/security/routeAccess";
 import { personTypes, type PersonType, type Role, type SecurityLocation, type Visitor } from "@/security/types";
+import { rankRoomSearchResults } from "@/lib/roomSearch";
 
 interface Props {
   onClose: () => void;
@@ -58,29 +59,8 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
   }, [fromRoom, toRoom]);
 
   const searchResults = useMemo(() => {
-    const q = (activeInput === "from" ? fromQuery : toQuery).trim().toLowerCase();
-    if (!q) return [];
-
-    return allRooms
-      .map((item) => {
-        const id = item.room.id.toLowerCase();
-        const label = item.room.label.toLowerCase();
-        const sublabel = item.room.sublabel?.toLowerCase() ?? "";
-        const description = item.room.description?.toLowerCase() ?? "";
-
-        let score = Number.POSITIVE_INFINITY;
-        if (label === q || id === q) score = 0;
-        else if (label.startsWith(q) || id.startsWith(q)) score = 1;
-        else if (sublabel.startsWith(q)) score = 2;
-        else if (label.includes(q) || id.includes(q)) score = 3;
-        else if (sublabel.includes(q) || description.includes(q)) score = 4;
-
-        return { item, score };
-      })
-      .filter(({ score }) => Number.isFinite(score))
-      .sort((a, b) => a.score - b.score || a.item.room.label.localeCompare(b.item.room.label))
-      .map(({ item }) => item)
-      .slice(0, 20);
+    const query = activeInput === "from" ? fromQuery : toQuery;
+    return rankRoomSearchResults(query, allRooms);
   }, [fromQuery, toQuery, activeInput, allRooms]);
 
   const directions = useMemo(() => {
@@ -266,19 +246,37 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
         </div>
 
         {/* Search dropdown */}
-        {activeInput && searchResults.length > 0 && (
-          <div className="absolute left-4 right-4 top-full mt-1 bg-card border border-border rounded-xl shadow-elevated z-50 max-h-48 overflow-y-auto">
+        {activeInput && (fromQuery.trim() || toQuery.trim()) && (
+          <div className="absolute left-4 right-4 top-full mt-1 bg-card border border-border rounded-xl shadow-elevated z-50 max-h-[min(55vh,24rem)] overflow-y-auto">
             <div className="p-1.5">
-              {searchResults.map((r, i) => (
-                <button
-                  key={`${r.floorId}-${r.room.id}-${i}`}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors rounded-lg"
-                  onClick={() => selectRoom(r.floorId, r.room.id, r.room.label)}
-                >
-                  <span className="font-medium text-foreground">{r.room.label}</span>
-                  <span className="text-xs text-muted-foreground ml-2">{r.floorTitle}</span>
-                </button>
-              ))}
+              {searchResults.length === 0 ? (
+                <div className="px-3 py-7 text-center">
+                  <Navigation2 className="mx-auto h-5 w-5 text-muted-foreground/50" />
+                  <p className="mt-2 text-sm font-medium text-foreground">No matching destination</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Try a room number, room name, floor, or building.</p>
+                </div>
+              ) : (
+                <>
+                  {searchResults.map((r, i) => (
+                    <button
+                      key={`${r.floorId}-${r.room.id}-${i}`}
+                      className="w-full text-left px-3 py-2.5 hover:bg-accent transition-colors rounded-lg flex items-center gap-3"
+                      onClick={() => selectRoom(r.floorId, r.room.id, r.room.label)}
+                    >
+                      <span className="h-8 w-8 shrink-0 rounded-xl bg-primary/10 grid place-items-center text-sm">
+                        {r.room.type === "lift" ? "🛗" : r.room.type === "stairs" ? "🪜" : r.room.type === "lab" ? "🔬" : r.room.type === "wc" ? "🚻" : "📍"}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="font-medium text-foreground block truncate">{r.room.label}</span>
+                        <span className="text-[10px] text-muted-foreground block truncate">{r.floorTitle}</span>
+                      </span>
+                    </button>
+                  ))}
+                  <div className="border-t border-border px-3 py-2 mt-1 bg-card/95 sticky bottom-0 backdrop-blur">
+                    <p className="text-[10px] text-muted-foreground text-center">{searchResults.length} matching destinations</p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
