@@ -14,6 +14,8 @@ export const can = {
   manageSecurity: (r: Role) => r === "security" || r === "admin",
   manageAccessControl: (r: Role) => r === "security" || r === "admin",
   manageVisitors: (r: Role) => r === "security" || r === "admin",
+  viewCCTV: (r: Role) => r === "security" || r === "management" || r === "admin",
+  manageCCTV: (r: Role) => r === "management" || r === "admin",
   viewManagement: (r: Role) => r === "management" || r === "admin",
   administer: (r: Role) => r === "admin",
 };
