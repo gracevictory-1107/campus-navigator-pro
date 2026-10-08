@@ -819,7 +819,7 @@ export default function Security() {
           Rules are applied by the existing visitor-category route authorization and saved with the security state.
         </p>
       </div>
-      {!manageAccess && <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">Read-only access. Only Security, Management, and Admin can change permissions.</p>}
+      {!manageAccess && <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">Read-only access. Only Security and Admin can change permissions.</p>}
       <div className="rounded-xl border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
@@ -1002,7 +1002,7 @@ export default function Security() {
           <Button asChild variant="ghost" size="icon" className="h-9 w-9"><Link to="/" aria-label="Back to navigator"><ArrowLeft className="h-4 w-4" /></Link></Button>
           <div>
             <h1 className="font-display text-lg font-bold text-foreground leading-tight">Campus Security</h1>
-            <p className="text-[11px] text-muted-foreground">{roles.find((r) => r.id === role)?.label} view{!manage && !manageAccess ? " · read-only" : ""} · CCTV connection pending</p>
+            <p className="text-[11px] text-muted-foreground">{roles.find((r) => r.id === role)?.label} view{!manage && !manageAccess ? " · read-only" : ""} · CCTV integration pending</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
