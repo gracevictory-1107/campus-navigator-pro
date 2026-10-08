@@ -178,7 +178,8 @@ export default function CampusNavigator() {
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             Explore
           </div>
-        <CategoryChips activeFilter={categoryFilter} onFilterChange={setCategoryFilter} />
+          <CategoryChips activeFilter={categoryFilter} onFilterChange={setCategoryFilter} />
+        </div>
       </div>
 
       {/* Body */}
