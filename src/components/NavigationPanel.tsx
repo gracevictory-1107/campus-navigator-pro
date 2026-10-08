@@ -145,7 +145,8 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
       setRouteDecision(decision);
       if (decision.allowed) {
         onNavigate(fromRoom.floorId, fromRoom.roomId);
-        onClose();
+        // Keep the directions panel open so the user can review the route
+        // before choosing which floor to show on the map.
       } else {
         const restrictedArea = decision.deniedAreas[0];
         if (restrictedArea) onFocusRestrictedArea(restrictedArea.floorId, restrictedArea.roomId);
@@ -350,11 +351,29 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
 
             {checkError && <p className="mb-3 text-xs text-red-700" role="alert">{checkError}</p>}
 
-            <div className="pt-2">
-              <Button className="w-full gap-2" onClick={checkAndShowRoute} disabled={isCheckingAccess || (!fullAccessRole && !visitor)}>
-                <Footprints className="h-4 w-4" />
-                {isCheckingAccess ? "Checking access..." : "Check Access & Generate Route"}
-              </Button>
+            <div className="pt-2 space-y-2">
+              {!routeDecision?.allowed ? (
+                <Button className="w-full gap-2" onClick={checkAndShowRoute} disabled={isCheckingAccess || (!fullAccessRole && !visitor)}>
+                  <Footprints className="h-4 w-4" />
+                  {isCheckingAccess ? "Checking access..." : "Check Access & Generate Route"}
+                </Button>
+              ) : (
+                <>
+                  <Button className="w-full gap-2" onClick={onClose}>
+                    <Navigation2 className="h-4 w-4" />
+                    {fromRoom.floorId === toRoom.floorId ? "Show Route on Map" : "Show Start-Floor Route"}
+                  </Button>
+                  {fromRoom.floorId !== toRoom.floorId && (
+                    <Button variant="outline" className="w-full gap-2" onClick={() => {
+                      onNavigate(toRoom.floorId, toRoom.roomId);
+                      onClose();
+                    }}>
+                      <Navigation2 className="h-4 w-4" />
+                      Show Destination Floor
+                    </Button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         ) : (
