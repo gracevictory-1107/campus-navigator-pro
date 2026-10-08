@@ -58,16 +58,29 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
   }, [fromRoom, toRoom]);
 
   const searchResults = useMemo(() => {
-    const q = activeInput === "from" ? fromQuery : toQuery;
-    if (!q.trim()) return [];
-    const lower = q.toLowerCase();
+    const q = (activeInput === "from" ? fromQuery : toQuery).trim().toLowerCase();
+    if (!q) return [];
+
     return allRooms
-      .filter(r =>
-        r.room.label.toLowerCase().includes(lower) ||
-        r.room.sublabel?.toLowerCase().includes(lower) ||
-        r.room.description?.toLowerCase().includes(lower)
-      )
-      .slice(0, 6);
+      .map((item) => {
+        const id = item.room.id.toLowerCase();
+        const label = item.room.label.toLowerCase();
+        const sublabel = item.room.sublabel?.toLowerCase() ?? "";
+        const description = item.room.description?.toLowerCase() ?? "";
+
+        let score = Number.POSITIVE_INFINITY;
+        if (label === q || id === q) score = 0;
+        else if (label.startsWith(q) || id.startsWith(q)) score = 1;
+        else if (sublabel.startsWith(q)) score = 2;
+        else if (label.includes(q) || id.includes(q)) score = 3;
+        else if (sublabel.includes(q) || description.includes(q)) score = 4;
+
+        return { item, score };
+      })
+      .filter(({ score }) => Number.isFinite(score))
+      .sort((a, b) => a.score - b.score || a.item.room.label.localeCompare(b.item.room.label))
+      .map(({ item }) => item)
+      .slice(0, 10);
   }, [fromQuery, toQuery, activeInput, allRooms]);
 
   const directions = useMemo(() => {
