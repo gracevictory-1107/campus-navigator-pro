@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { allFloorPlans } from "@/data/floorPlans";
 import type { Room, RoomType } from "@/data/floorPlans";
@@ -10,10 +11,13 @@ import RoomInfoPanel from "./RoomInfoPanel";
 import NavigationPanel from "./NavigationPanel";
 import CategoryChips from "./CategoryChips";
 import FavoritesPanel from "./FavoritesPanel";
-import { Menu, X, MapPin, Navigation2, Star } from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
+import { Menu, X, MapPin, Navigation2, Star, LogIn, LogOut, LayoutDashboard, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function CampusNavigator() {
   const [activeFloor, setActiveFloor] = useState("campus");
@@ -24,6 +28,8 @@ export default function CampusNavigator() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState<RoomType | null>(null);
   const isMobile = useIsMobile();
+  const { profile, role, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const [favorites, setFavorites] = useLocalStorage<string[]>("campus-favorites", []);
   const [recentSearches, setRecentSearches] = useLocalStorage<string[]>("campus-recent", []);
@@ -62,6 +68,9 @@ export default function CampusNavigator() {
   const mobileSidebarOpen = isMobile && sidebarOpen;
 
   const selectedFavKey = selectedRoom ? `${selectedRoom.floorId}:${selectedRoom.room.id}` : "";
+
+  const isStaff = role === "security" || role === "admin";
+  const canViewDashboard = isStaff || role === "management";
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -106,6 +115,40 @@ export default function CampusNavigator() {
             <span className="text-xs">Directions</span>
           </Button>
           <ExportPDF />
+
+          {/* Theme + role-based auth controls (added; existing UI preserved) */}
+          <ThemeToggle className="h-9 w-9" />
+          {profile ? (
+            <div className="flex items-center gap-1.5">
+              <Badge variant="outline" className="hidden md:inline-flex text-[10px] capitalize">
+                {role}
+              </Badge>
+              {canViewDashboard && (
+                <Button variant="outline" size="sm" className="hidden sm:flex gap-1.5 h-9"
+                  onClick={() => navigate("/dashboard")}>
+                  <LayoutDashboard className="h-3.5 w-3.5" />
+                  <span className="text-xs">Dashboard</span>
+                </Button>
+              )}
+              {role === "admin" && (
+                <Button variant="outline" size="icon" className="hidden sm:flex h-9 w-9"
+                  title="Admin console" onClick={() => navigate("/admin")}>
+                  <Settings className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" className="h-9 w-9" title="Sign out"
+                onClick={async () => { await signOut(); navigate("/login"); }}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <Link to="/login">
+              <Button variant="outline" size="sm" className="gap-1.5 h-9">
+                <LogIn className="h-3.5 w-3.5" />
+                <span className="text-xs">Sign in</span>
+              </Button>
+            </Link>
+          )}
         </div>
       </header>
 
@@ -227,6 +270,15 @@ export default function CampusNavigator() {
               <Navigation2 className="h-5 w-5" />
               <span className="text-[10px]">Directions</span>
             </button>
+            {canViewDashboard && (
+              <button
+                onClick={() => navigate("/dashboard")}
+                className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-primary transition-colors p-2"
+              >
+                <LayoutDashboard className="h-5 w-5" />
+                <span className="text-[10px]">Security</span>
+              </button>
+            )}
             <ExportPDF iconOnly />
           </div>
         )}

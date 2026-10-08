@@ -147,3 +147,101 @@
     scrollbar-width: none;
   }
 }
+
+/* ============================ DARK THEME ============================ */
+/* darkMode: ["class"] is enabled in tailwind.config.ts — toggling .dark on
+   <html> swaps these variables. Room colours are re-tuned for dark surfaces. */
+.dark {
+  --background: 222 24% 8%;
+  --foreground: 220 20% 94%;
+
+  --card: 222 22% 11%;
+  --card-foreground: 220 20% 94%;
+
+  --popover: 222 22% 11%;
+  --popover-foreground: 220 20% 94%;
+
+  --primary: 230 85% 66%;
+  --primary-foreground: 222 30% 8%;
+
+  --secondary: 222 18% 16%;
+  --secondary-foreground: 220 16% 88%;
+
+  --muted: 222 18% 16%;
+  --muted-foreground: 220 12% 66%;
+
+  --accent: 222 18% 20%;
+  --accent-foreground: 220 20% 94%;
+
+  --destructive: 0 72% 56%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 222 16% 22%;
+  --input: 222 16% 22%;
+  --ring: 230 85% 66%;
+
+  --room-lab: 142 30% 18%;
+  --room-lab-stroke: 142 40% 42%;
+  --room-lab-text: 142 45% 78%;
+
+  --room-class: 220 35% 20%;
+  --room-class-stroke: 220 45% 48%;
+  --room-class-text: 220 55% 82%;
+
+  --room-hod: 270 30% 20%;
+  --room-hod-stroke: 270 40% 50%;
+  --room-hod-text: 270 50% 84%;
+
+  --room-stairs: 40 40% 18%;
+  --room-stairs-stroke: 40 50% 45%;
+  --room-stairs-text: 40 60% 80%;
+
+  --room-lift: 210 35% 18%;
+  --room-lift-stroke: 210 45% 46%;
+  --room-lift-text: 210 55% 82%;
+
+  --room-wc: 180 30% 17%;
+  --room-wc-stroke: 180 40% 42%;
+  --room-wc-text: 180 45% 80%;
+
+  --room-exit: 145 35% 17%;
+  --room-exit-stroke: 145 45% 42%;
+  --room-exit-text: 145 50% 80%;
+
+  --room-corridor: 220 12% 15%;
+  --room-corridor-stroke: 220 12% 30%;
+  --room-corridor-text: 220 10% 66%;
+
+  --room-staff: 160 30% 17%;
+  --room-staff-stroke: 160 40% 42%;
+  --room-staff-text: 160 45% 80%;
+
+  --room-innov: 268 32% 20%;
+  --room-innov-stroke: 268 42% 50%;
+  --room-innov-text: 268 50% 84%;
+
+  --room-open: 120 22% 16%;
+  --room-open-stroke: 120 30% 40%;
+  --room-open-text: 120 35% 78%;
+
+  --room-canteen: 30 38% 18%;
+  --room-canteen-stroke: 30 48% 46%;
+  --room-canteen-text: 30 55% 82%;
+
+  --room-dean: 290 30% 20%;
+  --room-dean-stroke: 290 40% 48%;
+  --room-dean-text: 290 48% 84%;
+
+  --room-court: 170 30% 17%;
+  --room-court-stroke: 170 40% 42%;
+  --room-court-text: 170 45% 80%;
+
+  --sidebar-background: 222 22% 11%;
+  --sidebar-foreground: 220 20% 94%;
+  --sidebar-primary: 230 85% 66%;
+  --sidebar-primary-foreground: 222 30% 8%;
+  --sidebar-accent: 222 18% 18%;
+  --sidebar-accent-foreground: 220 20% 94%;
+  --sidebar-border: 222 16% 22%;
+  --sidebar-ring: 230 85% 66%;
+}

@@ -28,6 +28,13 @@ const roomTextColors: Record<RoomType, string> = {
   dean: "hsl(var(--room-dean-text))", court: "hsl(var(--room-court-text))",
 };
 
+export interface PersonMarker {
+  roomId: string;
+  color: "green" | "red";
+  label?: string;
+  title?: string;
+}
+
 interface Props {
   plan: FloorPlan;
   highlightRoomId?: string;
@@ -35,9 +42,10 @@ interface Props {
   categoryFilter?: RoomType | null;
   routeFromId?: string;
   routeToId?: string;
+  markers?: PersonMarker[];
 }
 
-export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categoryFilter, routeFromId, routeToId }: Props) {
+export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categoryFilter, routeFromId, routeToId, markers }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -360,6 +368,34 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
                   <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="8" fontWeight="700">
                     {idx === 0 ? "A" : "B"}
                   </text>
+                </g>
+              );
+            })}
+
+            {/* Security person markers (CCTV-detected location) */}
+            {markers?.map((m, i) => {
+              const room = plan.rooms.find(r => r.id === m.roomId);
+              if (!room) return null;
+              const cx = room.x + room.w / 2;
+              const cy = room.y + room.h / 2;
+              const fill = m.color === "red" ? "hsl(0, 70%, 50%)" : "hsl(145, 60%, 42%)";
+              return (
+                <g key={`person-${i}`} pointerEvents="none">
+                  {m.color === "red" && (
+                    <circle cx={cx} cy={cy} r={9} fill={fill} opacity={0.35}>
+                      <animate attributeName="r" values="8;14;8" dur="1.4s" repeatCount="indefinite" />
+                      <animate attributeName="opacity" values="0.4;0;0.4" dur="1.4s" repeatCount="indefinite" />
+                    </circle>
+                  )}
+                  <circle cx={cx} cy={cy} r={7} fill={fill} stroke="white" strokeWidth={1.5} />
+                  {m.label && (
+                    <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize="7" fontWeight="700">
+                      {m.label}
+                    </text>
+                  )}
+                  {m.title && (
+                    <title>{m.title}</title>
+                  )}
                 </g>
               );
             })}
