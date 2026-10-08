@@ -124,30 +124,30 @@ create policy profiles_admin_update on public.profiles for update to authenticat
 drop policy if exists access_rules_security_read on public.access_rules;
 create policy access_rules_security_read on public.access_rules for select to authenticated using (public.current_campus_role() in ('admin', 'management', 'security'));
 drop policy if exists access_rules_security_insert on public.access_rules;
-create policy access_rules_security_insert on public.access_rules for insert to authenticated with check (public.current_campus_role() in ('admin', 'management', 'security'));
+create policy access_rules_security_insert on public.access_rules for insert to authenticated with check (public.current_campus_role() in ('admin', 'security'));
 drop policy if exists access_rules_security_update on public.access_rules;
-create policy access_rules_security_update on public.access_rules for update to authenticated using (public.current_campus_role() in ('admin', 'management', 'security')) with check (public.current_campus_role() in ('admin', 'management', 'security'));
+create policy access_rules_security_update on public.access_rules for update to authenticated using (public.current_campus_role() in ('admin', 'security')) with check (public.current_campus_role() in ('admin', 'security'));
 
 drop policy if exists visitors_security_select on public.visitors;
 create policy visitors_security_select on public.visitors for select to authenticated using (public.current_campus_role() in ('admin', 'management', 'security'));
 drop policy if exists visitors_security_insert on public.visitors;
-create policy visitors_security_insert on public.visitors for insert to authenticated with check (public.current_campus_role() in ('admin', 'management', 'security'));
+create policy visitors_security_insert on public.visitors for insert to authenticated with check (public.current_campus_role() in ('admin', 'security'));
 drop policy if exists visitors_security_update on public.visitors;
-create policy visitors_security_update on public.visitors for update to authenticated using (public.current_campus_role() in ('admin', 'management', 'security')) with check (public.current_campus_role() in ('admin', 'management', 'security'));
+create policy visitors_security_update on public.visitors for update to authenticated using (public.current_campus_role() in ('admin', 'security')) with check (public.current_campus_role() in ('admin', 'security'));
 
 drop policy if exists events_security_select on public.security_events;
 create policy events_security_select on public.security_events for select to authenticated using (public.current_campus_role() in ('admin', 'management', 'security'));
 drop policy if exists events_security_insert on public.security_events;
-create policy events_security_insert on public.security_events for insert to authenticated with check (public.current_campus_role() in ('admin', 'management', 'security'));
+create policy events_security_insert on public.security_events for insert to authenticated with check (public.current_campus_role() in ('admin', 'security'));
 drop policy if exists events_security_update on public.security_events;
-create policy events_security_update on public.security_events for update to authenticated using (public.current_campus_role() in ('admin', 'management', 'security')) with check (public.current_campus_role() in ('admin', 'management', 'security'));
+create policy events_security_update on public.security_events for update to authenticated using (public.current_campus_role() in ('admin', 'security')) with check (public.current_campus_role() in ('admin', 'security'));
 
 drop policy if exists alerts_security_select on public.alerts;
 create policy alerts_security_select on public.alerts for select to authenticated using (public.current_campus_role() in ('admin', 'management', 'security'));
 drop policy if exists alerts_security_insert on public.alerts;
-create policy alerts_security_insert on public.alerts for insert to authenticated with check (public.current_campus_role() in ('admin', 'management', 'security'));
+create policy alerts_security_insert on public.alerts for insert to authenticated with check (public.current_campus_role() in ('admin', 'security'));
 drop policy if exists alerts_security_update on public.alerts;
-create policy alerts_security_update on public.alerts for update to authenticated using (public.current_campus_role() in ('admin', 'management', 'security')) with check (public.current_campus_role() in ('admin', 'management', 'security'));
+create policy alerts_security_update on public.alerts for update to authenticated using (public.current_campus_role() in ('admin', 'security')) with check (public.current_campus_role() in ('admin', 'security'));
 
 revoke all on public.profiles, public.access_rules, public.visitors, public.security_events, public.alerts from anon;
 grant select on public.profiles to authenticated;
@@ -256,16 +256,16 @@ ALTER TABLE public.biometric_verification_events ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS biometric_profiles_security_select ON public.biometric_profiles;
 CREATE POLICY biometric_profiles_security_select ON public.biometric_profiles FOR SELECT TO authenticated USING (public.current_campus_role() IN ('admin', 'management', 'security'));
 DROP POLICY IF EXISTS biometric_profiles_security_insert ON public.biometric_profiles;
-CREATE POLICY biometric_profiles_security_insert ON public.biometric_profiles FOR INSERT TO authenticated WITH CHECK (public.current_campus_role() IN ('admin', 'management', 'security'));
+CREATE POLICY biometric_profiles_security_insert ON public.biometric_profiles FOR INSERT TO authenticated WITH CHECK (public.current_campus_role() IN ('admin', 'security'));
 DROP POLICY IF EXISTS biometric_profiles_security_update ON public.biometric_profiles;
-CREATE POLICY biometric_profiles_security_update ON public.biometric_profiles FOR UPDATE TO authenticated USING (public.current_campus_role() IN ('admin', 'management', 'security')) WITH CHECK (public.current_campus_role() IN ('admin', 'management', 'security'));
+CREATE POLICY biometric_profiles_security_update ON public.biometric_profiles FOR UPDATE TO authenticated USING (public.current_campus_role() IN ('admin', 'security')) WITH CHECK (public.current_campus_role() IN ('admin', 'security'));
 DROP POLICY IF EXISTS biometric_profiles_security_delete ON public.biometric_profiles;
-CREATE POLICY biometric_profiles_security_delete ON public.biometric_profiles FOR DELETE TO authenticated USING (public.current_campus_role() IN ('admin', 'management', 'security'));
+CREATE POLICY biometric_profiles_security_delete ON public.biometric_profiles FOR DELETE TO authenticated USING (public.current_campus_role() IN ('admin', 'security'));
 
 DROP POLICY IF EXISTS biometric_verification_events_security_select ON public.biometric_verification_events;
 CREATE POLICY biometric_verification_events_security_select ON public.biometric_verification_events FOR SELECT TO authenticated USING (public.current_campus_role() IN ('admin', 'management', 'security'));
 DROP POLICY IF EXISTS biometric_verification_events_security_insert ON public.biometric_verification_events;
-CREATE POLICY biometric_verification_events_security_insert ON public.biometric_verification_events FOR INSERT TO authenticated WITH CHECK (public.current_campus_role() IN ('admin', 'management', 'security'));
+CREATE POLICY biometric_verification_events_security_insert ON public.biometric_verification_events FOR INSERT TO authenticated WITH CHECK (public.current_campus_role() IN ('admin', 'security'));
 
 REVOKE ALL ON public.biometric_profiles, public.biometric_verification_events FROM anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.biometric_profiles TO authenticated;
@@ -314,18 +314,18 @@ CREATE POLICY camera_configs_security_select
 DROP POLICY IF EXISTS camera_configs_security_insert ON public.camera_configs;
 CREATE POLICY camera_configs_security_insert
   ON public.camera_configs FOR INSERT TO authenticated
-  WITH CHECK (public.current_campus_role() IN ('admin', 'management', 'security'));
+  WITH CHECK (public.current_campus_role() IN ('admin','security'));
 
 DROP POLICY IF EXISTS camera_configs_security_update ON public.camera_configs;
 CREATE POLICY camera_configs_security_update
   ON public.camera_configs FOR UPDATE TO authenticated
-  USING (public.current_campus_role() IN ('admin', 'management', 'security'))
-  WITH CHECK (public.current_campus_role() IN ('admin', 'management', 'security'));
+  USING (public.current_campus_role() IN ('admin','security'))
+  WITH CHECK (public.current_campus_role() IN ('admin','security'));
 
 DROP POLICY IF EXISTS camera_configs_security_delete ON public.camera_configs;
 CREATE POLICY camera_configs_security_delete
   ON public.camera_configs FOR DELETE TO authenticated
-  USING (public.current_campus_role() IN ('admin', 'management', 'security'));
+  USING (public.current_campus_role() IN ('admin','security'));
 
 REVOKE ALL ON public.camera_configs FROM anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.camera_configs TO authenticated;
@@ -344,3 +344,17 @@ VALUES
   ('CAM-05', '', ''),
   ('CAM-06', '', '')
 ON CONFLICT (camera_id) DO NOTHING;
+
+-- Management is read-only for security operations.
+drop policy if exists access_rules_management_read on public.access_rules;
+create policy access_rules_management_read on public.access_rules for select to authenticated using (public.current_campus_role() = 'management');
+drop policy if exists visitors_management_read on public.visitors;
+create policy visitors_management_read on public.visitors for select to authenticated using (public.current_campus_role() = 'management');
+drop policy if exists events_management_read on public.security_events;
+create policy events_management_read on public.security_events for select to authenticated using (public.current_campus_role() = 'management');
+drop policy if exists alerts_management_read on public.alerts;
+create policy alerts_management_read on public.alerts for select to authenticated using (public.current_campus_role() = 'management');
+drop policy if exists biometric_profiles_management_read on public.biometric_profiles;
+create policy biometric_profiles_management_read on public.biometric_profiles for select to authenticated using (public.current_campus_role() = 'management');
+drop policy if exists biometric_verification_events_management_read on public.biometric_verification_events;
+create policy biometric_verification_events_management_read on public.biometric_verification_events for select to authenticated using (public.current_campus_role() = 'management');
