@@ -7,7 +7,7 @@ import { evaluateIndoorRouteAccess } from "./routeAccess";
 import { playAlertChime } from "./sound";
 import { allFloorPlans } from "@/data/floorPlans";
 import type { IndoorRoute } from "@/lib/indoorRouting";
-import { getAuthenticatedRole, loadSecuritySnapshot, persistSecuritySnapshot, supabase } from "@/lib/supabase";
+import { getAuthenticatedRole, loadSecuritySnapshot, persistSecuritySnapshot, supabase, supabaseConfigured } from "@/lib/supabase";
 import { personTypes, type AccessRule, type AlertSeverity, type AlertStatus, type LocationEvent, type PersonType, type Role, type SecurityAlert, type Visitor, type VisitorStatus } from "./types";
 import type { RouteAccessDecision } from "./routeAccess";
 
@@ -59,6 +59,9 @@ function normalizeAlertSeverity(value: unknown): AlertSeverity {
 }
 
 function load(): State {
+  if (supabaseConfigured) {
+    return { visitors: [], rules: defaultRules, events: [], alerts: [], muted: false };
+  }
   try {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) {
@@ -100,7 +103,11 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  useEffect(() => { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }, [state]);
+  useEffect(() => {
+    if (!supabaseConfigured) {
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    }
+  }, [state]);
   useEffect(() => {
     if (!supabase) return;
     let active = true;
@@ -145,6 +152,14 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           setRoleState("student");
           setSignedIn(false);
           localStorage.removeItem(ROLE_KEY);
+          if (supabaseConfigured) {
+            localStorage.removeItem(STORE_KEY);
+            localStorage.removeItem("campus-camera-config-v1");
+            for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+              const key = localStorage.key(index);
+              if (key?.startsWith("campus-biometric:")) localStorage.removeItem(key);
+            }
+          }
         }
       }, 0);
     });
