@@ -25,11 +25,19 @@ export default function CampusSidebar({ activeFloor, onSelectFloor, isOpen, isMo
         transition-transform duration-200 ease-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         ${!isMobile && !isOpen ? 'hidden' : ''}
-        shadow-card
+        shadow-card campus-sidebar
       `}
     >
-      <div className="p-4 pb-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Navigate</p>
+      <div className="campus-sidebar-intro p-4 pb-3">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary grid place-items-center">
+            <LayoutGrid className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Campus map</p>
+            <p className="text-[10px] text-muted-foreground">Choose a floor to explore</p>
+          </div>
+        </div>
       </div>
 
       {buildingSections.map((section) => (
@@ -44,7 +52,7 @@ export default function CampusSidebar({ activeFloor, onSelectFloor, isOpen, isMo
               <button
                 key={floor.id}
                 onClick={() => onSelectFloor(floor.id)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm cursor-pointer transition-all rounded-lg mx-2 max-w-[calc(100%-16px)]
+                className={`campus-floor-item w-full flex items-center gap-3 px-4 py-2.5 text-sm cursor-pointer transition-all rounded-xl mx-2 max-w-[calc(100%-16px)]
                   ${isActive
                     ? "bg-primary/10 text-primary font-medium"
                     : "text-foreground/70 hover:bg-accent hover:text-foreground"
