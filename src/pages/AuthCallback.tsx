@@ -44,7 +44,7 @@ export default function AuthCallback() {
           setRole(assignedRole);
           setState(assignedRole === "pending" ? "pending" : "ready");
         }
-      } catch (error) {
+      } catch {
         if (active) setState("error");
       }
     };
