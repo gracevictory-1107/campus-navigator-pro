@@ -180,7 +180,7 @@ export async function signUpWithSupabase(
   const cleanName = fullName.trim();
   const cleanEmail = email.trim().toLowerCase();
   if (cleanName.length < 2) throw new Error("Enter your full name.");
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(cleanEmail)) throw new Error("Enter a valid email address.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) throw new Error("Enter a valid email address.");
   if (password.length < 8) throw new Error("Use a password with at least 8 characters.");
 
   const { data, error } = await supabase.auth.signUp({
