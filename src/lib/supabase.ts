@@ -171,6 +171,21 @@ export async function signInWithSupabase(email: string, password: string): Promi
   }
 }
 
+/** Start Supabase's Google OAuth flow and return to the public auth callback. */
+export async function signInWithGoogle(): Promise<void> {
+  if (!supabase) throw new Error("Google sign-in is unavailable because Supabase is not configured.");
+
+  const redirectTo = `${window.location.origin}/auth/callback`;
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo,
+      queryParams: { prompt: "select_account" },
+    },
+  });
+  if (error) throw error;
+}
+
 export async function signUpWithSupabase(
   fullName: string,
   email: string,
