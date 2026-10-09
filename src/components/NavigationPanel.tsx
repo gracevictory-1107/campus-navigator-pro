@@ -391,14 +391,16 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
           </div>
         )}
       </div>
-      <div className="shrink-0 space-y-2 border-t border-border bg-card p-4">
+      <div className="sticky bottom-0 z-30 shrink-0 space-y-2 border-t border-border bg-card/95 p-4 shadow-[0_-10px_25px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
         {!fullAccessRole && !visitor && route && (
           <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs leading-5 text-muted-foreground">
             To start this route, sign in with an approved campus account or select a registered visitor so access can be checked.
           </p>
         )}
         <Button
-          className="w-full gap-2"
+          className="h-11 w-full gap-2 text-sm font-semibold shadow-sm"
+          aria-label="Start Navigation"
+          title="Start Navigation"
           onClick={() => void startNavigation()}
           disabled={!route || !fromRoom || !toRoom || isCheckingAccess || (!fullAccessRole && !visitor) || (!!routeDecision && !routeDecision.allowed)}
         >
