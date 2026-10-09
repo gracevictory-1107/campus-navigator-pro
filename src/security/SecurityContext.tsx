@@ -153,10 +153,10 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
       toast.error("You do not have permission to manage visitor records.");
       throw new Error("You do not have permission to manage visitor records.");
     }
-    const nextNum = 1020 + stateRef.current.visitors.length + Math.floor(Math.random() * 10);
+    const nextId = `VIS-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     const visitor: Visitor = {
       ...input,
-      id: existing?.id ?? `VIS-${nextNum}`,
+      id: existing?.id ?? nextId,
       checkIn: Date.now(),
       status: "Active",
       verified: true,
