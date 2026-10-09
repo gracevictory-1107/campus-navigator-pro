@@ -181,8 +181,8 @@ export default function DemoFaceVerification({ onContinue, onCancel, identityReq
               {phase === "requesting" && "Requesting camera permission..."}
               {phase === "camera-denied" && "Camera permission denied or blocked"}
               {phase === "camera-error" && "Biometric check unavailable"}
-              {phase === "verifying" && "AI face biometric verification in progress..."}
-              {(phase === "verified" || phase === "complete") && "AI face biometric check passed"}
+              {phase === "verifying" && "Checking face, anti-spoofing and liveness..."}
+              {(phase === "verified" || phase === "complete") && "Face capture and liveness checks passed"}
             </span>
           </>
         )}
@@ -191,11 +191,11 @@ export default function DemoFaceVerification({ onContinue, onCancel, identityReq
       <div className="rounded-lg border border-border p-3 text-sm grid gap-2">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-primary" />
-          <p className="font-medium text-foreground">{identityRequired ? "Real AI Face Biometric Verification" : "AI Camera Liveness Check"}</p>
+          <p className="font-medium text-foreground">{identityRequired ? "On-device Face Capture & Liveness Check" : "On-device Liveness Check"}</p>
         </div>
         <p className="text-xs text-muted-foreground">
           {identityRequired
-            ? "The browser runs an on-device face embedding check plus anti-spoofing and liveness checks. Camera frames are processed locally and are not uploaded by the face engine."
+            ? "The browser detects one face, checks anti-spoofing and liveness, and generates a face template on-device. Returning visitors are matched against stored templates in a separate step. Raw camera frames are not uploaded by this face engine."
             : "This flow checks that a real live face is present, but it does not identify a security account. Use the campus account sign-in for identity authentication."}
         </p>
         {captureResult && (
@@ -231,7 +231,7 @@ export default function DemoFaceVerification({ onContinue, onCancel, identityReq
           </Button>
         ) : phase === "camera-ready" ? (
           <Button className="flex-1" onClick={() => void capture()}>
-            <ScanFace className="h-4 w-4 mr-2" />Scan Face & Verify
+            <ScanFace className="h-4 w-4 mr-2" />Scan Face & Check Liveness
           </Button>
         ) : (
           <Button className="flex-1" onClick={() => void requestCamera()} disabled={phase === "requesting"}>
