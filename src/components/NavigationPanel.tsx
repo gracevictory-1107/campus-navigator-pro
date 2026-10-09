@@ -304,7 +304,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
                   Approx. {route.distanceMeters.toFixed(1)} m mapped distance · {route.walkingMinutes} min walking
                 </p>
                 <p className="mt-1 text-[10px] text-muted-foreground">
-                  Estimate assumes 0.05 m per map unit; plans have no scale or walkable-path graph.
+                  Estimate assumes 0.05 m per map unit; floor plans are not calibrated to physical scale.
                   {route.legs.length > 1 && " Vertical/outdoor transition distance is not included."}
                 </p>
               </div>
