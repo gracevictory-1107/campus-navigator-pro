@@ -24,7 +24,7 @@ interface HumanInstance {
   load: () => Promise<void>;
   warmup: () => Promise<void>;
   detect: (input: HTMLVideoElement) => Promise<HumanResult>;
-  match: {
+  match?: {
     similarity: (first: number[], second: number[]) => number;
   };
   similarity?: (first: number[], second: number[]) => number;
@@ -136,22 +136,31 @@ export async function captureBiometricSample(video: HTMLVideoElement): Promise<B
   if (livenessScore < BIOMETRIC_CONFIDENCE_THRESHOLD) {
     throw new Error("The live-face check did not pass. Move naturally, blink once, and try again.");
   }
-  if (embedding.length === 0) {
-    throw new Error("A face biometric template could not be generated. Please retry.");
+  if (!isValidEmbedding(embedding)) {
+    throw new Error("A valid face biometric template could not be generated. Please retry.");
   }
 
   return { embedding, faceScore, antiSpoofScore, livenessScore };
 }
 
 export async function compareBiometricEmbeddings(current: number[], enrolled: number[]) {
+  if (!isValidEmbedding(current) || !isValidEmbedding(enrolled)) {
+    throw new Error("The saved or captured face template is invalid. Re-enrol the visitor and try again.");
+  }
+  if (current.length !== enrolled.length) {
+    throw new Error("The saved face template uses a different model format. Re-enrol the visitor before matching.");
+  }
+
   const human = await getHuman();
   // @vladmandic/human v3.3.6 exposes face matching helpers under human.match.
   // Keep the legacy instance-level method as a fallback for compatibility.
-  const similarity = human.match?.similarity
-    ? human.match.similarity(current, enrolled)
-    : human.similarity
-      ? human.similarity(current, enrolled)
-      : (() => { throw new Error("Face matching engine is unavailable."); })();
+  const similarityFn = human.match?.similarity ?? human.similarity;
+  if (!similarityFn) throw new Error("Face matching engine is unavailable.");
+
+  const similarity = similarityFn(current, enrolled);
+  if (!Number.isFinite(similarity)) {
+    throw new Error("Face matching did not return a valid similarity score. Please retry.");
+  }
   return {
     matched: similarity >= BIOMETRIC_MATCH_THRESHOLD,
     similarity,
