@@ -18,6 +18,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { IndoorRoute } from "@/lib/indoorRouting";
 import { useSecurity } from "@/security/SecurityContext";
+import { can } from "@/security/permissions";
 import type { RouteAccessDecision, RestrictedRouteArea } from "@/security/routeAccess";
 import ThemeToggle from "./ThemeToggle";
 
@@ -165,12 +166,14 @@ export default function CampusNavigator() {
             <span className="text-xs">Directions</span>
           </Button>
 
-          <Button asChild variant="outline" size="sm" className="h-9 rounded-xl gap-1.5 px-2 sm:px-3" aria-label="Security Sign In">
-            <Link to="/security" aria-label="Security Sign In">
-              <Shield className="h-3.5 w-3.5" />
-              <span className="text-xs hidden sm:inline">Security</span>
-            </Link>
-          </Button>
+          {(!security.signedIn || can.viewSecurity(security.role)) && (
+            <Button asChild variant="outline" size="sm" className="h-9 rounded-xl gap-1.5 px-2 sm:px-3" aria-label="Security Sign In">
+              <Link to="/security" aria-label="Security Sign In">
+                <Shield className="h-3.5 w-3.5" />
+                <span className="text-xs hidden sm:inline">Security</span>
+              </Link>
+            </Button>
+          )}
 
           <ExportPDF />
         </div>
