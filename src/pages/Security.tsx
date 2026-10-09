@@ -110,7 +110,7 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
         onRoleChange(result.role);
         onOpenChange(false);
         setPassword("");
-        toast.success("Account created. Your initial access level is Student.");
+        toast.success(result.role === "pending" ? "Account created. Access is pending Admin approval." : "Account created.");
       }
     } catch (error) {
       toast.error(mode === "signIn" ? "Sign-in failed" : "Account creation failed", {
@@ -129,7 +129,7 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
           <DialogDescription>
             {mode === "signIn"
               ? "Sign in with the email and password for your verified campus account. Security dashboard permissions come from your assigned campus role."
-              : "Create an account with your real email address. New accounts start with Student access; only an authorised Admin can assign staff, Security or Management roles."}
+              : "Create an account with your real email address. New accounts remain Pending approval until an authorised Admin assigns the correct campus role."}
           </DialogDescription>
         </DialogHeader>
 
@@ -138,7 +138,7 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
             <CheckCircle2 className="h-8 w-8 text-[hsl(var(--status-authorized))]" />
             <h3 className="font-semibold text-foreground">Verify your email</h3>
             <p className="text-sm text-muted-foreground">
-              If the address is eligible for registration, a verification message has been sent to <span className="font-medium text-foreground">{email.trim().toLowerCase()}</span>. Open that email and verify your account before signing in.
+              If the address is eligible for registration, a verification message has been sent to <span className="font-medium text-foreground">{email.trim().toLowerCase()}</span>. Verify your email first. Your account will then remain Pending approval until a campus Admin assigns the correct role.
             </p>
             <Button onClick={() => { setMode("signIn"); setConfirmationSent(false); }}>Back to Sign In</Button>
           </div>
@@ -187,7 +187,8 @@ const managedRoleOptions: { value: ManagedRole; label: string }[] = [
   { value: "management", label: "Management" },
   { value: "faculty", label: "Faculty" },
   { value: "security", label: "Security" },
-  { value: "student", label: "Student" },
+  { value: "pending", label: "Pending approval" },
+  { value: "student", label: "Student (legacy)" },
 ];
 
 function AdminUsersPanel() {
@@ -253,7 +254,7 @@ function AdminUsersPanel() {
       )}
       {supabaseConfigured && !backendAdmin && !loading && (
         <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-          Sign in with a real Supabase Auth account linked to an Admin profile to load and manage users. User-created accounts start as Student and cannot grant themselves elevated roles.
+          Sign in with a real Supabase Auth account linked to an Admin profile to load and manage users. New accounts start as Pending approval and cannot grant themselves access.
         </p>
       )}
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
@@ -284,7 +285,7 @@ function AdminUsersPanel() {
         </Table>
       </div>
       {supabaseConfigured && backendAdmin && (
-        <p className="text-xs text-muted-foreground">Profile records are linked to real Supabase Auth accounts. New email sign-ups receive Student access automatically; only an Admin can assign elevated campus roles.</p>
+        <p className="text-xs text-muted-foreground">Profile records are linked to real Supabase Auth accounts. New email sign-ups remain Pending approval until an Admin assigns the appropriate campus role.</p>
       )}
     </section>
   );
