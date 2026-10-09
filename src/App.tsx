@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
+import Campus from "./pages/Campus";
 import About from "./pages/About";
 import HelpDesk from "./pages/HelpDesk";
 import AIAssistant from "./pages/AIAssistant";
@@ -27,6 +28,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/campus" element={<Campus />} />
                 <Route path="/security" element={<Security />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/help-desk" element={<HelpDesk />} />
