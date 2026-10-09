@@ -90,7 +90,10 @@ describe("calculateIndoorRoute", () => {
               candidate.id !== leg.endRoomId
             )) {
               for (let index = 1; index < leg.points.length; index += 1) {
-                expect(segmentIntersectsRoom(leg.points[index - 1], leg.points[index], room)).toBe(false);
+                expect(
+                  segmentIntersectsRoom(leg.points[index - 1], leg.points[index], room),
+                  `floor ${floorId}, route ${from.id} -> ${to.id}, blocked room ${room.id}, segment ${index}`
+                ).toBe(false);
               }
             }
           }
