@@ -64,6 +64,7 @@ interface WalkEdge {
 interface EndpointOption {
   node: Room;
   direct: boolean;
+  approximate: boolean;
   portalRoom: RoutePoint;
   portalWalkable: RoutePoint;
   cost: number;
@@ -149,6 +150,7 @@ function endpointOptions(room: Room, walkable: Room[], isStart: boolean, allowAp
     return [{
       node: room,
       direct: true,
+      approximate: false,
       portalRoom: center(room),
       portalWalkable: center(room),
       cost: 0,
@@ -163,6 +165,7 @@ function endpointOptions(room: Room, walkable: Room[], isStart: boolean, allowAp
     return [{
       node: candidate,
       direct: false,
+      approximate: false,
       portalRoom,
       portalWalkable,
       cost: distance(center(room), portalRoom) +
@@ -188,6 +191,7 @@ function endpointOptions(room: Room, walkable: Room[], isStart: boolean, allowAp
     return {
       node: candidate,
       direct: false,
+      approximate: true,
       portalRoom,
       portalWalkable,
       cost: distance(sourceCenter, portalRoom) +
@@ -223,12 +227,15 @@ function routeSegment(plan: FloorPlan, from: Room, to: Room): RouteSegment | nul
     }
   }
 
-  const startOptions = endpointOptions(from, walkable, true);
-  const endOptions = endpointOptions(to, walkable, false);
+  const exactStartOptions = endpointOptions(from, walkable, true);
+  const exactEndOptions = endpointOptions(to, walkable, false);
+  const startOptions = exactStartOptions.length ? exactStartOptions : endpointOptions(from, walkable, true, true);
+  const endOptions = exactEndOptions.length ? exactEndOptions : endpointOptions(to, walkable, false, true);
   if (startOptions.length === 0 || endOptions.length === 0) return null;
 
   let bestCost = Number.POSITIVE_INFINITY;
   let bestPoints: RoutePoint[] | null = null;
+  let bestQuality: RouteSegment["pathQuality"] = "mapped";
 
   for (const startOption of startOptions) {
     const distances = new Map<string, number>([[startOption.node.id, startOption.cost]]);
@@ -305,10 +312,11 @@ function routeSegment(plan: FloorPlan, from: Room, to: Room): RouteSegment | nul
       }
       bestCost = totalCost;
       bestPoints = points;
+      bestQuality = startOption.approximate || endOption.approximate ? "approximate" : "mapped";
     }
   }
 
-  if (bestPoints) return { points: bestPoints, pathQuality: "mapped" };
+  if (bestPoints) return { points: bestPoints, pathQuality: bestQuality };
 
   // The selected points can belong to disconnected mapped regions (for example,
   // an entrance overlaps an office block in the source diagram). Keep the route
