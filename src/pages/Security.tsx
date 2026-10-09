@@ -284,7 +284,7 @@ function AdminUsersPanel() {
         </Table>
       </div>
       {supabaseConfigured && backendAdmin && (
-        <p className="text-xs text-muted-foreground">Profile records do not create Auth accounts. Create/link accounts separately; demo face verification is never uploaded.</p>
+        <p className="text-xs text-muted-foreground">Profile records are linked to real Supabase Auth accounts. New email sign-ups receive Student access automatically; only an Admin can assign elevated campus roles.</p>
       )}
     </section>
   );
