@@ -1,10 +1,6 @@
-import CampusNavigator from "@/components/CampusNavigator";
 import Welcome from "@/pages/Welcome";
-import { useSecurity } from "@/security/SecurityContext";
 
-const Index = () => {
-  const { signedIn } = useSecurity();
-  return signedIn ? <CampusNavigator /> : <Welcome />;
-};
+/** The first page always offers sign-in / account creation. */
+const Index = () => <Welcome />;
 
 export default Index;
