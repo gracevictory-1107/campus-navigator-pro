@@ -1,7 +1,10 @@
 import CampusNavigator from "@/components/CampusNavigator";
+import Welcome from "@/pages/Welcome";
+import { useSecurity } from "@/security/SecurityContext";
 
 const Index = () => {
-  return <CampusNavigator />;
+  const { signedIn } = useSecurity();
+  return signedIn ? <CampusNavigator /> : <Welcome />;
 };
 
 export default Index;
