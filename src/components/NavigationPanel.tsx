@@ -12,7 +12,7 @@ interface Props {
   onClose: () => void;
   onNavigate: (floorId: string, roomId: string) => void;
   visitors: Visitor[];
-  onCheckRoute: (visitorId: string, route: IndoorRoute) => Promise<RouteAccessDecision>;
+  onCheckRoute: (visitorId: string | null, route: IndoorRoute) => Promise<RouteAccessDecision>;
   onRouteChanged: () => void;
   onFocusRestrictedArea: (floorId: string, roomId: string) => void;
   accessRole: Role;
@@ -135,8 +135,8 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
     setActiveInput(null);
   };
 
-  const checkAndShowRoute = async () => {
-    if ((!fullAccessRole && !visitor) || !route || !fromRoom || !toRoom) return;
+  const checkAndShowRoute = async (preview = true): Promise<RouteAccessDecision | null> => {
+    if ((!fullAccessRole && !visitor) || !route || !fromRoom || !toRoom) return null;
     setIsCheckingAccess(true);
     setCheckError(null);
     setRouteDecision(null);
@@ -144,18 +144,29 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
       const decision = await onCheckRoute(fullAccessRole ? null : visitor.id, route);
       setRouteDecision(decision);
       if (decision.allowed) {
-        onNavigate(fromRoom.floorId, fromRoom.roomId);
-        // Keep the directions panel open so the user can review the route
-        // before choosing which floor to show on the map.
+        // Route is checked first; preview/start controls decide when navigation begins.
+        if (preview) onNavigate(fromRoom.floorId, fromRoom.roomId);
       } else {
         const restrictedArea = decision.deniedAreas[0];
         if (restrictedArea) onFocusRestrictedArea(restrictedArea.floorId, restrictedArea.roomId);
       }
+      return decision;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to verify route access.";
       setCheckError(message);
+      return null;
     } finally {
       setIsCheckingAccess(false);
+    }
+  };
+
+  const startNavigation = async () => {
+    if (!route || !fromRoom || !toRoom || isCheckingAccess || (!fullAccessRole && !visitor)) return;
+    let decision = routeDecision;
+    if (!decision) decision = await checkAndShowRoute(false);
+    if (decision?.allowed) {
+      onNavigate(fromRoom.floorId, fromRoom.roomId);
+      onClose();
     }
   };
 
@@ -361,30 +372,31 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
             {checkError && <p className="mb-3 text-xs text-red-700" role="alert">{checkError}</p>}
 
             <div className="pt-2 space-y-2">
-              {!routeDecision?.allowed ? (
-                <Button className="w-full gap-2" onClick={checkAndShowRoute} disabled={isCheckingAccess || (!fullAccessRole && !visitor)}>
+              <Button
+                className="w-full gap-2"
+                onClick={() => void startNavigation()}
+                disabled={isCheckingAccess || (!fullAccessRole && !visitor) || (!!routeDecision && !routeDecision.allowed)}
+              >
+                <Navigation2 className="h-4 w-4" />
+                {isCheckingAccess ? "Checking access..." : "Start Navigation"}
+              </Button>
+              {!routeDecision?.allowed && (
+                <Button variant="outline" className="w-full gap-2" onClick={() => void checkAndShowRoute(true)} disabled={isCheckingAccess || (!fullAccessRole && !visitor)}>
                   <Footprints className="h-4 w-4" />
-                  {isCheckingAccess ? "Checking access..." : "Check Access & Generate Route"}
+                  {isCheckingAccess ? "Checking access..." : "Check Access & Preview Route"}
                 </Button>
-              ) : (
-                <>
-                  <Button className="w-full gap-2" onClick={() => {
-                    onNavigate(fromRoom.floorId, fromRoom.roomId);
-                    onClose();
-                  }}>
-                    <Navigation2 className="h-4 w-4" />
-                    Start Navigation
-                  </Button>
-                  {fromRoom.floorId !== toRoom.floorId && (
-                    <Button variant="outline" className="w-full gap-2" onClick={() => {
-                      onNavigate(toRoom.floorId, toRoom.roomId);
-                      onClose();
-                    }}>
-                      <Navigation2 className="h-4 w-4" />
-                      Show Destination Floor
-                    </Button>
-                  )}
-                </>
+              )}
+              {routeDecision && !routeDecision.allowed && (
+                <p className="text-xs text-red-700" role="status">This route is restricted. Choose a permitted destination or change the route to try again.</p>
+              )}
+              {routeDecision?.allowed && fromRoom.floorId !== toRoom.floorId && (
+                <Button variant="outline" className="w-full gap-2" onClick={() => {
+                  onNavigate(toRoom.floorId, toRoom.roomId);
+                  onClose();
+                }}>
+                  <Navigation2 className="h-4 w-4" />
+                  Show Destination Floor
+                </Button>
               )}
             </div>
           </div>
