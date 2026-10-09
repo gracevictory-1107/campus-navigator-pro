@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, Bell, BellOff, Camera, CheckCircle2, Eye, Lock, LogIn, LogOut, MapPin, Radio, Search, ShieldAlert, UserPlus, Users, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -292,6 +292,7 @@ function AdminUsersPanel() {
 }
 
 export default function Security() {
+  const navigate = useNavigate();
   const sec = useSecurity();
   const { role } = sec;
   const manage = can.manageSecurity(role);
@@ -462,7 +463,13 @@ export default function Security() {
           open={signInOpen}
           onOpenChange={setSignInOpen}
           onRoleChange={(selectedRole) => {
-            if (can.viewSecurity(selectedRole)) setSignInOpen(false);
+            if (can.viewSecurity(selectedRole)) {
+              setSignInOpen(false);
+              return;
+            }
+            // The Security page is restricted for students/faculty/staff/pending accounts.
+            // After successful authentication, send them back to the Campus Navigator page.
+            navigate("/", { replace: true });
           }}
         />
       </div>
