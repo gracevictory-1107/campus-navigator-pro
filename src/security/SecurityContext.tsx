@@ -52,7 +52,7 @@ function mergeRecords<T extends { id: string }>(local: T[], remote: T[]): T[] {
 
 export function SecurityProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(emptySecurityState);
-  const [role, setRoleState] = useState<Role>("student");
+  const [role, setRoleState] = useState<Role>("pending");
   const [signedIn, setSignedIn] = useState(false);
   const [highlightedCameraId, setHighlightedCameraId] = useState<string | null>(null);
   const [backendReady, setBackendReady] = useState(false);
@@ -67,7 +67,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         const authenticatedRole = await getAuthenticatedRole();
         if (!active) return;
         if (!authenticatedRole) {
-          setRoleState("student");
+          setRoleState("pending");
           setSignedIn(false);
           setBackendReady(false);
           setState(emptySecurityState());
