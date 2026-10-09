@@ -186,7 +186,10 @@ export async function signUpWithSupabase(
   const { data, error } = await supabase.auth.signUp({
     email: cleanEmail,
     password,
-    options: { data: { full_name: cleanName } },
+    options: {
+      data: { full_name: cleanName },
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
   });
   if (error) throw error;
   if (!data.user) throw new Error("Account creation did not complete. Please try again.");
