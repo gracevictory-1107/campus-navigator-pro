@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { cameras, defaultRules, locationById, seedVisitors, securityLocations } from "./data";
+import { cameras, defaultRules, locationById, securityLocations } from "./data";
 import { can } from "./permissions";
 import { accessService } from "./services";
 import { evaluateIndoorRouteAccess } from "./routeAccess";
@@ -8,7 +8,7 @@ import { playAlertChime } from "./sound";
 import { allFloorPlans } from "@/data/floorPlans";
 import type { IndoorRoute } from "@/lib/indoorRouting";
 import { getAuthenticatedRole, loadSecuritySnapshot, persistSecuritySnapshot, supabase, supabaseConfigured } from "@/lib/supabase";
-import { personTypes, type AccessRule, type AlertSeverity, type AlertStatus, type LocationEvent, type PersonType, type Role, type SecurityAlert, type Visitor, type VisitorStatus } from "./types";
+import { personTypes, type AccessRule, type AlertStatus, type LocationEvent, type PersonType, type Role, type SecurityAlert, type Visitor, type VisitorStatus } from "./types";
 import type { RouteAccessDecision } from "./routeAccess";
 
 interface State {
@@ -24,7 +24,6 @@ interface Ctx extends State {
   /** True when the current security session has loaded and can persist data through Supabase. */
   backendReady: boolean;
   signedIn: boolean;
-  setRole: (r: Role) => void;
   signOut: () => void;
   highlightedCameraId: string | null;
   setHighlightedCameraId: (id: string | null) => void;
@@ -40,56 +39,9 @@ interface Ctx extends State {
 }
 
 const SecurityCtx = createContext<Ctx | null>(null);
-const STORE_KEY = "campus-security-v1";
-const ROLE_KEY = "campus-role";
-
-function normalizePersonType(value: unknown): PersonType {
-  if (value === "Visitor") return "General Visitor";
-  if (personTypes.some((type) => type === value)) return value as PersonType;
-  throw new Error(`Unsupported stored visitor category: ${String(value)}`);
-}
-
-function normalizeAlertSeverity(value: unknown): AlertSeverity {
-  if (value === "HIGH") return "High";
-  if (value === "CRITICAL") return "Critical";
-  if (value === "MEDIUM") return "Medium";
-  if (value === "LOW") return "Low";
-  if (value === "Critical" || value === "High" || value === "Medium" || value === "Low") return value;
-  return "High";
-}
 
 function emptySecurityState(): State {
   return { visitors: [], rules: defaultRules, events: [], alerts: [], muted: false };
-}
-
-function load(): State {
-  if (supabaseConfigured) {
-    return emptySecurityState();
-  }
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (raw) {
-      const stored = JSON.parse(raw) as State;
-      const rulesById = new Map(defaultRules.map((rule) => [rule.id, rule]));
-      stored.rules.forEach((rule) => {
-        const personType = normalizePersonType(rule.personType);
-        const migrated = { ...rule, personType, id: `${personType}:${rule.locationId}` };
-        rulesById.set(migrated.id, migrated);
-      });
-      return {
-        ...stored,
-        visitors: stored.visitors.map((visitor) => ({ ...visitor, type: normalizePersonType(visitor.type) })),
-        rules: [...rulesById.values()],
-        events: stored.events.map((event) => ({ ...event, personType: normalizePersonType(event.personType) })),
-        alerts: stored.alerts.map((alert) => ({
-          ...alert,
-          severity: normalizeAlertSeverity(alert.severity),
-          event: { ...alert.event, personType: normalizePersonType(alert.event.personType) },
-        })),
-      };
-    }
-  } catch { /* ignore */ }
-  return { visitors: seedVisitors, rules: defaultRules, events: [], alerts: [], muted: false };
 }
 
 function mergeRecords<T extends { id: string }>(local: T[], remote: T[]): T[] {
@@ -99,19 +51,14 @@ function mergeRecords<T extends { id: string }>(local: T[], remote: T[]): T[] {
 }
 
 export function SecurityProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<State>(load);
-  const [role, setRoleState] = useState<Role>(() => (localStorage.getItem(ROLE_KEY) as Role) || "student");
-  const [signedIn, setSignedIn] = useState(() => localStorage.getItem(ROLE_KEY) !== null);
+  const [state, setState] = useState<State>(emptySecurityState);
+  const [role, setRoleState] = useState<Role>("student");
+  const [signedIn, setSignedIn] = useState(false);
   const [highlightedCameraId, setHighlightedCameraId] = useState<string | null>(null);
   const [backendReady, setBackendReady] = useState(false);
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  useEffect(() => {
-    if (!supabaseConfigured) {
-      localStorage.setItem(STORE_KEY, JSON.stringify(state));
-    }
-  }, [state]);
   useEffect(() => {
     if (!supabase) return;
     let active = true;
@@ -120,14 +67,13 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         const authenticatedRole = await getAuthenticatedRole();
         if (!active) return;
         if (!authenticatedRole) {
-          localStorage.removeItem(ROLE_KEY);
           setRoleState("student");
           setSignedIn(false);
           setBackendReady(false);
-          if (supabaseConfigured) setState(emptySecurityState());
+          setState(emptySecurityState());
+          await supabase.auth.signOut();
           return;
         }
-        localStorage.setItem(ROLE_KEY, authenticatedRole);
         setRoleState(authenticatedRole);
         setSignedIn(true);
         if (supabaseConfigured) setState(emptySecurityState());
@@ -158,13 +104,10 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           setRoleState("student");
           setSignedIn(false);
           setState(emptySecurityState());
-          localStorage.removeItem(ROLE_KEY);
-          if (supabaseConfigured) {
-            localStorage.removeItem(STORE_KEY);
-            localStorage.removeItem("campus-camera-config-v1");
-            for (let index = localStorage.length - 1; index >= 0; index -= 1) {
-              const key = localStorage.key(index);
-              if (key?.startsWith("campus-biometric:")) localStorage.removeItem(key);
+          for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+            const key = localStorage.key(index);
+            if (key === "campus-role" || key === "campus-security-v1" || key === "campus-camera-config-v1" || key?.startsWith("campus-biometric:") || key === "campus-demo-profiles-v1") {
+              localStorage.removeItem(key);
             }
           }
         }
@@ -187,50 +130,20 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     }, 350);
     return () => window.clearTimeout(timer);
   }, [backendReady, role, state]);
-  const setRole = useCallback((r: Role) => {
-    const applyDemoRole = () => {
-      localStorage.setItem(ROLE_KEY, r);
-      setRoleState(r);
-      setSignedIn(true);
-    };
-    if (!supabase) {
-      applyDemoRole();
-      return;
-    }
-    void supabase.auth.getSession().then(async ({ data, error }) => {
-      if (error) throw error;
-      if (!data.session) {
-        applyDemoRole();
-        return;
-      }
-      const authenticatedRole = await getAuthenticatedRole();
-      if (!authenticatedRole) throw new Error("This account is not linked to an authorized campus profile.");
-      localStorage.setItem(ROLE_KEY, authenticatedRole);
-      setRoleState(authenticatedRole);
-      setSignedIn(true);
-    }).catch((error: unknown) => {
-      toast.error("Could not confirm the signed-in campus role", {
-        description: error instanceof Error ? error.message : "Try signing in again.",
-      });
-    });
-  }, []);
   const signOut = useCallback(() => {
     if (supabase) {
       void supabase.auth.signOut().then(({ error }) => {
         if (error) toast.error("Supabase sign-out failed", { description: error.message });
       });
     }
-    localStorage.removeItem(ROLE_KEY);
     setRoleState("student");
     setSignedIn(false);
     setBackendReady(false);
     setState(emptySecurityState());
-    if (supabaseConfigured) {
-      localStorage.removeItem(STORE_KEY);
-      localStorage.removeItem("campus-camera-config-v1");
-      for (let index = localStorage.length - 1; index >= 0; index -= 1) {
-        const key = localStorage.key(index);
-        if (key?.startsWith("campus-biometric:")) localStorage.removeItem(key);
+    for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+      const key = localStorage.key(index);
+      if (key === "campus-role" || key === "campus-security-v1" || key === "campus-camera-config-v1" || key?.startsWith("campus-biometric:") || key === "campus-demo-profiles-v1") {
+        localStorage.removeItem(key);
       }
     }
   }, []);
@@ -434,7 +347,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   }, [state.events, state.visitors]);
 
   const value: Ctx = {
-    ...state, role, backendReady, signedIn, setRole, signOut, highlightedCameraId, setHighlightedCameraId, registerVisitor, setVisitorStatus,
+    ...state, role, backendReady, signedIn, signOut, highlightedCameraId, setHighlightedCameraId, registerVisitor, setVisitorStatus,
     simulateDetection, authorizeIndoorRoute, setAlertStatus, setRule, setMuted, currentLocations,
   };
   return <SecurityCtx.Provider value={value}>{children}</SecurityCtx.Provider>;
