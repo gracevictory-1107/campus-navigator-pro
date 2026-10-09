@@ -12,7 +12,7 @@ import NavigationPanel from "./NavigationPanel";
 import CategoryChips from "./CategoryChips";
 import FavoritesPanel from "./FavoritesPanel";
 import CampusMasterMap from "./CampusMasterMap";
-import { Menu, X, MapPin, Navigation2, Shield, Star, Sparkles } from "lucide-react";
+import { Menu, X, MapPin, Navigation2, Shield, Star, Sparkles, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -175,6 +175,19 @@ export default function CampusNavigator() {
             </Button>
           )}
 
+          {security.signedIn && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-xl gap-1.5 px-2 sm:px-3"
+              onClick={security.signOut}
+              aria-label="Sign out"
+              title="Sign out"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="text-xs">Sign out</span>
+            </Button>
+          )}
           <ExportPDF />
         </div>
       </header>
