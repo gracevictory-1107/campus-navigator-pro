@@ -310,6 +310,15 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
               </div>
             )}
 
+            {routeDecision?.allowed && route.legs.some((leg) => leg.pathQuality === "approximate") && (
+              <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3" role="note">
+                <p className="text-xs font-semibold text-amber-800">Floor-map connection needs verification</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  The map does not show a continuous corridor/door connection for part of this route, so that segment is a best-effort estimate. Confirm it with reception before following it.
+                </p>
+              </div>
+            )}
+
             {routeDecision?.allowed && directions.map((step, i) => (
               <div key={i} className="flex gap-3 relative">
                 {i < directions.length - 1 && <div className="absolute left-[15px] top-8 bottom-0 w-px bg-border" />}
