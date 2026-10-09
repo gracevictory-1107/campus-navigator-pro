@@ -22,7 +22,7 @@ import { cctvEvidence, cctvEvidenceCaptureCounts, identifiedCctvEvidence } from 
 import { can, roles } from "@/security/permissions";
 import { formatTime, useSecurity } from "@/security/SecurityContext";
 import { personTypes, type LocationEvent, type PersonType, type Role, type SecurityAlert } from "@/security/types";
-import { loadAdminProfiles, loadCameraConfigs, saveCameraConfig, signInWithSupabase, signUpWithSupabase, supabaseConfigured, updateManagedProfileRole, type CameraConfig, type ManagedProfile, type ManagedRole } from "@/lib/supabase";
+import { loadAdminProfiles, loadCameraConfigs, saveCameraConfig, signInWithGoogle, signInWithSupabase, signUpWithSupabase, supabaseConfigured, updateManagedProfileRole, type CameraConfig, type ManagedProfile, type ManagedRole } from "@/lib/supabase";
 import { toast } from "sonner";
 
 const ok = "text-[hsl(var(--status-authorized))]";
@@ -76,6 +76,7 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
 
   const resetDialog = (nextOpen: boolean) => {
@@ -86,6 +87,19 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
       setConfirmationSent(false);
     }
     onOpenChange(nextOpen);
+  };
+
+  const handleGoogleSignIn = async () => {
+    setGoogleBusy(true);
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      toast.error("Google sign-in could not start", {
+        description: error instanceof Error ? error.message : "Use email sign-in or try again.",
+      });
+    } finally {
+      setGoogleBusy(false);
+    }
   };
 
   const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
@@ -162,6 +176,14 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
             </div>
             <Button type="submit" disabled={authBusy || !supabaseConfigured}>
               {authBusy ? "Please wait..." : mode === "signIn" ? "Sign In with Email" : "Create Account"}
+            </Button>
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+              <div className="relative flex justify-center"><span className="bg-card px-3 text-xs text-muted-foreground">or continue with</span></div>
+            </div>
+            <Button type="button" variant="outline" className="w-full gap-3" onClick={() => void handleGoogleSignIn()} disabled={googleBusy || authBusy || !supabaseConfigured}>
+              <span className="grid h-5 w-5 place-items-center rounded-full border border-border font-bold text-sm text-blue-600" aria-hidden="true">G</span>
+              {googleBusy ? "Opening Google..." : "Continue with Google"}
             </Button>
             {!supabaseConfigured && (
               <p role="alert" className="text-xs text-destructive">Account login is unavailable because the authentication service is not configured.</p>
