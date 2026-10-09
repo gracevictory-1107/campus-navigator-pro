@@ -188,7 +188,8 @@ export async function signUpWithSupabase(
     password,
     options: {
       data: { full_name: cleanName },
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
+      // Always return email confirmation links to the live app, even when signup starts from localhost.
+      emailRedirectTo: "https://campus-navigator-pro.vercel.app/auth/callback",
     },
   });
   if (error) throw error;
