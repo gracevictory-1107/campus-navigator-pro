@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { allFloorPlans } from "@/data/floorPlans";
 import type { Room, RoomType } from "@/data/floorPlans";
 import CampusSidebar from "./CampusSidebar";
@@ -23,6 +23,7 @@ import type { RouteAccessDecision, RestrictedRouteArea } from "@/security/routeA
 import ThemeToggle from "./ThemeToggle";
 
 export default function CampusNavigator() {
+  const navigate = useNavigate();
   const [activeFloor, setActiveFloor] = useState("campus");
   const [highlightRoom, setHighlightRoom] = useState<string | undefined>();
   const [selectedRoom, setSelectedRoom] = useState<{ room: Room; floorId: string } | null>(null);
@@ -180,7 +181,7 @@ export default function CampusNavigator() {
               variant="outline"
               size="sm"
               className="h-9 rounded-xl gap-1.5 px-2 sm:px-3"
-              onClick={security.signOut}
+              onClick={() => { security.signOut(); navigate("/", { replace: true }); }}
               aria-label="Sign out"
               title="Sign out"
             >
