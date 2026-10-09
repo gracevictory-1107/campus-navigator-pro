@@ -296,13 +296,15 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
 
       {/* Directions */}
       <div className="flex-1 overflow-y-auto p-4">
-        {directions && route && (visitor || fullAccessRole) ? (
+        {directions && route ? (
           <div className="space-y-0">
             {!routeDecision && (
               <p className="mb-3 rounded-lg border border-border bg-secondary/60 p-3 text-xs text-muted-foreground">
                 {fullAccessRole
                   ? `${activeAccessLabel} access: all mapped campus rooms are available.`
-                  : `Check this visitor’s existing category permissions before generating directions.`}
+                  : visitor
+                    ? "Check this visitor’s existing category permissions before generating directions."
+                    : "A route has been calculated, but access cannot be checked yet. Sign in with an approved campus role or select a registered visitor."}
               </p>
             )}
 
@@ -344,7 +346,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
                   <ShieldAlert className="h-4 w-4" /> Access Restricted
                 </p>
                 <p className="mt-1 text-xs text-foreground">
-                  {visitor.name} ({visitor.type}) does not have permission to access {routeDecision.deniedAreas.map((area) => area.label).join(", ")}.
+                  {visitor ? `${visitor.name} (${visitor.type})` : activeAccessLabel} does not have permission to access {routeDecision.deniedAreas.map((area) => area.label).join(", ")}.
                   No route was generated.
                 </p>
                 {routeDecision.permittedAlternatives.length > 0 && (
@@ -371,40 +373,57 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
 
             {checkError && <p className="mb-3 text-xs text-red-700" role="alert">{checkError}</p>}
 
-            <div className="pt-2 space-y-2">
-              <Button
-                className="w-full gap-2"
-                onClick={() => void startNavigation()}
-                disabled={isCheckingAccess || (!fullAccessRole && !visitor) || (!!routeDecision && !routeDecision.allowed)}
-              >
-                <Navigation2 className="h-4 w-4" />
-                {isCheckingAccess ? "Checking access..." : "Start Navigation"}
-              </Button>
-              {!routeDecision?.allowed && (
-                <Button variant="outline" className="w-full gap-2" onClick={() => void checkAndShowRoute(true)} disabled={isCheckingAccess || (!fullAccessRole && !visitor)}>
-                  <Footprints className="h-4 w-4" />
-                  {isCheckingAccess ? "Checking access..." : "Check Access & Preview Route"}
-                </Button>
-              )}
-              {routeDecision && !routeDecision.allowed && (
-                <p className="text-xs text-red-700" role="status">This route is restricted. Choose a permitted destination or change the route to try again.</p>
-              )}
-              {routeDecision?.allowed && fromRoom.floorId !== toRoom.floorId && (
-                <Button variant="outline" className="w-full gap-2" onClick={() => {
-                  onNavigate(toRoom.floorId, toRoom.roomId);
-                  onClose();
-                }}>
-                  <Navigation2 className="h-4 w-4" />
-                  Show Destination Floor
-                </Button>
-              )}
-            </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground gap-3">
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-3 text-center text-muted-foreground">
             <Navigation2 className="h-10 w-10 opacity-20" />
-            <p className="text-sm">Select start and destination rooms to get directions</p>
+            {fromRoom && toRoom ? (
+              <>
+                <p className="text-sm font-semibold text-foreground">No connected route found</p>
+                <p className="max-w-xs text-xs leading-5">The current floor-plan graph does not connect these two rooms. Try another mapped room or confirm the path with reception.</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-foreground">Plan your route</p>
+                <p className="max-w-xs text-xs leading-5">Choose a starting room and a destination from the search suggestions. The Start Navigation button will stay visible below.</p>
+              </>
+            )}
           </div>
+        )}
+      </div>
+      <div className="shrink-0 space-y-2 border-t border-border bg-card p-4">
+        {!fullAccessRole && !visitor && route && (
+          <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs leading-5 text-muted-foreground">
+            To start this route, sign in with an approved campus account or select a registered visitor so access can be checked.
+          </p>
+        )}
+        <Button
+          className="w-full gap-2"
+          onClick={() => void startNavigation()}
+          disabled={!route || !fromRoom || !toRoom || isCheckingAccess || (!fullAccessRole && !visitor) || (!!routeDecision && !routeDecision.allowed)}
+        >
+          <Navigation2 className="h-4 w-4" />
+          {isCheckingAccess ? "Checking access..." : "Start Navigation"}
+        </Button>
+        {route && !routeDecision?.allowed && (
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() => void checkAndShowRoute(true)}
+            disabled={isCheckingAccess || (!fullAccessRole && !visitor)}
+          >
+            <Footprints className="h-4 w-4" />
+            {isCheckingAccess ? "Checking access..." : "Check Access & Preview Route"}
+          </Button>
+        )}
+        {routeDecision?.allowed && fromRoom && toRoom && fromRoom.floorId !== toRoom.floorId && (
+          <Button variant="outline" className="w-full gap-2" onClick={() => {
+            onNavigate(toRoom.floorId, toRoom.roomId);
+            onClose();
+          }}>
+            <Navigation2 className="h-4 w-4" />
+            Show Destination Floor
+          </Button>
         )}
       </div>
     </motion.div>
