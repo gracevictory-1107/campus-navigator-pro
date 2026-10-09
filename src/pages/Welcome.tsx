@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, CheckCircle2, Eye, EyeOff, LockKeyhole, Mail, MapPinned, UserRound, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ const highlights = [
 export default function Welcome() {
   const navigate = useNavigate();
   const { signedIn, role } = useSecurity();
+  const reduceMotion = Boolean(useReducedMotion());
   const [mode, setMode] = useState<AuthMode>("signIn");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -82,8 +84,25 @@ export default function Welcome() {
 
   return (
     <PublicPageLayout activePage="home">
-      <main className="mx-auto grid min-h-[calc(100vh-145px)] max-w-7xl items-center gap-10 px-4 py-9 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:py-14">
-        <section className="space-y-7">
+      <main className="relative isolate mx-auto grid min-h-[calc(100vh-145px)] max-w-7xl items-center gap-10 overflow-hidden px-4 py-9 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:py-14">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+          <motion.div
+            className="absolute -right-20 -top-16 h-72 w-72 rounded-full bg-primary/10 blur-3xl sm:h-96 sm:w-96"
+            animate={reduceMotion ? undefined : { x: [0, 20, 0], y: [0, 15, 0] }}
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl sm:h-80 sm:w-80"
+            animate={reduceMotion ? undefined : { x: [0, -16, 0], y: [0, -18, 0] }}
+            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
+        <motion.section
+          className="space-y-7"
+          initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.55, ease: "easeOut" }}
+        >
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary">
             <MapPinned className="h-4 w-4" /> Campus wayfinding, made simpler
           </div>
@@ -98,11 +117,18 @@ export default function Welcome() {
 
           <div className="grid gap-3 sm:grid-cols-3">
             {highlights.map((item, index) => (
-              <div key={item.title} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <motion.div
+                key={item.title}
+                className="rounded-2xl border border-border bg-card/90 p-4 shadow-sm backdrop-blur transition-shadow hover:shadow-lg"
+                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.4, delay: reduceMotion ? 0 : 0.12 + index * 0.08, ease: "easeOut" }}
+                whileHover={reduceMotion ? undefined : { y: -4 }}
+              >
                 <span className="mb-3 grid h-8 w-8 place-items-center rounded-xl bg-primary/10 text-sm font-bold text-primary">{index + 1}</span>
                 <h2 className="text-sm font-semibold">{item.title}</h2>
                 <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{item.text}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
 
@@ -129,10 +155,15 @@ export default function Welcome() {
               Campus AI Assistant
             </Link>
           </div>
-        </section>
+        </motion.section>
 
-        <section className="mx-auto w-full max-w-md">
-          <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-xl shadow-primary/5">
+        <motion.section
+          className="mx-auto w-full max-w-md"
+          initial={reduceMotion ? false : { opacity: 0, y: 20, scale: 0.985 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: reduceMotion ? 0 : 0.6, delay: reduceMotion ? 0 : 0.1, ease: "easeOut" }}
+        >
+          <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-xl shadow-primary/5 transition-shadow duration-300 hover:shadow-2xl hover:shadow-primary/10">
             <div className="border-b border-border p-6 sm:p-7">
               <div className="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
                 {mode === "signIn" ? <LockKeyhole className="h-6 w-6" /> : <Users className="h-6 w-6" />}
@@ -187,7 +218,7 @@ export default function Welcome() {
               </div>
               {mode === "signUp" && <p className="text-xs leading-5 text-muted-foreground">New accounts may show Pending until a campus Admin assigns the correct role.</p>}
               {!supabaseConfigured && <p role="alert" className="text-xs text-destructive">Account access is not configured. Contact the campus administrator.</p>}
-              <Button type="submit" className="mt-1 w-full gap-2" disabled={busy || !supabaseConfigured}>
+              <Button type="submit" className="mt-1 w-full gap-2 transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0" disabled={busy || !supabaseConfigured}>
                 {busy ? "Please wait…" : mode === "signIn" ? "Sign in to campus" : "Create account"}
                 {!busy && <ArrowRight className="h-4 w-4" />}
               </Button>
@@ -198,7 +229,7 @@ export default function Welcome() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full gap-3"
+                className="w-full gap-3 transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0"
                 onClick={() => void handleGoogleSignIn()}
                 disabled={googleBusy || busy || !supabaseConfigured}
               >
@@ -215,7 +246,7 @@ export default function Welcome() {
               </p>
             </form>
           </div>
-        </section>
+        </motion.section>
       </main>
     </PublicPageLayout>
   );
