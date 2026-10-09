@@ -126,21 +126,22 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
     setIsSaving(true);
 
     try {
-      const visitorBeforeSave = pendingVisitor ?? existing ?? biometricIdentity;
-      const registered = visitorBeforeSave ?? registerVisitor(
+      const visitorWasKnown = Boolean(existing ?? biometricIdentity);
+      const registered = pendingVisitor ?? registerVisitor(
         {
           ...form,
           email: form.email.trim().toLowerCase(),
           name: form.name.trim(),
-        }
+        },
+        existing ?? biometricIdentity ?? undefined
       );
-      if (!pendingVisitor && !visitorBeforeSave) setPendingVisitor(registered);
+      if (!pendingVisitor) setPendingVisitor(registered);
 
       // Save the parent row first; biometric_profiles and biometric_verification_events
       // have foreign keys to visitors.id.
       await saveVisitorRecord(registered);
 
-      if (!visitorBeforeSave || biometricEnrollment === "new") {
+      if (!visitorWasKnown || biometricEnrollment === "new") {
         await saveBiometricEmbedding(registered.id, biometricCapture.embedding);
         await recordBiometricVerificationEvent({
           visitorId: registered.id,
