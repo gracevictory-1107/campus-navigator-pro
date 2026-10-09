@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { BookOpen, House, LifeBuoy, LogOut, MapPin, Navigation2, Sparkles } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -14,6 +15,7 @@ export default function PublicPageLayout({
   activePage: PublicPage;
 }) {
   const { signedIn, role, signOut } = useSecurity();
+  const reduceMotion = Boolean(useReducedMotion());
   const links = [
     { to: "/", label: "Home", key: "home" as const, Icon: House },
     { to: "/about", label: "About", key: "about" as const, Icon: BookOpen },
@@ -41,7 +43,7 @@ export default function PublicPageLayout({
                 key={key}
                 to={to}
                 aria-current={activePage === key ? "page" : undefined}
-                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-colors sm:text-sm ${
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-200 hover:-translate-y-0.5 sm:text-sm ${
                   activePage === key
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -71,7 +73,13 @@ export default function PublicPageLayout({
           </nav>
         </div>
       </header>
-      {children}
+      <motion.div
+        initial={reduceMotion ? false : { opacity: 0, y: 7 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: reduceMotion ? 0 : 0.32, ease: "easeOut" }}
+      >
+        {children}
+      </motion.div>
       <footer className="border-t border-border bg-card/50 px-4 py-5 text-center text-xs text-muted-foreground">
         <p className="font-medium">© {new Date().getFullYear()} AWDC Campus Navigator. All rights reserved.</p>
         <p className="mx-auto mt-1 max-w-3xl leading-5">
