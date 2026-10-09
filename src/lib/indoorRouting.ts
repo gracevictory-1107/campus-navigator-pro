@@ -15,6 +15,7 @@ export interface RouteLeg {
   startKind: "start" | "transition";
   endKind: "destination" | "transition";
   distanceMeters: number;
+  pathQuality: "mapped" | "approximate";
 }
 
 export interface IndoorRoute {
@@ -66,6 +67,10 @@ interface EndpointOption {
   portalRoom: RoutePoint;
   portalWalkable: RoutePoint;
   cost: number;
+}
+interface RouteSegment {
+  points: RoutePoint[];
+  pathQuality: "mapped" | "approximate";
 }
 interface PreviousEdge {
   fromId: string;
@@ -139,7 +144,7 @@ function edgeCost(from: Room, to: Room, portal: PortalPair) {
     distance(portal.b, center(to));
 }
 
-function endpointOptions(room: Room, walkable: Room[], isStart: boolean): EndpointOption[] {
+function endpointOptions(room: Room, walkable: Room[], isStart: boolean, allowApproximate = false): EndpointOption[] {
   if (WALKABLE_ROOM_TYPES.has(room.type)) {
     return [{
       node: room,
@@ -150,7 +155,7 @@ function endpointOptions(room: Room, walkable: Room[], isStart: boolean): Endpoi
     }];
   }
 
-  return walkable.flatMap((candidate) => {
+  const touching = walkable.flatMap((candidate) => {
     const portal = isStart ? roomPortalPair(room, candidate) : roomPortalPair(candidate, room);
     if (!portal) return [];
     const portalRoom = isStart ? portal.a : portal.b;
@@ -165,15 +170,40 @@ function endpointOptions(room: Room, walkable: Room[], isStart: boolean): Endpoi
         distance(portalWalkable, center(candidate)),
     }];
   });
+  if (touching.length > 0 || !allowApproximate) return touching;
+
+  // Some legacy floor maps don't draw a continuous corridor beside every pin.
+  // Keep a best-effort endpoint connection, but mark this route as approximate.
+  return walkable.map((candidate) => {
+    const sourceCenter = center(room);
+    const walkableCenter = center(candidate);
+    const portalRoom = {
+      x: clamp(walkableCenter.x, room.x, room.x + room.w),
+      y: clamp(walkableCenter.y, room.y, room.y + room.h),
+    };
+    const portalWalkable = {
+      x: clamp(portalRoom.x, candidate.x, candidate.x + candidate.w),
+      y: clamp(portalRoom.y, candidate.y, candidate.y + candidate.h),
+    };
+    return {
+      node: candidate,
+      direct: false,
+      portalRoom,
+      portalWalkable,
+      cost: distance(sourceCenter, portalRoom) +
+        distance(portalRoom, portalWalkable) +
+        distance(portalWalkable, walkableCenter),
+    };
+  });
 }
 
 /**
- * Build a graph from actual walkable map regions, then find a shortest path
- * through touching corridors/open areas. This avoids drawing a straight line
- * through unrelated rooms when the start and destination use different halls.
+ * Build a graph from mapped walkable regions and find a shortest route through
+ * connected corridors/open spaces. If the floor map has disconnected or missing
+ * connectors, return a flagged best-effort route rather than a silent dead end.
  */
-function routeSegment(plan: FloorPlan, from: Room, to: Room): RoutePoint[] | null {
-  if (from.id === to.id) return [center(from)];
+function routeSegment(plan: FloorPlan, from: Room, to: Room): RouteSegment | null {
+  if (from.id === to.id) return { points: [center(from)], pathQuality: "mapped" };
 
   const walkable = plan.rooms.filter((room) => WALKABLE_ROOM_TYPES.has(room.type));
   if (walkable.length === 0) return null;
@@ -273,18 +303,41 @@ function routeSegment(plan: FloorPlan, from: Room, to: Room): RoutePoint[] | nul
         push(endOption.portalRoom);
         push(center(to));
       }
-
-      if (!endOption.direct) {
-        push(endOption.portalWalkable);
-        push(endOption.portalRoom);
-        push(center(to));
-      }
       bestCost = totalCost;
       bestPoints = points;
     }
   }
 
-  return bestPoints;
+  if (bestPoints) return { points: bestPoints, pathQuality: "mapped" };
+
+  // The selected points can belong to disconnected mapped regions (for example,
+  // an entrance overlaps an office block in the source diagram). Keep the route
+  // usable while disclosing that geometry needs a site-plan connector correction.
+  const approximateStarts = endpointOptions(from, walkable, true, true);
+  const approximateEnds = endpointOptions(to, walkable, false, true);
+  let fallback: { cost: number; start: EndpointOption; end: EndpointOption } | null = null;
+  for (const startOption of approximateStarts) {
+    for (const endOption of approximateEnds) {
+      const cost = startOption.cost + distance(center(startOption.node), center(endOption.node)) + endOption.cost;
+      if (!fallback || cost < fallback.cost) fallback = { cost, start: startOption, end: endOption };
+    }
+  }
+  if (!fallback) return null;
+
+  const points: RoutePoint[] = [center(from)];
+  const push = (point: RoutePoint) => appendPoint(points, point);
+  if (!fallback.start.direct) {
+    push(fallback.start.portalRoom);
+    push(fallback.start.portalWalkable);
+  }
+  push(center(fallback.start.node));
+  push(center(fallback.end.node));
+  if (!fallback.end.direct) {
+    push(fallback.end.portalWalkable);
+    push(fallback.end.portalRoom);
+  }
+  push(center(to));
+  return { points, pathQuality: "approximate" };
 }
 
 function routeLeg(
@@ -295,12 +348,14 @@ function routeLeg(
   endKind: RouteLeg["endKind"]
 ): RouteLeg | null {
   const plan = allFloorPlans[floorId];
-  const points = routeSegment(plan, from, to);
-  if (!points) return null;
+  const segment = routeSegment(plan, from, to);
+  if (!segment) return null;
+  const points = segment.points;
   const mapUnits = points.slice(1).reduce((sum, point, index) => sum + distance(points[index], point), 0);
   return {
     floorId,
     points,
+    pathQuality: segment.pathQuality,
     startRoomId: from.id,
     endRoomId: to.id,
     startLabel: from.label,
