@@ -86,20 +86,37 @@ function roomPortalPair(a: Room, b: Room): PortalPair | null {
   const xOverlap = Math.min(rightA, rightB) - Math.max(a.x, b.x);
   const yOverlap = Math.min(bottomA, bottomB) - Math.max(a.y, b.y);
 
+  const centerA = center(a);
+  const centerB = center(b);
+  const sharedY = Math.max(a.y, b.y);
+  const sharedBottom = Math.min(bottomA, bottomB);
+  const sharedX = Math.max(a.x, b.x);
+  const sharedRight = Math.min(rightA, rightB);
+  const yAim = !WALKABLE_ROOM_TYPES.has(a.type)
+    ? centerA.y
+    : !WALKABLE_ROOM_TYPES.has(b.type)
+      ? centerB.y
+      : (centerA.y + centerB.y) / 2;
+  const xAim = !WALKABLE_ROOM_TYPES.has(a.type)
+    ? centerA.x
+    : !WALKABLE_ROOM_TYPES.has(b.type)
+      ? centerB.x
+      : (centerA.x + centerB.x) / 2;
+
   if (yOverlap > 0 && Math.abs(rightA - b.x) <= ROOM_EDGE_TOLERANCE) {
-    const y = Math.max(a.y, b.y) + yOverlap / 2;
+    const y = clamp(yAim, sharedY, sharedBottom);
     return { a: { x: rightA, y }, b: { x: b.x, y } };
   }
   if (yOverlap > 0 && Math.abs(rightB - a.x) <= ROOM_EDGE_TOLERANCE) {
-    const y = Math.max(a.y, b.y) + yOverlap / 2;
+    const y = clamp(yAim, sharedY, sharedBottom);
     return { a: { x: a.x, y }, b: { x: rightB, y } };
   }
   if (xOverlap > 0 && Math.abs(bottomA - b.y) <= ROOM_EDGE_TOLERANCE) {
-    const x = Math.max(a.x, b.x) + xOverlap / 2;
+    const x = clamp(xAim, sharedX, sharedRight);
     return { a: { x, y: bottomA }, b: { x, y: b.y } };
   }
   if (xOverlap > 0 && Math.abs(bottomB - a.y) <= ROOM_EDGE_TOLERANCE) {
-    const x = Math.max(a.x, b.x) + xOverlap / 2;
+    const x = clamp(xAim, sharedX, sharedRight);
     return { a: { x, y: a.y }, b: { x, y: bottomB } };
   }
 
