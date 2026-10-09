@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PublicPageLayout from "@/components/PublicPageLayout";
-import { signInWithSupabase, signUpWithSupabase, supabaseConfigured } from "@/lib/supabase";
+import { signInWithGoogle, signInWithSupabase, signUpWithSupabase, supabaseConfigured } from "@/lib/supabase";
 import { useSecurity } from "@/security/SecurityContext";
 import { toast } from "sonner";
 
@@ -26,11 +26,28 @@ export default function Welcome() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
 
   const switchMode = (next: AuthMode) => {
     setMode(next);
     setConfirmationSent(false);
+  };
+
+  const handleGoogleSignIn = async () => {
+    setGoogleBusy(true);
+    try {
+      if (!supabaseConfigured) {
+        throw new Error("Google sign-in is not configured yet. Please contact the campus administrator.");
+      }
+      await signInWithGoogle();
+    } catch (error) {
+      toast.error("Google sign-in could not start", {
+        description: error instanceof Error ? error.message : "Please try again or use email sign-in.",
+      });
+    } finally {
+      setGoogleBusy(false);
+    }
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -174,6 +191,25 @@ export default function Welcome() {
                 {busy ? "Please wait…" : mode === "signIn" ? "Sign in to campus" : "Create account"}
                 {!busy && <ArrowRight className="h-4 w-4" />}
               </Button>
+              <div className="relative py-1">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+                <div className="relative flex justify-center"><span className="bg-card px-3 text-xs text-muted-foreground">or continue with</span></div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-3"
+                onClick={() => void handleGoogleSignIn()}
+                disabled={googleBusy || busy || !supabaseConfigured}
+              >
+                <span className="grid h-5 w-5 place-items-center rounded-full border border-border font-bold text-sm text-blue-600" aria-hidden="true">G</span>
+                {googleBusy ? "Opening Google..." : "Continue with Google"}
+              </Button>
+              {mode === "signUp" && (
+                <p className="text-center text-xs leading-5 text-muted-foreground">
+                  First-time Google sign-ins create an account too. New campus accounts may remain Pending until an Admin assigns a role.
+                </p>
+              )}
               <p className="text-center text-xs leading-5 text-muted-foreground">
                 By continuing, you agree to use campus maps responsibly and follow college access instructions.
               </p>
