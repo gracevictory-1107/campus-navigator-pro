@@ -89,7 +89,8 @@ function loadHumanScript(): Promise<HumanNamespace> {
       }
       existing.addEventListener("load", () => {
         existing.dataset.campusLoaded = "true";
-        window.Human ? resolve(window.Human) : reject(new Error("Human face engine loaded without its runtime."));
+        if (window.Human) resolve(window.Human);
+        else reject(new Error("Human face engine loaded without its runtime."));
       }, { once: true });
       existing.addEventListener("error", () => {
         existing.dataset.campusFailed = "true";
@@ -104,7 +105,8 @@ function loadHumanScript(): Promise<HumanNamespace> {
     script.dataset.campusHuman = "true";
     script.onload = () => {
       script.dataset.campusLoaded = "true";
-      window.Human ? resolve(window.Human) : reject(new Error("Human face engine loaded without its runtime."));
+      if (window.Human) resolve(window.Human);
+      else reject(new Error("Human face engine loaded without its runtime."));
     };
     script.onerror = () => {
       script.dataset.campusFailed = "true";
