@@ -42,7 +42,7 @@ export default function Welcome() {
       if (mode === "signIn") {
         await signInWithSupabase(email, password);
         toast.success("Signed in. Welcome to AWDC Campus Navigator.");
-        navigate("/", { replace: true });
+        navigate("/campus", { replace: true });
       } else {
         const result = await signUpWithSupabase(fullName, email, password);
         if (result.needsEmailConfirmation) {
@@ -51,7 +51,7 @@ export default function Welcome() {
           toast.success("Account created. Check your email to verify it.");
         } else {
           toast.success("Account created. Welcome to AWDC Campus Navigator.");
-          navigate("/", { replace: true });
+          navigate("/campus", { replace: true });
         }
       }
     } catch (error) {
