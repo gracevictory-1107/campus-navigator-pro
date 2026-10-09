@@ -14,7 +14,7 @@ interface ProfileRow extends Record<string, unknown> {
   auth_user_id: string | null;
   full_name: string;
   email: string;
-  role: "admin" | "faculty" | "management" | "security" | "student";
+  role: "admin" | "faculty" | "management" | "security" | "student" | "pending";
   created_at: string;
   updated_at: string;
 }
