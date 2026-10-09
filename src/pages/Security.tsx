@@ -94,7 +94,6 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
     try {
       if (mode === "signIn") {
         const role = await signInWithSupabase(email, password);
-        await sec.setRole(role);
         onRoleChange(role);
         onOpenChange(false);
         setPassword("");
@@ -108,7 +107,6 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
           return;
         }
         if (!result.role) throw new Error("The account was created, but the campus role could not be confirmed.");
-        await sec.setRole(result.role);
         onRoleChange(result.role);
         onOpenChange(false);
         setPassword("");
@@ -184,14 +182,6 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
   );
 }
 
-const demoManagedProfiles: ManagedProfile[] = [
-  { id: "demo-admin", full_name: "Admin", email: "admin@gmail.com", role: "admin" },
-  { id: "demo-management", full_name: "Management", email: "management@gmail.com", role: "management" },
-  { id: "demo-faculty", full_name: "Faculty", email: "faculty@gmail.com", role: "faculty" },
-  { id: "demo-security", full_name: "Security", email: "security@gmail.com", role: "security" },
-  { id: "demo-student", full_name: "Student", email: "student@gmail.com", role: "student" },
-];
-const demoProfilesKey = "campus-demo-profiles-v1";
 const managedRoleOptions: { value: ManagedRole; label: string }[] = [
   { value: "admin", label: "Admin" },
   { value: "management", label: "Management" },
@@ -200,22 +190,8 @@ const managedRoleOptions: { value: ManagedRole; label: string }[] = [
   { value: "student", label: "Student" },
 ];
 
-function loadDemoProfiles(): ManagedProfile[] {
-  try {
-    const saved = localStorage.getItem(demoProfilesKey);
-    if (!saved) return demoManagedProfiles;
-    const rows = JSON.parse(saved) as ManagedProfile[];
-    if (!Array.isArray(rows) || rows.some((row) => !managedRoleOptions.some((option) => option.value === row.role))) {
-      throw new Error("Invalid saved demo user roles.");
-    }
-    return rows;
-  } catch {
-    return demoManagedProfiles;
-  }
-}
-
 function AdminUsersPanel() {
-  const [profiles, setProfiles] = useState<ManagedProfile[]>(loadDemoProfiles);
+  const [profiles, setProfiles] = useState<ManagedProfile[]>([]);
   const [backendAdmin, setBackendAdmin] = useState(false);
   const [loading, setLoading] = useState(supabaseConfigured);
 
@@ -259,10 +235,7 @@ function AdminUsersPanel() {
       }
       return;
     }
-    const updated = profiles.map((profile) => profile.id === id ? { ...profile, role: nextRole } : profile);
-    setProfiles(updated);
-    localStorage.setItem(demoProfilesKey, JSON.stringify(updated));
-    toast.success("Demo profile role saved on this device only.");
+    toast.error("Supabase authentication is required to manage real campus profiles.");
   };
 
   return (
@@ -270,14 +243,17 @@ function AdminUsersPanel() {
       <div>
         <h2 className="text-sm font-semibold text-foreground">Users & Roles</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          {supabaseConfigured
-            ? "Profiles are managed through Supabase. Role changes require a linked Supabase Admin account and are also enforced by row-level security."
-            : "Demo profiles are stored only in this browser. Configure Supabase and link Auth users before using this as a production user directory."}
+          "Profiles are managed in Supabase. Role changes require an authenticated Admin account and are enforced by database row-level security."
         </p>
       </div>
+      {!supabaseConfigured && (
+        <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+          Account management is unavailable until Supabase authentication is configured.
+        </p>
+      )}
       {supabaseConfigured && !backendAdmin && !loading && (
         <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-          Sign in with a Supabase Auth account linked to an Admin profile to load and manage the users table. Dashboard demo-role selection is not sufficient.
+          Sign in with a real Supabase Auth account linked to an Admin profile to load and manage users. User-created accounts start as Student and cannot grant themselves elevated roles.
         </p>
       )}
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
@@ -463,7 +439,7 @@ export default function Security() {
 
   const peopleAt = (locId: string) => sec.currentLocations.filter((e) => e.locationId === locId).length;
 
-  if (!sec.signedIn || !can.viewSecurity(role)) {
+  if (!sec.signedIn || !can.viewSecurity(role) || (supabaseConfigured && !sec.backendReady)) {
     return (
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border bg-card px-4 py-3 shadow-soft">
@@ -1134,10 +1110,10 @@ export default function Security() {
             className={sec.backendReady
               ? "border-[hsl(var(--status-authorized)/0.35)] text-[hsl(var(--status-authorized))]"
               : "border-border text-muted-foreground"}
-            title={sec.backendReady ? "Security data is connected to Supabase." : "Using local browser state until an authorized Supabase session is connected."}
+            title={sec.backendReady ? "Security data is connected to Supabase." : "Waiting for an authorised Supabase session and database sync."}
           >
             <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${sec.backendReady ? "bg-[hsl(var(--status-authorized))]" : "bg-muted-foreground"}`} />
-            {sec.backendReady ? "Database synced" : "Local demo"}
+            {sec.backendReady ? "Database synced" : "Not synced"}
           </Badge>
           {activeAlerts.length > 0 && <Badge variant="destructive" className="gap-1"><Bell className="h-3 w-3" />{activeAlerts.length}</Badge>}
           <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => sec.setMuted(!sec.muted)} aria-label={sec.muted ? "Unmute alerts" : "Mute alerts"} title={sec.muted ? "Unmute alerts" : "Mute alerts"}>
