@@ -369,6 +369,39 @@ export async function persistSecuritySnapshot(snapshot: SupabaseSecuritySnapshot
 }
 
 
+/**
+ * Persists the visitor row before any biometric profile or verification event is
+ * written. Those tables reference visitors.id, so relying on the debounced
+ * SecurityContext snapshot can race and cause foreign-key failures.
+ */
+export async function saveVisitorRecord(visitor: Visitor): Promise<void> {
+  if (!supabase) return;
+
+  const profile = await getSignedInProfile();
+  if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
+    throw new Error("A linked Supabase Security or Admin account is required to save visitor records.");
+  }
+
+  const { error } = await supabase.from("visitors").upsert({
+    id: visitor.id,
+    name: visitor.name.trim(),
+    email: visitor.email.trim().toLowerCase(),
+    mobile: visitor.mobile.trim(),
+    person_type: visitor.type,
+    visiting: visitor.visiting.trim(),
+    purpose: visitor.purpose.trim(),
+    authorized_location_id: visitor.authorizedLocationId,
+    expected_exit: visitor.expectedExit,
+    check_in: visitor.checkIn,
+    checked_out_at: visitor.checkedOutAt ?? null,
+    status: visitor.status,
+    verified: visitor.verified,
+    returning: visitor.returning,
+  });
+  if (error) throw error;
+}
+
+
 export interface BiometricStoredProfile {
   id: string;
   visitorId: string;
@@ -403,11 +436,13 @@ export async function getBiometricEmbedding(visitorId: string): Promise<number[]
     .maybeSingle();
 
   if (error) throw error;
-  if (!data?.provider_reference) return null;
+  if (!data?.provider_reference || data.status !== "ENROLLED") return null;
 
   try {
     const parsed = JSON.parse(data.provider_reference) as { version?: number; embedding?: unknown };
-    return Array.isArray(parsed.embedding) && parsed.embedding.every((item) => typeof item === "number" && Number.isFinite(item))
+    return Array.isArray(parsed.embedding)
+      && parsed.embedding.length > 0
+      && parsed.embedding.every((item) => typeof item === "number" && Number.isFinite(item))
       ? parsed.embedding
       : null;
   } catch {
@@ -416,6 +451,10 @@ export async function getBiometricEmbedding(visitorId: string): Promise<number[]
 }
 
 export async function saveBiometricEmbedding(visitorId: string, embedding: number[]): Promise<BiometricStoredProfile> {
+  if (!Array.isArray(embedding) || embedding.length === 0 || !embedding.every((value) => Number.isFinite(value))) {
+    throw new Error("The face template is invalid. Scan the visitor again before saving.");
+  }
+
   if (!supabase) {
     localStorage.setItem(biometricLocalKey(visitorId), JSON.stringify(embedding));
     return { id: "LOCAL-" + visitorId, visitorId, embedding, status: "ENROLLED" };
