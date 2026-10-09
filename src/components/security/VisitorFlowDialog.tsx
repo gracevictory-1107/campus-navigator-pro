@@ -9,7 +9,8 @@ import { useSecurity } from "@/security/SecurityContext";
 import { securityLocations } from "@/security/data";
 import { faceVerificationService } from "@/security/services";
 import { compareBiometricEmbeddings, describeBiometricScore, type BiometricCaptureResult } from "@/security/biometrics";
-import { getBiometricEmbedding, loadAllBiometricEmbeddings, recordBiometricVerificationEvent, saveBiometricEmbedding } from "@/lib/supabase";
+import { getBiometricEmbedding, loadAllBiometricEmbeddings, recordBiometricVerificationEvent, saveBiometricEmbedding, saveVisitorRecord } from "@/lib/supabase";
+import { toast } from "sonner";
 import { personTypes, type PersonType, type Visitor } from "@/security/types";
 import VisitorProfileCard from "./VisitorProfileCard";
 import DemoFaceVerification from "./DemoFaceVerification";
@@ -28,10 +29,13 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
   const [biometricMatch, setBiometricMatch] = useState<number | null>(null);
   const [biometricEnrollment, setBiometricEnrollment] = useState<"new" | "enrolled" | null>(null);
   const [biometricIdentity, setBiometricIdentity] = useState<Visitor | null>(null);
+  const [pendingVisitor, setPendingVisitor] = useState<Visitor | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const close = (o: boolean) => {
     onOpenChange(o);
-    if (!o) { setStep("form"); setForm(empty); setVerificationComplete(false); setResult(null); setExisting(undefined); setBiometricCapture(null); setBiometricMatch(null); setBiometricEnrollment(null); setBiometricIdentity(null); }
+    if (!o) { setStep("form"); setForm(empty); setVerificationComplete(false); setResult(null); setExisting(undefined); setBiometricCapture(null); setBiometricMatch(null); setBiometricEnrollment(null); setBiometricIdentity(null); setPendingVisitor(null); setIsSaving(false); setIsCheckingOut(false); }
   };
   const valid = form.name.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) && /^\d{10}$/.test(form.mobile) && form.visiting.trim() && form.purpose.trim() && form.expectedExit;
 
@@ -118,57 +122,88 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
   };
 
   const finish = async () => {
-    if (!biometricCapture) return;
+    if (!biometricCapture || isSaving) return;
+    setIsSaving(true);
 
-    const visitorBeforeSave = existing ?? biometricIdentity;
-    const registered = registerVisitor(
-      {
-        ...form,
-        email: form.email.trim().toLowerCase(),
-        name: form.name.trim(),
-      },
-      visitorBeforeSave
-    );
+    try {
+      const visitorBeforeSave = pendingVisitor ?? existing ?? biometricIdentity;
+      const registered = visitorBeforeSave ?? registerVisitor(
+        {
+          ...form,
+          email: form.email.trim().toLowerCase(),
+          name: form.name.trim(),
+        }
+      );
+      if (!pendingVisitor && !visitorBeforeSave) setPendingVisitor(registered);
 
-    if (!visitorBeforeSave || biometricEnrollment === "new") {
-      await saveBiometricEmbedding(registered.id, biometricCapture.embedding);
-      await recordBiometricVerificationEvent({
-        visitorId: registered.id,
-        result: "VERIFIED",
-        eventType: "visitor_biometric_enrollment",
-        destination: form.authorizedLocationId,
-        accessResult: "authorized",
+      // Save the parent row first; biometric_profiles and biometric_verification_events
+      // have foreign keys to visitors.id.
+      await saveVisitorRecord(registered);
+
+      if (!visitorBeforeSave || biometricEnrollment === "new") {
+        await saveBiometricEmbedding(registered.id, biometricCapture.embedding);
+        await recordBiometricVerificationEvent({
+          visitorId: registered.id,
+          result: "VERIFIED",
+          eventType: "visitor_biometric_enrollment",
+          destination: form.authorizedLocationId,
+          accessResult: "authorized",
+        });
+      } else {
+        await recordBiometricVerificationEvent({
+          visitorId: registered.id,
+          result: "VERIFIED",
+          eventType: "returning_visitor_check_in",
+          destination: form.authorizedLocationId,
+          accessResult: "authorized",
+        });
+      }
+
+      setPendingVisitor(null);
+      setResult(registered);
+      setStep("done");
+    } catch (error) {
+      toast.error("Could not complete visitor check-in", {
+        description: error instanceof Error ? error.message : "The visitor or biometric record could not be saved. Please retry.",
       });
-    } else {
-      await recordBiometricVerificationEvent({
-        visitorId: registered.id,
-        result: "VERIFIED",
-        eventType: "returning_visitor_check_in",
-        destination: form.authorizedLocationId,
-        accessResult: "authorized",
-      });
+    } finally {
+      setIsSaving(false);
     }
-
-    setResult(registered);
-    setStep("done");
   };
 
   const checkOutExistingVisitor = async () => {
     const visitor = existing ?? biometricIdentity;
-    if (!visitor) return;
+    if (!visitor || isCheckingOut) return;
 
-    setVisitorStatus(visitor.id, "Checked Out");
+    setIsCheckingOut(true);
     const checkedOutAt = Date.now();
-    await recordBiometricVerificationEvent({
-      visitorId: visitor.id,
-      result: "VERIFIED",
-      eventType: "returning_visitor_check_out",
-      destination: form.authorizedLocationId,
-      accessResult: "authorized",
-    });
+    const checkedOutVisitor: Visitor = { ...visitor, status: "Checked Out", checkedOutAt };
+    try {
+      await saveVisitorRecord(checkedOutVisitor);
+      setVisitorStatus(visitor.id, "Checked Out");
+      setResult(checkedOutVisitor);
+      setStep("done");
 
-    setResult({ ...visitor, status: "Checked Out", checkedOutAt });
-    setStep("done");
+      try {
+        await recordBiometricVerificationEvent({
+          visitorId: visitor.id,
+          result: "VERIFIED",
+          eventType: "returning_visitor_check_out",
+          destination: form.authorizedLocationId,
+          accessResult: "authorized",
+        });
+      } catch (error) {
+        toast.error("Visitor checked out, but the verification event was not recorded", {
+          description: error instanceof Error ? error.message : "Please check the database logs.",
+        });
+      }
+    } catch (error) {
+      toast.error("Could not check out visitor", {
+        description: error instanceof Error ? error.message : "The visitor status could not be saved.",
+      });
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
   const set = (k: keyof typeof empty) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -252,17 +287,17 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
 
             {verificationComplete && (
               <div className="grid grid-cols-2 gap-2">
-                <Button onClick={() => void finish()} disabled={!!existing && existing.status === "Active"}>
+                <Button onClick={() => void finish()} disabled={isSaving || (!!existing && existing.status === "Active")}>
                   <LogIn className="h-4 w-4 mr-2" />
-                  {existing?.status === "Active" ? "Already Checked In" : "Check In"}
+                  {isSaving ? "Saving..." : existing?.status === "Active" ? "Already Checked In" : "Check In"}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => void checkOutExistingVisitor()}
-                  disabled={!existing || existing.status !== "Active"}
+                  disabled={isCheckingOut || !existing || existing.status !== "Active"}
                 >
                   <LogOut className="h-4 w-4 mr-2" />
-                  {existing?.status === "Checked Out" ? "Already Checked Out" : "Check Out"}
+                  {isCheckingOut ? "Checking Out..." : existing?.status === "Checked Out" ? "Already Checked Out" : "Check Out"}
                 </Button>
               </div>
             )}
