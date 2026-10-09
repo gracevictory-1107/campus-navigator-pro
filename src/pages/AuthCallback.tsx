@@ -72,7 +72,7 @@ export default function AuthCallback() {
               Your account has been saved. Campus access is now waiting for an Admin to assign the correct role. You do not need Student access to use this app.
             </p>
             <p className="text-xs text-muted-foreground">Current status: {roleLabels[role ?? "pending"]}</p>
-            <Button asChild className="mt-2 w-full"><Link to="/">Continue to Campus Navigator</Link></Button>
+            <Button asChild className="mt-2 w-full"><Link to="/campus">Continue to Campus Navigator</Link></Button>
           </div>
         )}
 
@@ -83,7 +83,7 @@ export default function AuthCallback() {
             <p className="text-sm leading-6 text-muted-foreground">
               Your campus account is verified and its assigned role is {roleLabels[role ?? "pending"]}.
             </p>
-            <Button asChild className="mt-2 w-full"><Link to="/">Continue to Campus Navigator</Link></Button>
+            <Button asChild className="mt-2 w-full"><Link to="/campus">Continue to Campus Navigator</Link></Button>
             {(role === "admin" || role === "management" || role === "security") && (
               <Button variant="outline" asChild className="w-full"><Link to="/security">Open Campus Security</Link></Button>
             )}
