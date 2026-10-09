@@ -79,8 +79,22 @@ function loadHumanScript(): Promise<HumanNamespace> {
   return new Promise((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>('script[data-campus-human="true"]');
     if (existing) {
-      existing.addEventListener("load", () => window.Human ? resolve(window.Human!) : reject(new Error("Human face engine loaded without its runtime.")));
-      existing.addEventListener("error", () => reject(new Error("Could not load the face biometric engine.")));
+      if (existing.dataset.campusLoaded === "true") {
+        reject(new Error("Human face engine loaded without its runtime."));
+        return;
+      }
+      if (existing.dataset.campusFailed === "true") {
+        reject(new Error("Could not load the face biometric engine. Check the network connection and try again."));
+        return;
+      }
+      existing.addEventListener("load", () => {
+        existing.dataset.campusLoaded = "true";
+        window.Human ? resolve(window.Human) : reject(new Error("Human face engine loaded without its runtime."));
+      }, { once: true });
+      existing.addEventListener("error", () => {
+        existing.dataset.campusFailed = "true";
+        reject(new Error("Could not load the face biometric engine. Check the network connection and try again."));
+      }, { once: true });
       return;
     }
 
@@ -88,8 +102,14 @@ function loadHumanScript(): Promise<HumanNamespace> {
     script.src = HUMAN_SCRIPT_URL;
     script.async = true;
     script.dataset.campusHuman = "true";
-    script.onload = () => window.Human ? resolve(window.Human) : reject(new Error("Human face engine loaded without its runtime."));
-    script.onerror = () => reject(new Error("Could not load the face biometric engine. Check the network connection and try again."));
+    script.onload = () => {
+      script.dataset.campusLoaded = "true";
+      window.Human ? resolve(window.Human) : reject(new Error("Human face engine loaded without its runtime."));
+    };
+    script.onerror = () => {
+      script.dataset.campusFailed = "true";
+      reject(new Error("Could not load the face biometric engine. Check the network connection and try again."));
+    };
     document.head.appendChild(script);
   });
 }
