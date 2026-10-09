@@ -12,17 +12,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import FloorPlanSVG from "@/components/FloorPlanSVG";
 import ThemeToggle from "@/components/ThemeToggle";
-import RoleSwitcher from "@/components/RoleSwitcher";
 import VisitorFlowDialog from "@/components/security/VisitorFlowDialog";
 import VisitorProfileCard from "@/components/security/VisitorProfileCard";
-import DemoFaceVerification from "@/components/security/DemoFaceVerification";
 import { allFloorPlans } from "@/data/floorPlans";
 import { cameras, locationById, securityLocations } from "@/security/data";
 import { cctvEvidence, cctvEvidenceCaptureCounts, identifiedCctvEvidence } from "@/security/cctvInventory";
 import { can, roles } from "@/security/permissions";
 import { formatTime, useSecurity } from "@/security/SecurityContext";
 import { personTypes, type LocationEvent, type PersonType, type Role, type SecurityAlert } from "@/security/types";
-import { loadAdminProfiles, loadCameraConfigs, saveCameraConfig, signInWithSupabase, supabaseConfigured, updateManagedProfileRole, type CameraConfig, type ManagedProfile, type ManagedRole } from "@/lib/supabase";
+import { loadAdminProfiles, loadCameraConfigs, saveCameraConfig, signInWithSupabase, signUpWithSupabase, supabaseConfigured, updateManagedProfileRole, type CameraConfig, type ManagedProfile, type ManagedRole } from "@/lib/supabase";
 import { toast } from "sonner";
 
 const ok = "text-[hsl(var(--status-authorized))]";
@@ -72,77 +70,114 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
   onRoleChange: (role: Role) => void;
 }) {
   const sec = useSecurity();
-  const [faceSignInOpen, setFaceSignInOpen] = useState(false);
+  const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
-  const submitSupabaseSignIn = async (event: FormEvent<HTMLFormElement>) => {
+  const [confirmationSent, setConfirmationSent] = useState(false);
+
+  const resetDialog = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setMode("signIn");
+      setFullName("");
+      setPassword("");
+      setConfirmationSent(false);
+    }
+    onOpenChange(nextOpen);
+  };
+
+  const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setAuthBusy(true);
+    setConfirmationSent(false);
     try {
-      const role = await signInWithSupabase(email, password);
-      sec.setRole(role);
-      onRoleChange(role);
-      onOpenChange(false);
-      setPassword("");
-      toast.success(`Signed in as ${role}`);
+      if (mode === "signIn") {
+        const role = await signInWithSupabase(email, password);
+        await sec.setRole(role);
+        onRoleChange(role);
+        onOpenChange(false);
+        setPassword("");
+        toast.success("Signed in successfully.");
+      } else {
+        const result = await signUpWithSupabase(fullName, email, password);
+        if (result.needsEmailConfirmation) {
+          setConfirmationSent(true);
+          setPassword("");
+          toast.success("Check your email to verify your account.");
+          return;
+        }
+        if (!result.role) throw new Error("The account was created, but the campus role could not be confirmed.");
+        await sec.setRole(result.role);
+        onRoleChange(result.role);
+        onOpenChange(false);
+        setPassword("");
+        toast.success("Account created. Your initial access level is Student.");
+      }
     } catch (error) {
-      toast.error("Supabase sign-in failed", {
-        description: error instanceof Error ? error.message : "Check your credentials and linked campus profile.",
+      toast.error(mode === "signIn" ? "Sign-in failed" : "Account creation failed", {
+        description: error instanceof Error ? error.message : "Please check your details and try again.",
       });
     } finally {
       setAuthBusy(false);
     }
   };
+
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => {
-      if (!nextOpen) setFaceSignInOpen(false);
-      onOpenChange(nextOpen);
-    }}>
+    <Dialog open={open} onOpenChange={resetDialog}>
       <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{faceSignInOpen ? "Security Camera Liveness Check" : "Sign In to Campus Security"}</DialogTitle>
+          <DialogTitle>{mode === "signIn" ? "Sign In to Campus Security" : "Create a Campus Account"}</DialogTitle>
           <DialogDescription>
-            {faceSignInOpen
-              ? "Live-face check only. It does not identify a security account."
-              : "Use the configured campus account, the existing local demo role sign-in, or camera verification."}
+            {mode === "signIn"
+              ? "Sign in with the email and password for your verified campus account. Security dashboard permissions come from your assigned campus role."
+              : "Create an account with your real email address. New accounts start with Student access; only an authorised Admin can assign staff, Security or Management roles."}
           </DialogDescription>
         </DialogHeader>
-        {faceSignInOpen ? (
-          <DemoFaceVerification
-            identityRequired={false}
-            onContinue={(_capture) => {
-              sec.setRole("security");
-              onRoleChange("security");
-              setFaceSignInOpen(false);
-              onOpenChange(false);
-            }}
-            onCancel={() => setFaceSignInOpen(false)}
-          />
-        ) : (
-          <div className="grid gap-4">
-            {supabaseConfigured && (
-              <form onSubmit={(event) => void submitSupabaseSignIn(event)} className="grid gap-3 rounded-lg border border-border p-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Campus account sign-in</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Use a Supabase Auth account linked to a campus profile. Public account creation is disabled.</p>
-                </div>
-                <Input type="email" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email" aria-label="Campus account email" />
-                <Input type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" aria-label="Campus account password" />
-                <Button type="submit" disabled={authBusy}>{authBusy ? "Signing in..." : "Sign In with Campus Account"}</Button>
-              </form>
-            )}
-            <div className="grid gap-2">
-              <p className="text-sm font-medium text-foreground">Local demo role sign-in</p>
-              <RoleSwitcher onRoleChange={onRoleChange} />
-              <p className="text-xs text-muted-foreground">Role selection is a local demo flow and does not authenticate a Supabase account.</p>
-            </div>
-            <div className="border-t border-border pt-3">
-              <Button variant="outline" className="w-full" onClick={() => setFaceSignInOpen(true)}>
-                <Camera className="mr-2 h-4 w-4" />Sign In with Face
-              </Button>
-            </div>
+
+        {confirmationSent ? (
+          <div className="grid gap-3 rounded-xl border border-border bg-muted/30 p-4">
+            <CheckCircle2 className="h-8 w-8 text-[hsl(var(--status-authorized))]" />
+            <h3 className="font-semibold text-foreground">Verify your email</h3>
+            <p className="text-sm text-muted-foreground">
+              If the address is eligible for registration, a verification message has been sent to <span className="font-medium text-foreground">{email.trim().toLowerCase()}</span>. Open that email and verify your account before signing in.
+            </p>
+            <Button onClick={() => { setMode("signIn"); setConfirmationSent(false); }}>Back to Sign In</Button>
           </div>
+        ) : (
+          <form onSubmit={(event) => void submitAuth(event)} className="grid gap-3 rounded-lg border border-border p-3">
+            {mode === "signUp" && (
+              <div className="grid gap-1.5">
+                <Label htmlFor="campus-signup-name">Full name</Label>
+                <Input id="campus-signup-name" autoComplete="name" required minLength={2} maxLength={100} value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Your full name" />
+              </div>
+            )}
+            <div className="grid gap-1.5">
+              <Label htmlFor="campus-auth-email">Email address</Label>
+              <Input id="campus-auth-email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="campus-auth-password">Password</Label>
+              <Input id="campus-auth-password" type="password" autoComplete={mode === "signIn" ? "current-password" : "new-password"} required minLength={mode === "signUp" ? 8 : 1} maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={mode === "signUp" ? "At least 8 characters" : "Password"} />
+              {mode === "signUp" && <p className="text-xs text-muted-foreground">Use at least 8 characters. Never share your password.</p>}
+            </div>
+            <Button type="submit" disabled={authBusy || !supabaseConfigured}>
+              {authBusy ? "Please wait..." : mode === "signIn" ? "Sign In with Email" : "Create Account"}
+            </Button>
+            {!supabaseConfigured && (
+              <p role="alert" className="text-xs text-destructive">Account login is unavailable because the authentication service is not configured.</p>
+            )}
+            <div className="flex flex-wrap items-center justify-center gap-1 text-sm">
+              <span className="text-muted-foreground">{mode === "signIn" ? "New here?" : "Already have an account?"}</span>
+              <button
+                type="button"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+                onClick={() => { setMode((current) => current === "signIn" ? "signUp" : "signIn"); setPassword(""); setConfirmationSent(false); }}
+              >
+                {mode === "signIn" ? "Create an account" : "Sign in"}
+              </button>
+            </div>
+          </form>
         )}
       </DialogContent>
     </Dialog>
