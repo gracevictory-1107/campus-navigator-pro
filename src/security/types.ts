@@ -1,4 +1,4 @@
-export type Role = "student" | "faculty" | "staff" | "management" | "security" | "admin";
+export type Role = "pending" | "student" | "faculty" | "staff" | "management" | "security" | "admin";
 export const personTypes = [
   "Parent",
   "Product/Business Visitor",
