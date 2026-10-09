@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PublicPageLayout from "@/components/PublicPageLayout";
 import { signInWithSupabase, signUpWithSupabase, supabaseConfigured } from "@/lib/supabase";
+import { useSecurity } from "@/security/SecurityContext";
 import { toast } from "sonner";
 
 type AuthMode = "signIn" | "signUp";
@@ -18,6 +19,7 @@ const highlights = [
 
 export default function Welcome() {
   const navigate = useNavigate();
+  const { signedIn, role } = useSecurity();
   const [mode, setMode] = useState<AuthMode>("signIn");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -86,6 +88,18 @@ export default function Welcome() {
               </div>
             ))}
           </div>
+
+          {signedIn && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <div>
+                <p className="text-sm font-semibold">You’re already signed in</p>
+                <p className="mt-1 text-xs text-muted-foreground">Account role: {role === "pending" ? "Pending approval" : role.charAt(0).toUpperCase() + role.slice(1)}. Continue to the map when you’re ready.</p>
+              </div>
+              <Link to="/campus" className="inline-flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
+                Open Campus Map <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2">
             <Link to="/about" className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2.5 text-sm font-medium hover:bg-accent">
