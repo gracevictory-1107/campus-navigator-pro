@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import Security from "./pages/Security";
+import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import AppErrorBoundary from "./components/AppErrorBoundary";
 import { SecurityProvider } from "./security/SecurityContext";
@@ -24,6 +25,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/security" element={<Security />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
