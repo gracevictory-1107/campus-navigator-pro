@@ -1,6 +1,7 @@
 import type { Role } from "./types";
 
 export const roles: { id: Role; label: string }[] = [
+  { id: "pending", label: "Pending approval" },
   { id: "student", label: "Student" },
   { id: "faculty", label: "Faculty" },
   { id: "staff", label: "Staff" },
