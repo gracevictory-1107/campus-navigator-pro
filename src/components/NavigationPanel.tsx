@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useReducedMotion } from "framer-motion";
 import { motion } from "framer-motion";
 import { getAllRooms, allFloorPlans, buildingSections } from "@/data/floorPlans";
 import { X, Navigation2, ArrowRight, Footprints, ShieldAlert, ShieldCheck } from "lucide-react";
@@ -37,6 +38,7 @@ function getBuilding(floorId: string): string {
 }
 
 export default function NavigationPanel({ onClose, onNavigate, visitors, onCheckRoute, onRouteChanged, onFocusRestrictedArea, accessRole }: Props) {
+  const reduceMotion = Boolean(useReducedMotion());
   const [fromQuery, setFromQuery] = useState("");
   const [toQuery, setToQuery] = useState("");
   const [fromRoom, setFromRoom] = useState<{ floorId: string; roomId: string; label: string } | null>(null);
@@ -172,10 +174,10 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
 
   return (
     <motion.div
-      initial={{ x: "100%", opacity: 0 }}
+      initial={reduceMotion ? false : { x: "100%", opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      exit={{ x: "100%", opacity: 0 }}
-      transition={{ type: "spring", damping: 25, stiffness: 300 }}
+      exit={reduceMotion ? undefined : { x: "100%", opacity: 0 }}
+      transition={reduceMotion ? { duration: 0 } : { type: "spring", damping: 25, stiffness: 300 }}
       className="absolute right-0 top-0 bottom-0 w-96 max-w-full bg-card border-l border-border shadow-elevated z-20 flex flex-col"
     >
       {/* Header */}
@@ -295,7 +297,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
       </div>
 
       {/* Directions */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {directions && route ? (
           <div className="space-y-0">
             {!routeDecision && (
@@ -391,14 +393,14 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
           </div>
         )}
       </div>
-      <div className="sticky bottom-0 z-30 shrink-0 space-y-2 border-t border-border bg-card/95 p-4 shadow-[0_-10px_25px_-20px_rgba(0,0,0,0.35)] backdrop-blur">
+      <div className="relative z-30 shrink-0 space-y-2 border-t border-border bg-card p-4 shadow-[0_-10px_25px_-20px_rgba(0,0,0,0.35)]">
         {!fullAccessRole && !visitor && route && (
           <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs leading-5 text-muted-foreground">
             To start this route, sign in with an approved campus account or select a registered visitor so access can be checked.
           </p>
         )}
         <Button
-          className="h-11 w-full gap-2 text-sm font-semibold shadow-sm"
+          className="h-12 w-full gap-2 text-sm font-semibold shadow-md transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:translate-y-0 disabled:opacity-70"
           aria-label="Start Navigation"
           title="Start Navigation"
           onClick={() => void startNavigation()}
