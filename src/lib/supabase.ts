@@ -155,17 +155,52 @@ async function getSignedInProfile() {
 }
 
 export async function signInWithSupabase(email: string, password: string): Promise<Role> {
-  if (!supabase) throw new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
-  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+  if (!supabase) throw new Error("Account sign-in is unavailable because Supabase is not configured.");
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password,
+  });
   if (signInError) throw signInError;
   try {
     const profile = await getSignedInProfile();
-    if (!profile) throw new Error("This account is not linked to an authorized campus profile.");
+    if (!profile) throw new Error("Your account has no campus profile yet. Verify your email, then try again. If this continues, contact the campus administrator.");
     return mapAppRole(profile.role);
   } catch (error) {
     await supabase.auth.signOut();
     throw error;
   }
+}
+
+export async function signUpWithSupabase(
+  fullName: string,
+  email: string,
+  password: string,
+): Promise<{ role: Role | null; needsEmailConfirmation: boolean }> {
+  if (!supabase) throw new Error("Account creation is unavailable because Supabase is not configured.");
+  const cleanName = fullName.trim();
+  const cleanEmail = email.trim().toLowerCase();
+  if (cleanName.length < 2) throw new Error("Enter your full name.");
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(cleanEmail)) throw new Error("Enter a valid email address.");
+  if (password.length < 8) throw new Error("Use a password with at least 8 characters.");
+
+  const { data, error } = await supabase.auth.signUp({
+    email: cleanEmail,
+    password,
+    options: { data: { full_name: cleanName } },
+  });
+  if (error) throw error;
+  if (!data.user) throw new Error("Account creation did not complete. Please try again.");
+
+  if (!data.session) {
+    return { role: null, needsEmailConfirmation: true };
+  }
+
+  const profile = await getSignedInProfile();
+  if (!profile) {
+    await supabase.auth.signOut();
+    throw new Error("Your account was created, but its campus profile was not provisioned. Contact the campus administrator.");
+  }
+  return { role: mapAppRole(profile.role), needsEmailConfirmation: false };
 }
 
 export async function getAuthenticatedRole(): Promise<Role | null> {
