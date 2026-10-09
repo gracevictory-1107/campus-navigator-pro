@@ -285,7 +285,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
 
       {/* Directions */}
       <div className="flex-1 overflow-y-auto p-4">
-        {directions && route && visitor ? (
+        {directions && route && (visitor || fullAccessRole) ? (
           <div className="space-y-0">
             {!routeDecision && (
               <p className="mb-3 rounded-lg border border-border bg-secondary/60 p-3 text-xs text-muted-foreground">
@@ -368,9 +368,12 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
                 </Button>
               ) : (
                 <>
-                  <Button className="w-full gap-2" onClick={onClose}>
+                  <Button className="w-full gap-2" onClick={() => {
+                    onNavigate(fromRoom.floorId, fromRoom.roomId);
+                    onClose();
+                  }}>
                     <Navigation2 className="h-4 w-4" />
-                    {fromRoom.floorId === toRoom.floorId ? "Show Route on Map" : "Show Start-Floor Route"}
+                    Start Navigation
                   </Button>
                   {fromRoom.floorId !== toRoom.floorId && (
                     <Button variant="outline" className="w-full gap-2" onClick={() => {
