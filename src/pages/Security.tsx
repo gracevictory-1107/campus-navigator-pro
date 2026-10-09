@@ -97,7 +97,7 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
         onRoleChange(role);
         onOpenChange(false);
         setPassword("");
-        toast.success("Signed in successfully.");
+        toast.success(role === "pending" ? "Signed in, but access is waiting for Admin approval." : "Signed in successfully.");
       } else {
         const result = await signUpWithSupabase(fullName, email, password);
         if (result.needsEmailConfirmation) {
