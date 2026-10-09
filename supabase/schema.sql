@@ -5,7 +5,7 @@ create table if not exists public.profiles (
   auth_user_id uuid unique references auth.users(id) on delete set null,
   full_name text not null,
   email text not null unique,
-  role text not null check (role in ('admin', 'faculty', 'management', 'security', 'student')),
+  role text not null default 'pending' check (role in ('admin', 'faculty', 'management', 'security', 'student', 'pending')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -108,7 +108,8 @@ $$;
 
 -- Safe role migration: allow Management as a first-class authenticated campus role.
 alter table public.profiles drop constraint if exists profiles_role_check;
-alter table public.profiles add constraint profiles_role_check check (role in ('admin', 'faculty', 'management', 'security', 'student'));
+alter table public.profiles add constraint profiles_role_check check (role in ('admin', 'faculty', 'management', 'security', 'student', 'pending'));
+alter table public.profiles alter column role set default 'pending';
 
 alter table public.profiles enable row level security;
 alter table public.access_rules enable row level security;
@@ -120,6 +121,35 @@ drop policy if exists profiles_select_self_or_admin on public.profiles;
 create policy profiles_select_self_or_admin on public.profiles for select to authenticated using (auth_user_id = auth.uid() or public.current_campus_role() = 'admin');
 drop policy if exists profiles_admin_update on public.profiles;
 create policy profiles_admin_update on public.profiles for update to authenticated using (public.current_campus_role() = 'admin' and auth_user_id is distinct from auth.uid()) with check (public.current_campus_role() = 'admin' and auth_user_id is distinct from auth.uid());
+
+-- Newly registered accounts have no campus privileges until an Admin assigns a role.
+drop trigger if exists on_auth_user_created_student_profile on auth.users;
+drop trigger if exists on_auth_user_created_profile on auth.users;
+create or replace function public.handle_new_auth_user_profile()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if new.email is null or length(trim(new.email)) = 0 then
+    return new;
+  end if;
+
+  insert into public.profiles (auth_user_id, full_name, email, role)
+  values (
+    new.id,
+    coalesce(nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''), split_part(new.email, '@', 1)),
+    lower(trim(new.email)),
+    'pending'
+  )
+  on conflict (auth_user_id) do nothing;
+
+  return new;
+end;
+$function$;
+create trigger on_auth_user_created_profile after insert on auth.users for each row execute function public.handle_new_auth_user_profile();
+drop function if exists public.handle_new_auth_user_student_profile();
 
 drop policy if exists access_rules_security_read on public.access_rules;
 create policy access_rules_security_read on public.access_rules for select to authenticated using (public.current_campus_role() in ('admin', 'management', 'security'));
