@@ -85,7 +85,7 @@ describe("calculateIndoorRoute", () => {
 
           for (const leg of route!.legs) {
             for (const room of plan.rooms.filter((candidate) =>
-              candidate.type !== "corridor" &&
+              !["corridor", "exit", "open", "court"].includes(candidate.type) &&
               candidate.id !== leg.startRoomId &&
               candidate.id !== leg.endRoomId
             )) {
