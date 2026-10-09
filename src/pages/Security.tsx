@@ -340,6 +340,7 @@ export default function Security() {
   const [tab, setTab] = useState(role === "management" ? "management" : "dashboard");
   const [cameraConfigs, setCameraConfigs] = useState<Record<string, CameraConfig>>(() => Object.fromEntries(cameraRegistry.map((camera) => [camera.id, { cameraId: camera.id, ipAddress: "", streamUrl: "" }])));
   const [cameraConfigSaving, setCameraConfigSaving] = useState<string | null>(null);
+  const [cameraSearch, setCameraSearch] = useState("");
   const [cameraInventorySearch, setCameraInventorySearch] = useState("");
 
   useEffect(() => {
@@ -704,98 +705,100 @@ export default function Security() {
   const CctvConfiguration = viewCCTV && (
     <section className="grid gap-3 rounded-xl border border-border bg-card p-4">
       <div>
-        <h2 className="text-base font-semibold text-foreground">Campus CCTV Inventory &amp; Configuration</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          The college-reported total is {CAMPUS_REPORTED_CAMERA_COUNT} cameras. These temporary IDs are for tracking only; they are not claimed to match the NVR labels.
-          Exact floor/area mapping and camera-free zones will be added from the annotated layout. We will not guess camera locations.
+        <h2 className="text-base font-semibold text-foreground">Campus CCTV Register · {CAMPUS_REPORTED_CAMERA_COUNT} cameras</h2>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          The campus has reported {CAMPUS_REPORTED_CAMERA_COUNT} cameras. CAM-01 to CAM-109 are provisional tracking IDs for configuration and must be checked against the college NVR labels.
+          Six entries currently have demonstration map links; the rest await the annotated floor layouts. IP addresses and stream URLs are blank until supplied by the campus CCTV/NVR administrator.
+        </p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
           {manageCCTV
-            ? " Management can enter the IP address and stream/NVR URL supplied by the college CCTV/NVR administrator."
-            : " Security has view-only access. Only Management or Admin can change camera configuration."}
-          An IP address alone does not create a live browser stream; the college/NVR must provide a compatible, reachable stream URL.
+            ? "Management/Admin can save network details for each camera. Saving a URL does not by itself prove the stream is live or supported by the browser."
+            : "Security has view-only access. Only Management/Admin can change camera configuration."}
         </p>
       </div>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <div className="rounded-lg border border-border p-3">
-          <p className="text-xs text-muted-foreground">Camera tracking IDs</p>
-          <p className="mt-1 text-2xl font-bold text-foreground">{CAMPUS_REPORTED_CAMERA_COUNT}</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-border bg-secondary/30 p-3">
+          <p className="text-xs text-muted-foreground">Register entries</p>
+          <p className="mt-1 text-2xl font-bold text-foreground">{cameraRegistry.length}</p>
         </div>
-        <div className="rounded-lg border border-border p-3">
-          <p className="text-xs text-muted-foreground">IP addresses entered</p>
-          <p className="mt-1 text-2xl font-bold text-foreground">{cameraRegistry.filter((entry) => Boolean(cameraConfigs[entry.id]?.ipAddress.trim())).length}</p>
+        <div className="rounded-xl border border-border bg-secondary/30 p-3">
+          <p className="text-xs text-muted-foreground">Demo-linked entries</p>
+          <p className="mt-1 text-2xl font-bold text-foreground">{cameras.length}</p>
         </div>
-        <div className="rounded-lg border border-border p-3">
-          <p className="text-xs text-muted-foreground">Stream URLs entered</p>
-          <p className="mt-1 text-2xl font-bold text-foreground">{cameraRegistry.filter((entry) => Boolean(cameraConfigs[entry.id]?.streamUrl.trim())).length}</p>
+        <div className="col-span-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 sm:col-span-1">
+          <p className="text-xs text-muted-foreground">Awaiting layout mapping</p>
+          <p className="mt-1 text-2xl font-bold text-foreground">{cameraRegistry.length - cameras.length}</p>
         </div>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="grid gap-2">
+        <label htmlFor="camera-registry-search" className="text-xs font-medium text-foreground">Find camera</label>
         <Input
-          value={cameraInventorySearch}
-          onChange={(event) => setCameraInventorySearch(event.target.value)}
-          placeholder="Search temporary camera ID, e.g. CAM-42"
-          aria-label="Search campus CCTV inventory"
-          className="max-w-sm"
+          id="camera-registry-search"
+          value={cameraSearch}
+          onChange={(event) => setCameraSearch(event.target.value)}
+          placeholder="Search CAM-01, CAM-109, or a demo-linked location"
         />
-        <p className="text-xs text-muted-foreground">
-          Showing {cameraRegistry.filter((entry) => entry.id.toLowerCase().includes(cameraInventorySearch.trim().toLowerCase())).length} of {CAMPUS_REPORTED_CAMERA_COUNT} entries
-        </p>
       </div>
-      <div className="max-h-[620px] overflow-auto rounded-xl border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Tracking ID</TableHead>
-              <TableHead>Location mapping</TableHead>
-              <TableHead>IP address</TableHead>
-              <TableHead>Stream / NVR URL</TableHead>
-              <TableHead>Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {cameraRegistry
-              .filter((entry) => entry.id.toLowerCase().includes(cameraInventorySearch.trim().toLowerCase()))
-              .map((camera) => {
-                const config = cameraConfigs[camera.id] ?? { cameraId: camera.id, ipAddress: "", streamUrl: "" };
-                return (
-                  <TableRow key={camera.id}>
-                    <TableCell className="whitespace-nowrap font-medium">{camera.id}</TableCell>
-                    <TableCell className="min-w-[170px]">
-                      <Badge variant="secondary">Pending layout</Badge>
-                      <p className="mt-1 text-[11px] text-muted-foreground">Not assigned to a floor or area</p>
-                    </TableCell>
-                    <TableCell className="min-w-[180px]">
-                      <Input
-                        id={"camera-ip-" + camera.id}
-                        value={config.ipAddress}
-                        placeholder="e.g. 192.168.1.50"
-                        onChange={(event) => updateCameraConfig(camera.id, "ipAddress", event.target.value)}
-                        disabled={!manageCCTV}
-                        aria-label={camera.id + " IP address"}
-                      />
-                    </TableCell>
-                    <TableCell className="min-w-[220px]">
-                      <Input
-                        id={"camera-stream-" + camera.id}
-                        value={config.streamUrl}
-                        placeholder="College NVR stream URL"
-                        onChange={(event) => updateCameraConfig(camera.id, "streamUrl", event.target.value)}
-                        disabled={!manageCCTV}
-                        aria-label={camera.id + " stream or NVR URL"}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {manageCCTV && (
-                        <Button size="sm" onClick={() => void persistCameraConfig(camera.id)} disabled={cameraConfigSaving === camera.id}>
-                          {cameraConfigSaving === camera.id ? "Saving..." : "Save"}
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-          </TableBody>
-        </Table>
+      <div className="grid max-h-[min(68vh,760px)] gap-3 overflow-y-auto pr-1">
+        {cameraRegistry.filter((entry) => {
+          const query = cameraSearch.trim().toLowerCase();
+          if (!query) return true;
+          const mappedCamera = cameras.find((candidate) => candidate.id === entry.id);
+          const locationName = mappedCamera ? locationById(mappedCamera.locationId)?.name ?? "" : "";
+          return `${entry.id} ${locationName} ${mappedCamera ? "demo linked" : "location pending"}`.toLowerCase().includes(query);
+        }).map((entry) => {
+          const mappedCamera = cameras.find((candidate) => candidate.id === entry.id);
+          const locationName = mappedCamera ? locationById(mappedCamera.locationId)?.name ?? "Demo location" : "Location awaiting annotated layout";
+          const config = cameraConfigs[entry.id] ?? { cameraId: entry.id, ipAddress: "", streamUrl: "" };
+          return (
+            <div key={entry.id} className="grid gap-2 rounded-lg border border-border p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{entry.id} · {locationName}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    {mappedCamera
+                      ? "Prototype map association only. Confirm the physical location against the annotated floor layout."
+                      : "Provisional camera ID. Physical location and camera-free areas await the annotated floor layout."}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">{mappedCamera ? "Demo linked" : "Mapping pending"}</Badge>
+                  {manageCCTV && (
+                    <Button size="sm" onClick={() => void persistCameraConfig(entry.id)} disabled={cameraConfigSaving === entry.id}>
+                      {cameraConfigSaving === entry.id ? "Saving..." : "Save"}
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                <div className="grid gap-1">
+                  <label className="text-xs font-medium text-foreground" htmlFor={"camera-ip-" + entry.id}>IP Address</label>
+                  <Input
+                    id={"camera-ip-" + entry.id}
+                    value={config.ipAddress}
+                    placeholder="IP supplied by CCTV administrator"
+                    onChange={(event) => updateCameraConfig(entry.id, "ipAddress", event.target.value)}
+                    disabled={!manageCCTV}
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-xs font-medium text-foreground" htmlFor={"camera-stream-" + entry.id}>Stream / NVR URL</label>
+                  <Input
+                    id={"camera-stream-" + entry.id}
+                    value={config.streamUrl}
+                    placeholder="Browser-supported stream URL, if available"
+                    onChange={(event) => updateCameraConfig(entry.id, "streamUrl", event.target.value)}
+                    disabled={!manageCCTV}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
+      <p className="text-[11px] leading-5 text-muted-foreground">
+        Live CCTV remains disconnected until the real NVR/provider details, authentication, browser-compatible stream transport, and network permissions are verified. Never paste camera passwords or private keys into public chat.
+      </p>
     </section>
   );
 
