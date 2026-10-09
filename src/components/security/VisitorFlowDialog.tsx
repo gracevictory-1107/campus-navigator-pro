@@ -29,17 +29,21 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
   const [biometricMatch, setBiometricMatch] = useState<number | null>(null);
   const [biometricEnrollment, setBiometricEnrollment] = useState<"new" | "enrolled" | null>(null);
   const [biometricIdentity, setBiometricIdentity] = useState<Visitor | null>(null);
+  const [manualIdentityCheckRequired, setManualIdentityCheckRequired] = useState(false);
+  const [manualIdentityConfirmed, setManualIdentityConfirmed] = useState(false);
   const [pendingVisitor, setPendingVisitor] = useState<Visitor | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const close = (o: boolean) => {
     onOpenChange(o);
-    if (!o) { setStep("form"); setForm(empty); setVerificationComplete(false); setResult(null); setExisting(undefined); setBiometricCapture(null); setBiometricMatch(null); setBiometricEnrollment(null); setBiometricIdentity(null); setPendingVisitor(null); setIsSaving(false); setIsCheckingOut(false); }
+    if (!o) { setStep("form"); setForm(empty); setVerificationComplete(false); setResult(null); setExisting(undefined); setBiometricCapture(null); setBiometricMatch(null); setBiometricEnrollment(null); setBiometricIdentity(null); setManualIdentityCheckRequired(false); setManualIdentityConfirmed(false); setPendingVisitor(null); setIsSaving(false); setIsCheckingOut(false); }
   };
   const valid = form.name.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) && /^\d{10}$/.test(form.mobile) && form.visiting.trim() && form.purpose.trim() && form.expectedExit;
 
   const completeVerification = async (capture: BiometricCaptureResult) => {
+    setManualIdentityCheckRequired(false);
+    setManualIdentityConfirmed(false);
     setBiometricCapture(capture);
 
     const formIdentity = await faceVerificationService.verify({ name: form.name, mobile: form.mobile }, visitors);
@@ -105,7 +109,11 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
           );
         }
       } else {
+        // A name/mobile match is not face identification. Require the security operator
+        // to check the visitor's physical ID before creating a template for this record.
         setBiometricEnrollment("new");
+        setManualIdentityCheckRequired(true);
+        setManualIdentityConfirmed(false);
       }
       setExisting(formIdentity.existing);
       if (enrolled) {
@@ -123,6 +131,10 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
 
   const finish = async () => {
     if (!biometricCapture || isSaving) return;
+    if (manualIdentityCheckRequired && !manualIdentityConfirmed) {
+      toast.error("Manual identity check required", { description: "Verify the visitor's physical ID before enrolling a face for an existing profile." });
+      return;
+    }
     setIsSaving(true);
 
     try {
@@ -146,7 +158,7 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
         await recordBiometricVerificationEvent({
           visitorId: registered.id,
           result: "VERIFIED",
-          eventType: "visitor_biometric_enrollment",
+          eventType: manualIdentityCheckRequired ? "visitor_biometric_enrollment_after_manual_id_check" : "visitor_biometric_enrollment",
           destination: form.authorizedLocationId,
           accessResult: "authorized",
         });
@@ -257,7 +269,7 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
               <div className="rounded-lg border border-[hsl(var(--status-authorized)/0.35)] bg-[hsl(var(--status-authorized)/0.05)] p-3 text-sm grid gap-3">
                 <div className="flex items-center gap-2 text-[hsl(var(--status-authorized))]">
                   <UserRoundCheck className="h-4 w-4" />
-                  <p className="font-semibold">{biometricIdentity ? "Same face detected" : "New face detected"}</p>
+                  <p className="font-semibold">{manualIdentityCheckRequired ? "Existing visitor needs manual ID check" : biometricIdentity ? "Stored face template matched" : "New face detected"}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
@@ -266,6 +278,17 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
                   <div><span className="text-muted-foreground block">Email</span><span className="break-all">{form.email}</span></div>
                   <div><span className="text-muted-foreground block">Visitor Type</span>{form.type}</div>
                 </div>
+
+                {manualIdentityCheckRequired && (
+                  <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs" role="alert">
+                    <p className="font-semibold text-amber-800">This profile has no stored face template.</p>
+                    <p className="mt-1 text-muted-foreground">The entered name and mobile only locate a possible profile. They do not prove identity. Check the visitor's physical ID before enrolling this face.</p>
+                    <label className="mt-3 flex items-start gap-2 text-foreground">
+                      <input type="checkbox" className="mt-0.5" checked={manualIdentityConfirmed} onChange={(event) => setManualIdentityConfirmed(event.target.checked)} />
+                      <span>I checked the visitor's physical ID and confirmed it matches this existing profile.</span>
+                    </label>
+                  </div>
+                )}
 
                 {biometricIdentity && (
                   <div className="rounded-md border border-border bg-card p-2.5">
@@ -288,7 +311,7 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
 
             {verificationComplete && (
               <div className="grid grid-cols-2 gap-2">
-                <Button onClick={() => void finish()} disabled={isSaving || (!!existing && existing.status === "Active")}>
+                <Button onClick={() => void finish()} disabled={isSaving || (!!existing && existing.status === "Active") || (manualIdentityCheckRequired && !manualIdentityConfirmed)}>
                   <LogIn className="h-4 w-4 mr-2" />
                   {isSaving ? "Saving..." : existing?.status === "Active" ? "Already Checked In" : "Check In"}
                 </Button>
