@@ -178,7 +178,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
       animate={{ x: 0, opacity: 1 }}
       exit={reduceMotion ? undefined : { x: "100%", opacity: 0 }}
       transition={reduceMotion ? { duration: 0 } : { type: "spring", damping: 25, stiffness: 300 }}
-      className="absolute right-0 top-0 bottom-0 w-96 max-w-full bg-card border-l border-border shadow-elevated z-20 flex flex-col"
+      className="absolute right-0 top-0 bottom-0 w-96 max-w-full bg-card border-l border-border shadow-elevated z-40 flex flex-col"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
