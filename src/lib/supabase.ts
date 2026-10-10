@@ -106,6 +106,20 @@ interface CameraConfigRow extends Record<string, unknown> {
   updated_at: string;
 }
 
+interface CameraCoverageAreaRow extends Record<string, unknown> {
+  id: string;
+  building: string;
+  floor_id: string | null;
+  area_label: string;
+  coverage_type: "camera_present" | "camera_free" | "unknown";
+  camera_id: string | null;
+  source_image: string | null;
+  notes: string;
+  confirmed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 interface Database {
   public: {
     Tables: {
@@ -117,6 +131,7 @@ interface Database {
       biometric_profiles: Table<BiometricProfileRow, Omit<BiometricProfileRow, "id" | "created_at" | "updated_at">>;
       biometric_verification_events: Table<BiometricVerificationEventRow, Omit<BiometricVerificationEventRow, "id" | "created_at">>;
       camera_configs: Table<CameraConfigRow, Omit<CameraConfigRow, "created_at" | "updated_at">>;
+      camera_coverage_areas: Table<CameraCoverageAreaRow, Omit<CameraCoverageAreaRow, "id" | "created_at" | "updated_at">>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
