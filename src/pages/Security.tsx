@@ -1198,7 +1198,7 @@ export default function Security() {
           </Button>
           {manage && <Button size="sm" className="h-9" onClick={() => setRegisterOpen(true)}><UserPlus className="h-4 w-4 mr-1" />Register Visitor</Button>}
           <span className="hidden text-xs font-medium text-muted-foreground sm:inline">{roles.find((item) => item.id === role)?.label}</span>
-          <Button size="sm" variant="outline" className="h-9" onClick={sec.signOut}><LogOut className="mr-1 h-4 w-4" /><span>Sign Out</span></Button>
+          <Button size="sm" variant="outline" className="h-9" onClick={() => { sec.signOut(); navigate("/", { replace: true }); }}><LogOut className="mr-1 h-4 w-4" /><span>Sign Out</span></Button>
           <ThemeToggle />
         </div>
       </header>
