@@ -344,18 +344,18 @@ CREATE POLICY camera_configs_security_select
 DROP POLICY IF EXISTS camera_configs_security_insert ON public.camera_configs;
 CREATE POLICY camera_configs_security_insert
   ON public.camera_configs FOR INSERT TO authenticated
-  WITH CHECK (public.current_campus_role() IN ('admin','security'));
+  WITH CHECK (public.current_campus_role() IN ('admin','management'));
 
 DROP POLICY IF EXISTS camera_configs_security_update ON public.camera_configs;
 CREATE POLICY camera_configs_security_update
   ON public.camera_configs FOR UPDATE TO authenticated
-  USING (public.current_campus_role() IN ('admin','security'))
-  WITH CHECK (public.current_campus_role() IN ('admin','security'));
+  USING (public.current_campus_role() IN ('admin','management'))
+  WITH CHECK (public.current_campus_role() IN ('admin','management'));
 
 DROP POLICY IF EXISTS camera_configs_security_delete ON public.camera_configs;
 CREATE POLICY camera_configs_security_delete
   ON public.camera_configs FOR DELETE TO authenticated
-  USING (public.current_campus_role() IN ('admin','security'));
+  USING (public.current_campus_role() IN ('admin','management'));
 
 REVOKE ALL ON public.camera_configs FROM anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.camera_configs TO authenticated;
@@ -365,15 +365,46 @@ CREATE TRIGGER camera_configs_set_updated_at
   BEFORE UPDATE ON public.camera_configs
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+-- Pre-create 109 blank camera config slots; provisional IDs must be matched to the NVR labels.
 INSERT INTO public.camera_configs (camera_id, ip_address, stream_url)
-VALUES
-  ('CAM-01', '', ''),
-  ('CAM-02', '', ''),
-  ('CAM-03', '', ''),
-  ('CAM-04', '', ''),
-  ('CAM-05', '', ''),
-  ('CAM-06', '', '')
+SELECT 'CAM-' || lpad(n::text, 2, '0'), '', ''
+FROM generate_series(1, 109) AS n
 ON CONFLICT (camera_id) DO NOTHING;
+
+-- Evidence-based camera locations and camera-free zones are added after reviewing annotated floor layouts.
+CREATE TABLE IF NOT EXISTS public.camera_coverage_areas (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  building text NOT NULL DEFAULT 'Unmapped',
+  floor_id text,
+  area_label text NOT NULL,
+  coverage_type text NOT NULL CHECK (coverage_type IN ('camera_present', 'camera_free', 'unknown')),
+  camera_id text REFERENCES public.camera_configs(camera_id) ON DELETE SET NULL,
+  source_image text,
+  notes text NOT NULL DEFAULT '',
+  confirmed boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS camera_coverage_areas_floor_idx ON public.camera_coverage_areas (building, floor_id);
+CREATE INDEX IF NOT EXISTS camera_coverage_areas_camera_idx ON public.camera_coverage_areas (camera_id);
+
+ALTER TABLE public.camera_coverage_areas ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS camera_coverage_areas_security_read ON public.camera_coverage_areas;
+CREATE POLICY camera_coverage_areas_security_read
+  ON public.camera_coverage_areas FOR SELECT TO authenticated
+  USING (public.current_campus_role() IN ('admin', 'management', 'security'));
+
+DROP POLICY IF EXISTS camera_coverage_areas_management_write ON public.camera_coverage_areas;
+CREATE POLICY camera_coverage_areas_management_write
+  ON public.camera_coverage_areas FOR ALL TO authenticated
+  USING (public.current_campus_role() IN ('admin', 'management'))
+  WITH CHECK (public.current_campus_role() IN ('admin', 'management'));
+
+DROP TRIGGER IF EXISTS camera_coverage_areas_set_updated_at ON public.camera_coverage_areas;
+CREATE TRIGGER camera_coverage_areas_set_updated_at BEFORE UPDATE ON public.camera_coverage_areas
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- Management is read-only for security operations.
 drop policy if exists access_rules_management_read on public.access_rules;
