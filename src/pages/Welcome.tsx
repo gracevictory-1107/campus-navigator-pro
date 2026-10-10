@@ -233,7 +233,12 @@ export default function Welcome() {
                 onClick={() => void handleGoogleSignIn()}
                 disabled={googleBusy || busy || !supabaseConfigured}
               >
-                <span className="grid h-5 w-5 place-items-center rounded-full border border-border font-bold text-sm text-blue-600" aria-hidden="true">G</span>
+                <svg className="h-5 w-5" viewBox="0 0 48 48" aria-hidden="true">
+                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 37.92 46.98 31.7 46.98 24.55z" />
+                  <path fill="#FBBC05" d="M10.53 28.59a14.42 14.42 0 0 1 0-9.18l-7.98-6.19a23.93 23.93 0 0 0 0 21.56l7.98-6.19z" />
+                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.14 1.45-4.88 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-10l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                </svg>
                 {googleBusy ? "Opening Google..." : "Continue with Google"}
               </Button>
               {mode === "signUp" && (
