@@ -24,10 +24,10 @@ export default function PublicPageLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen min-h-[100dvh] bg-background text-foreground">
       <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <Link to="/" className="flex items-center gap-3" aria-label="AWDC Campus Navigator home">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
+          <Link to="/" className="flex min-w-0 items-center gap-2 sm:gap-3" aria-label="AWDC Campus Navigator home">
             <span className="grid h-10 w-[76px] shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-white p-1 shadow-sm">
               <img
                 src="https://sat.aditya.ac.in/registration/assets/images/aditya-logo.png"
@@ -36,19 +36,19 @@ export default function PublicPageLayout({
                 loading="eager"
               />
             </span>
-            <span>
-              <span className="block font-display text-base font-bold leading-tight">AWDC Campus Navigator</span>
-              <span className="block text-[11px] text-muted-foreground">Aditya Women’s Degree College · Kakinada</span>
+            <span className="min-w-0">
+              <span className="block truncate font-display text-sm font-bold leading-tight sm:text-base">AWDC Campus Navigator</span>
+              <span className="hidden text-[11px] text-muted-foreground sm:block">Aditya Women’s Degree College · Kakinada</span>
             </span>
           </Link>
 
-          <nav aria-label="Main navigation" className="flex flex-wrap items-center gap-1.5">
+          <nav aria-label="Main navigation" className="no-scrollbar flex w-full flex-nowrap items-center gap-1 overflow-x-auto pb-0.5 sm:w-auto sm:flex-wrap sm:gap-1.5 sm:overflow-visible">
             {links.map(({ to, label, key, Icon }) => (
               <Link
                 key={key}
                 to={to}
                 aria-current={activePage === key ? "page" : undefined}
-                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-200 hover:-translate-y-0.5 sm:text-sm ${
+                className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-2 text-xs font-medium transition-all duration-200 hover:-translate-y-0.5 sm:px-3 sm:text-sm ${
                   activePage === key
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -85,7 +85,7 @@ export default function PublicPageLayout({
       >
         {children}
       </motion.div>
-      <footer className="border-t border-border bg-card/50 px-4 py-5 text-center text-xs text-muted-foreground">
+      <footer className="border-t border-border bg-card/50 px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-center text-xs text-muted-foreground">
         <p className="font-medium">© {new Date().getFullYear()} AWDC Campus Navigator. All rights reserved.</p>
         <p className="mx-auto mt-1 max-w-3xl leading-5">
           Campus navigation project prototype. Mapped routes may be approximate. Follow on-site signs and campus staff guidance; this website is not an emergency service or a live CCTV monitoring system.
