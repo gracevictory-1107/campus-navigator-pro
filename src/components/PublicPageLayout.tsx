@@ -42,7 +42,7 @@ export default function PublicPageLayout({
             </span>
           </Link>
 
-          <nav aria-label="Main navigation" className="no-scrollbar flex w-full flex-nowrap items-center gap-1 overflow-x-auto pb-0.5 sm:w-auto sm:flex-wrap sm:gap-1.5 sm:overflow-visible">
+          <nav aria-label="Main navigation" className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto">
             {links.map(({ to, label, key, Icon }) => (
               <Link
                 key={key}
