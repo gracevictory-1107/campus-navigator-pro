@@ -351,7 +351,7 @@ export default function CampusNavigator() {
 
         {/* Mobile bottom bar */}
         {isMobile && (
-          <div className="campus-mobile-bar fixed bottom-0 left-0 right-0 flex items-center justify-around py-2 z-20">
+          <div className="campus-mobile-bar fixed bottom-0 left-0 right-0 z-20 flex items-center justify-around pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             <button
               onClick={() => {
                 if (!showFloorExplorer) {
