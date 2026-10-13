@@ -63,7 +63,7 @@ export default function RoomInfoPanel({ room, floorId, onClose, onGetDirections,
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: "100%", opacity: 0 }}
       transition={{ type: "spring", damping: 25, stiffness: 300 }}
-      className="absolute right-0 top-0 bottom-0 w-80 max-w-full bg-card border-l border-border shadow-elevated z-20 flex flex-col"
+      className="absolute right-0 top-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 flex w-80 max-w-full flex-col border-l border-border bg-card shadow-elevated sm:bottom-0"
     >
       {/* Header */}
       <div className="flex items-start justify-between p-4 border-b border-border">
