@@ -27,7 +27,7 @@ export default function CategoryChips({ activeFilter, onFilterChange }: Props) {
       <button
         onClick={() => onFilterChange(null)}
         className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all border",
+          "flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all border",
           !activeFilter
             ? "bg-primary text-primary-foreground border-primary shadow-soft"
             : "bg-card text-foreground/70 border-border hover:bg-accent hover:text-foreground"
@@ -40,7 +40,7 @@ export default function CategoryChips({ activeFilter, onFilterChange }: Props) {
           key={type}
           onClick={() => onFilterChange(activeFilter === type ? null : type)}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all border",
+            "flex items-center gap-1.5 px-3 py-2.5 sm:py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all border",
             activeFilter === type
               ? "bg-primary text-primary-foreground border-primary shadow-soft"
               : "bg-card text-foreground/70 border-border hover:bg-accent hover:text-foreground"
