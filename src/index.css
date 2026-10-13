@@ -225,6 +225,9 @@
   .campus-shell {
     position: relative;
     isolation: isolate;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
     background:
       radial-gradient(circle at 12% 0%, hsl(var(--primary) / 0.08), transparent 28rem),
       radial-gradient(circle at 88% 12%, hsl(139 71% 30% / 0.06), transparent 24rem),
