@@ -84,7 +84,7 @@ export default function Welcome() {
 
   return (
     <PublicPageLayout activePage="home">
-      <main className="relative isolate mx-auto grid min-h-[calc(100vh-145px)] min-h-[calc(100dvh-145px)] max-w-7xl items-center gap-8 overflow-hidden px-3 py-6 sm:gap-10 sm:px-6 sm:py-9 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:py-14">
+      <main className="welcome-page-main relative isolate mx-auto grid max-w-7xl items-center gap-8 overflow-hidden px-3 py-6 sm:gap-10 sm:px-6 sm:py-9 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:py-14">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
           <motion.div
             className="absolute -right-20 -top-16 h-72 w-72 rounded-full bg-primary/10 blur-3xl sm:h-96 sm:w-96"
