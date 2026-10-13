@@ -101,21 +101,28 @@ export default function CampusNavigator() {
     });
   }, [setRecentSearches]);
 
-  const mobileSidebarOpen = isMobile && sidebarOpen;
+  const mobileSidebarOpen = isMobile && sidebarOpen && showFloorExplorer;
 
   const selectedFavKey = selectedRoom ? `${selectedRoom.floorId}:${selectedRoom.room.id}` : "";
 
   return (
-    <div className="campus-shell h-screen flex flex-col bg-background">
+    <div className="campus-shell flex min-h-0 flex-col bg-background">
       {/* Header */}
-      <header className="campus-header relative z-40 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3.5 sm:px-5 flex-shrink-0">
+      <header className="campus-header relative z-40 flex flex-shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 py-2.5 sm:gap-y-3 sm:px-5 sm:py-3.5">
         <div className="flex min-w-0 items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             className="md:hidden h-9 w-9 rounded-xl"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label={sidebarOpen ? "Close floor menu" : "Open floor menu"}
+            onClick={() => {
+              if (!showFloorExplorer) {
+                setShowFloorExplorer(true);
+                setSidebarOpen(true);
+              } else {
+                setSidebarOpen((open) => !open);
+              }
+            }}
+            aria-label={mobileSidebarOpen ? "Close floor menu" : "Open floor menu"}
           >
             {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
@@ -137,12 +144,12 @@ export default function CampusNavigator() {
                   Live Map
                 </span>
               </div>
-              <p className="text-[11px] text-muted-foreground">Kakinada · Find your way with confidence</p>
+              <p className="hidden text-[11px] text-muted-foreground sm:block">Kakinada · Find your way with confidence</p>
             </div>
           </div>
         </div>
 
-        <div className="flex w-full min-w-0 items-center justify-end gap-1.5 sm:w-auto">
+        <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-1.5 sm:w-auto sm:flex-nowrap sm:justify-end">
           <SearchBar
             onNavigate={handleNavigate}
             favorites={favorites}
@@ -199,8 +206,8 @@ export default function CampusNavigator() {
       </header>
 
       {/* Category chips */}
-      <div className="campus-category-strip border-b border-border bg-card/70 px-3 sm:px-4 flex-shrink-0 overflow-hidden">
-        <div className="mx-auto flex max-w-[1600px] items-center gap-2">
+      <div className="campus-category-strip flex-shrink-0 overflow-hidden border-b border-border bg-card/70 px-2 sm:px-4">
+        <div className="mx-auto flex min-w-0 max-w-[1600px] items-center gap-2">
           <button
             type="button"
             onClick={() => setShowFloorExplorer((previous) => !previous)}
@@ -220,7 +227,7 @@ export default function CampusNavigator() {
       {/* Body */}
       <div className="flex flex-1 overflow-hidden relative">
         {mobileSidebarOpen && (
-          <div className="fixed inset-0 bg-black/20 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-0 z-40 bg-black/35 backdrop-blur-[2px] md:hidden" onClick={() => setSidebarOpen(false)} />
         )}
 
         {showFloorExplorer && (
@@ -233,6 +240,7 @@ export default function CampusNavigator() {
             }}
             isOpen={isMobile ? sidebarOpen : true}
             isMobile={!!isMobile}
+            onClose={() => setSidebarOpen(false)}
           />
         )}
 
@@ -249,12 +257,12 @@ export default function CampusNavigator() {
           ) : (
             plan && (
             <div className="h-full flex flex-col">
-              <div className="campus-map-toolbar flex items-center justify-between gap-3 px-4 sm:px-5 py-3 bg-card/85 backdrop-blur-xl border-b border-border">
+              <div className="campus-map-toolbar flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card/85 px-3 py-2.5 backdrop-blur-xl sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-3">
                 <div className="flex items-center gap-3">
                   <div className="min-w-0"><p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-primary/80">You are viewing</p><h2 className="font-display text-base sm:text-[17px] font-semibold text-foreground truncate mt-0.5">{plan.title}</h2></div>
                   <span className="text-xs text-muted-foreground hidden sm:inline truncate">{plan.subtitle}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <span className="rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
                     {plan.code}
                   </span>
@@ -268,8 +276,8 @@ export default function CampusNavigator() {
                 {routeAccessNotice && (
                   <div className={`absolute top-3 left-3 z-10 rounded-lg border px-3 py-2 shadow-soft text-sm font-semibold ${
                     routeAccessNotice.allowed
-                      ? "border-emerald-600/30 bg-card/95 text-emerald-700"
-                      : "border-red-600/40 bg-card/95 text-red-700"
+                      ? "border-emerald-600/30 bg-card/95 text-emerald-700 dark:text-emerald-300"
+                      : "border-red-600/40 bg-card/95 text-red-700 dark:text-red-300"
                   }`}>
                     {routeAccessNotice.allowed ? "Access Allowed" : "Access Restricted"}
                     <span className="ml-2 text-xs font-normal text-muted-foreground">
@@ -343,10 +351,17 @@ export default function CampusNavigator() {
 
         {/* Mobile bottom bar */}
         {isMobile && (
-          <div className="campus-mobile-bar fixed bottom-0 left-0 right-0 flex items-center justify-around py-2 z-20">
+          <div className="campus-mobile-bar fixed bottom-0 left-0 right-0 z-20 flex items-center justify-around pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-primary transition-colors p-2"
+              onClick={() => {
+                if (!showFloorExplorer) {
+                  setShowFloorExplorer(true);
+                  setSidebarOpen(true);
+                } else {
+                  setSidebarOpen((open) => !open);
+                }
+              }}
+              className="flex min-w-[56px] flex-col items-center gap-0.5 p-2 text-muted-foreground transition-colors hover:text-primary"
             >
               <MapPin className="h-5 w-5" />
               <span className="text-[10px]">Floors</span>

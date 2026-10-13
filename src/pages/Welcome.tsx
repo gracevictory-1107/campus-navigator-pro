@@ -84,7 +84,7 @@ export default function Welcome() {
 
   return (
     <PublicPageLayout activePage="home">
-      <main className="relative isolate mx-auto grid min-h-[calc(100vh-145px)] max-w-7xl items-center gap-10 overflow-hidden px-4 py-9 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:py-14">
+      <main className="relative isolate mx-auto grid min-h-[calc(100vh-145px)] min-h-[calc(100dvh-145px)] max-w-7xl items-center gap-8 overflow-hidden px-3 py-6 sm:gap-10 sm:px-6 sm:py-9 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 lg:py-14">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
           <motion.div
             className="absolute -right-20 -top-16 h-72 w-72 rounded-full bg-primary/10 blur-3xl sm:h-96 sm:w-96"
@@ -98,7 +98,7 @@ export default function Welcome() {
           />
         </div>
         <motion.section
-          className="space-y-7"
+          className="space-y-5 sm:space-y-7"
           initial={reduceMotion ? false : { opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduceMotion ? 0 : 0.55, ease: "easeOut" }}
@@ -107,7 +107,7 @@ export default function Welcome() {
             <MapPinned className="h-4 w-4" /> Campus wayfinding, made simpler
           </div>
           <div className="space-y-4">
-            <h1 className="max-w-2xl font-display text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="max-w-2xl font-display text-3xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
               Your campus. <span className="text-primary">One clear route.</span>
             </h1>
             <p className="max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
@@ -115,7 +115,7 @@ export default function Welcome() {
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
             {highlights.map((item, index) => (
               <motion.div
                 key={item.title}
@@ -164,7 +164,7 @@ export default function Welcome() {
           transition={{ duration: reduceMotion ? 0 : 0.6, delay: reduceMotion ? 0 : 0.1, ease: "easeOut" }}
         >
           <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-xl shadow-primary/5 transition-shadow duration-300 hover:shadow-2xl hover:shadow-primary/10">
-            <div className="border-b border-border p-6 sm:p-7">
+            <div className="border-b border-border p-5 sm:p-7">
               <div className="mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
                 {mode === "signIn" ? <LockKeyhole className="h-6 w-6" /> : <Users className="h-6 w-6" />}
               </div>
@@ -174,7 +174,7 @@ export default function Welcome() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-1 bg-muted/60 p-1.5 mx-6 mt-5 rounded-xl">
+            <div className="mx-5 mt-5 grid grid-cols-2 gap-1 rounded-xl bg-muted/60 p-1.5 sm:mx-6">
               <button type="button" onClick={() => switchMode("signIn")} className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${mode === "signIn" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`} aria-pressed={mode === "signIn"}>
                 Sign in
               </button>
@@ -183,7 +183,7 @@ export default function Welcome() {
               </button>
             </div>
 
-            <form onSubmit={submit} className="grid gap-4 p-6 sm:p-7">
+            <form onSubmit={submit} className="grid gap-4 p-5 sm:p-7">
               {confirmationSent && (
                 <div role="status" className="flex gap-2 rounded-xl border border-emerald-600/25 bg-emerald-500/5 p-3 text-sm">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />

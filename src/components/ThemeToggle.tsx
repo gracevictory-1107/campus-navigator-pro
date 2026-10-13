@@ -8,7 +8,7 @@ export default function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="h-9 w-9" aria-label="Theme">
+        <Button variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl sm:h-9 sm:w-9" aria-label="Choose colour theme" title="Choose colour theme">
           <Sun className="h-4 w-4 dark:hidden" />
           <Moon className="h-4 w-4 hidden dark:block" />
         </Button>

@@ -110,7 +110,8 @@ export default function SearchBar({ onNavigate, favorites = [], onToggleFavorite
                       {onToggleFavorite && (
                         <button
                           onClick={(e) => { e.stopPropagation(); onToggleFavorite(favKey); }}
-                          className={`transition-all ${isFav ? 'text-yellow-500' : 'text-muted-foreground/30 opacity-0 group-hover:opacity-100'}`}
+                          aria-label={isFav ? `Remove ${r.room.label} from favourites` : `Add ${r.room.label} to favourites`}
+                          className={`rounded-lg p-2 transition-all ${isFav ? 'text-yellow-500' : 'text-muted-foreground/70 sm:opacity-0 sm:group-hover:opacity-100'}`}
                         >
                           <Star className="h-3.5 w-3.5" fill={isFav ? "currentColor" : "none"} />
                         </button>

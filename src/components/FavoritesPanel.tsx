@@ -65,7 +65,8 @@ export default function FavoritesPanel({
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); onRemoveFavorite(item!.key); }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label={`Remove ${item!.room.label} from saved places`}
+                    className="rounded-lg p-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     <X className="h-3 w-3 text-muted-foreground" />
                   </button>
