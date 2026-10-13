@@ -121,8 +121,13 @@ export default function CampusNavigator() {
           </Button>
 
           <div className="flex items-center gap-3 min-w-0">
-            <div className="campus-logo-mark flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-primary to-indigo-500 shadow-lg shadow-primary/20 ring-4 ring-primary/10">
-              <MapPin className="h-5 w-5 text-primary-foreground" />
+            <div className="campus-logo-mark flex h-10 w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-white p-1 shadow-sm">
+              <img
+                src="https://sat.aditya.ac.in/registration/assets/images/aditya-logo.png"
+                alt="Aditya Educational Institutions logo"
+                className="h-full w-full object-contain"
+                loading="eager"
+              />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
