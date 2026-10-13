@@ -101,7 +101,7 @@ export default function CampusNavigator() {
     });
   }, [setRecentSearches]);
 
-  const mobileSidebarOpen = isMobile && sidebarOpen;
+  const mobileSidebarOpen = isMobile && sidebarOpen && showFloorExplorer;
 
   const selectedFavKey = selectedRoom ? `${selectedRoom.floorId}:${selectedRoom.room.id}` : "";
 
@@ -114,8 +114,15 @@ export default function CampusNavigator() {
             variant="ghost"
             size="icon"
             className="md:hidden h-9 w-9 rounded-xl"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label={sidebarOpen ? "Close floor menu" : "Open floor menu"}
+            onClick={() => {
+              if (!showFloorExplorer) {
+                setShowFloorExplorer(true);
+                setSidebarOpen(true);
+              } else {
+                setSidebarOpen((open) => !open);
+              }
+            }}
+            aria-label={mobileSidebarOpen ? "Close floor menu" : "Open floor menu"}
           >
             {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
@@ -220,7 +227,7 @@ export default function CampusNavigator() {
       {/* Body */}
       <div className="flex flex-1 overflow-hidden relative">
         {mobileSidebarOpen && (
-          <div className="fixed inset-0 bg-black/20 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-0 z-40 bg-black/35 backdrop-blur-[2px] md:hidden" onClick={() => setSidebarOpen(false)} />
         )}
 
         {showFloorExplorer && (
@@ -233,6 +240,7 @@ export default function CampusNavigator() {
             }}
             isOpen={isMobile ? sidebarOpen : true}
             isMobile={!!isMobile}
+            onClose={() => setSidebarOpen(false)}
           />
         )}
 
@@ -345,8 +353,15 @@ export default function CampusNavigator() {
         {isMobile && (
           <div className="campus-mobile-bar fixed bottom-0 left-0 right-0 flex items-center justify-around py-2 z-20">
             <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="flex flex-col items-center gap-0.5 text-muted-foreground hover:text-primary transition-colors p-2"
+              onClick={() => {
+                if (!showFloorExplorer) {
+                  setShowFloorExplorer(true);
+                  setSidebarOpen(true);
+                } else {
+                  setSidebarOpen((open) => !open);
+                }
+              }}
+              className="flex min-w-[56px] flex-col items-center gap-0.5 p-2 text-muted-foreground transition-colors hover:text-primary"
             >
               <MapPin className="h-5 w-5" />
               <span className="text-[10px]">Floors</span>
