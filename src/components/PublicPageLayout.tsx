@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { BookOpen, House, LifeBuoy, LogOut, MapPin, Navigation2, Sparkles } from "lucide-react";
+import { BookOpen, House, LifeBuoy, LogOut, Navigation2, Sparkles } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useSecurity } from "@/security/SecurityContext";
 
@@ -28,8 +28,13 @@ export default function PublicPageLayout({
       <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <Link to="/" className="flex items-center gap-3" aria-label="AWDC Campus Navigator home">
-            <span className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-              <MapPin className="h-5 w-5" />
+            <span className="grid h-10 w-[76px] shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-white p-1 shadow-sm">
+              <img
+                src="https://sat.aditya.ac.in/registration/assets/images/aditya-logo.png"
+                alt="Aditya Educational Institutions logo"
+                className="h-full w-full object-contain"
+                loading="eager"
+              />
             </span>
             <span>
               <span className="block font-display text-base font-bold leading-tight">AWDC Campus Navigator</span>

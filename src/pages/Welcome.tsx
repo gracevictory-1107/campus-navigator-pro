@@ -92,7 +92,7 @@ export default function Welcome() {
             transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
           />
           <motion.div
-            className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl sm:h-80 sm:w-80"
+            className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-green-600/10 blur-3xl sm:h-80 sm:w-80"
             animate={reduceMotion ? undefined : { x: [0, -16, 0], y: [0, -18, 0] }}
             transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
           />
