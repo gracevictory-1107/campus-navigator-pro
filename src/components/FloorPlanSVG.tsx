@@ -229,20 +229,20 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
     <div className="relative h-full w-full">
       {/* Zoom controls */}
       <div className="absolute top-3 right-3 z-10 flex flex-col gap-1">
-        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => zoom(1.3)} aria-label="Zoom in" title="Zoom in">
+        <Button variant="outline" size="icon" className="h-10 w-10 bg-card shadow-soft sm:h-8 sm:w-8" onClick={() => zoom(1.3)} aria-label="Zoom in" title="Zoom in">
           <ZoomIn className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => zoom(0.7)} aria-label="Zoom out" title="Zoom out">
+        <Button variant="outline" size="icon" className="h-10 w-10 bg-card shadow-soft sm:h-8 sm:w-8" onClick={() => zoom(0.7)} aria-label="Zoom out" title="Zoom out">
           <ZoomOut className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => zoomTo(1)} aria-label="Reset zoom" title="Reset (100%)">
+        <Button variant="outline" size="icon" className="h-10 w-10 bg-card shadow-soft sm:h-8 sm:w-8" onClick={() => zoomTo(1)} aria-label="Reset zoom" title="Reset (100%)">
           <RotateCcw className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={resetView} aria-label="Fit to screen" title="Fit to screen">
+        <Button variant="outline" size="icon" className="h-10 w-10 bg-card shadow-soft sm:h-8 sm:w-8" onClick={resetView} aria-label="Fit to screen" title="Fit to screen">
           <Maximize2 className="h-4 w-4" />
         </Button>
         {highlightRoomId && (
-          <Button variant="outline" size="icon" className="h-8 w-8 bg-card shadow-soft" onClick={() => {
+          <Button variant="outline" size="icon" className="h-10 w-10 bg-card shadow-soft sm:h-8 sm:w-8" onClick={() => {
             const room = plan.rooms.find(r => r.id === highlightRoomId);
             if (room && containerRef.current) {
               const { clientWidth: cw, clientHeight: ch } = containerRef.current;
@@ -297,7 +297,7 @@ export default function FloorPlanSVG({ plan, highlightRoomId, onRoomClick, categ
               <text
                 key={i} x={label.x} y={label.y}
                 textAnchor={label.anchor || "start"}
-                fill={label.color === "green" ? "hsl(145, 55%, 40%)" : label.color === "amber" ? "hsl(30, 70%, 45%)" : "hsl(var(--primary))"}
+                fill={label.color === "green" ? "hsl(var(--status-authorized))" : label.color === "amber" ? "hsl(var(--status-warning))" : "hsl(var(--primary))"}
                 fontSize="10" letterSpacing="0.5" fontFamily="var(--font-body)" fontWeight="600"
               >
                 {label.text}
