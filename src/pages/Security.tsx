@@ -138,7 +138,7 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
 
   return (
     <Dialog open={open} onOpenChange={resetDialog}>
-      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
+      <DialogContent className="max-h-[90dvh] max-w-md overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mode === "signIn" ? "Sign In to Campus Security" : "Create a Campus Account"}</DialogTitle>
           <DialogDescription>
@@ -468,7 +468,7 @@ export default function Security() {
 
   if (!sec.signedIn || !can.viewSecurity(role) || (supabaseConfigured && !sec.backendReady)) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen min-h-[100dvh] bg-background">
         <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border bg-card px-4 py-3 shadow-soft">
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="icon" className="h-9 w-9"><Link to="/" aria-label="Back to navigator"><ArrowLeft className="h-4 w-4" /></Link></Button>
@@ -674,7 +674,7 @@ export default function Security() {
         const dateTime = new Date(a.event.at).toLocaleString();
         const severityClass = a.severity === "Critical" || a.severity === "High"
           ? bad
-          : a.severity === "Medium" ? "text-amber-600" : "text-muted-foreground";
+          : a.severity === "Medium" ? "text-amber-600 dark:text-amber-300" : "text-muted-foreground";
         return (
           <article key={a.id} className={`rounded-xl border bg-card p-4 grid gap-2 ${a.status === "Active" ? "border-[hsl(var(--status-restricted)/0.6)] bg-[hsl(var(--status-restricted)/0.04)]" : "border-border"}`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1172,8 +1172,8 @@ export default function Security() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-border bg-card shadow-soft">
+    <div className="min-h-screen min-h-[100dvh] bg-background">
+      <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-3 py-2.5 shadow-soft sm:px-4 sm:py-3">
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost" size="icon" className="h-9 w-9"><Link to="/" aria-label="Back to navigator"><ArrowLeft className="h-4 w-4" /></Link></Button>
           <div>
@@ -1181,7 +1181,7 @@ export default function Security() {
             <p className="text-[11px] text-muted-foreground">{roles.find((r) => r.id === role)?.label} view{!manage && !manageAccess ? " · read-only" : ""} · CCTV integration pending</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Badge
             variant="outline"
             className={sec.backendReady
@@ -1203,7 +1203,7 @@ export default function Security() {
         </div>
       </header>
 
-      <main className="p-4 max-w-7xl mx-auto">
+      <main className="mx-auto max-w-7xl p-3 sm:p-4">
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="flex-wrap h-auto mb-4">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
@@ -1309,7 +1309,7 @@ export default function Security() {
       />
 
       <Dialog open={!!camera} onOpenChange={(o) => !o && setCameraOpen(null)}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{camera?.name} · {camera && (locationById(camera.locationId)?.name ?? "Unknown location")}</DialogTitle>
             <DialogDescription>
@@ -1371,7 +1371,7 @@ export default function Security() {
       </Dialog>
 
       <Dialog open={!!profile} onOpenChange={(o) => !o && setProfileOpen(null)}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogContent className="max-h-[90dvh] max-w-2xl overflow-y-auto">
           <DialogHeader><DialogTitle>{profile?.name ?? "Visitor Details"}</DialogTitle><DialogDescription>{profile?.id} · {profile?.type}</DialogDescription></DialogHeader>
           {profile && (() => {
             const physicalEvent = currentVisitorLocations.get(profile.id);
@@ -1470,7 +1470,7 @@ export default function Security() {
       </AlertDialog>
 
       <Dialog open={!!alert} onOpenChange={(o) => !o && setAlertOpen(null)}>
-        <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
+        <DialogContent className="max-h-[85dvh] max-w-lg overflow-y-auto">
           <DialogHeader><DialogTitle>Incident {alert?.id}</DialogTitle><DialogDescription>{alert?.event.personName} · {alert?.event.personType} · {alert?.severity} severity</DialogDescription></DialogHeader>
           {alert && (() => {
             const eventLocation = locationById(alert.event.locationId);
