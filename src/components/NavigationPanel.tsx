@@ -178,7 +178,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
       animate={{ x: 0, opacity: 1 }}
       exit={reduceMotion ? undefined : { x: "100%", opacity: 0 }}
       transition={reduceMotion ? { duration: 0 } : { type: "spring", damping: 25, stiffness: 300 }}
-      className="absolute right-0 top-0 bottom-0 w-96 max-w-full bg-card border-l border-border shadow-elevated z-40 flex flex-col"
+      className="absolute inset-0 z-40 flex min-h-0 flex-col border-l border-border bg-card shadow-elevated sm:inset-y-0 sm:left-auto sm:right-0 sm:w-96 sm:max-w-full"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
@@ -312,7 +312,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
 
             {routeDecision?.allowed && (
               <div className="mb-3 rounded-lg border border-emerald-600/30 bg-emerald-500/5 p-3" role="status">
-                <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
                   <ShieldCheck className="h-4 w-4" /> Access Allowed
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -327,7 +327,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
 
             {routeDecision?.allowed && route.legs.some((leg) => leg.pathQuality === "approximate") && (
               <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3" role="note">
-                <p className="text-xs font-semibold text-amber-800">Floor-map connection needs verification</p>
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">Floor-map connection needs verification</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   The map does not show a continuous corridor/door connection for part of this route, so that segment is a best-effort estimate. Confirm it with reception before following it.
                 </p>
@@ -344,7 +344,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
 
             {routeDecision && !routeDecision.allowed && (
               <div className="mb-3 rounded-lg border border-red-600/40 bg-red-500/5 p-3" role="alert">
-                <p className="flex items-center gap-2 text-sm font-semibold text-red-700">
+                <p className="flex items-center gap-2 text-sm font-semibold text-red-700 dark:text-red-300">
                   <ShieldAlert className="h-4 w-4" /> Access Restricted
                 </p>
                 <p className="mt-1 text-xs text-foreground">
@@ -373,7 +373,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
               </div>
             )}
 
-            {checkError && <p className="mb-3 text-xs text-red-700" role="alert">{checkError}</p>}
+            {checkError && <p className="mb-3 text-xs text-red-700 dark:text-red-300" role="alert">{checkError}</p>}
 
           </div>
         ) : (
