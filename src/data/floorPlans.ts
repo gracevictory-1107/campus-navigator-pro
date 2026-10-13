@@ -232,9 +232,8 @@ const mbFloor3: FloorPlan = {
     { id: "classroom-a", label: "Classroom A", type: "class", x: 260, y: 142, w: 180, h: 58, description: "Classroom shown in the supplied floor-plan reference" },
     { id: "classroom-b", label: "Classroom B", type: "class", x: 260, y: 202, w: 180, h: 58, description: "Classroom shown in the supplied floor-plan reference" },
     { id: "stair-r", label: "Staircase (R)", type: "stairs", x: 260, y: 262, w: 180, h: 60 },
-    { id: "conference-exam", label: "GD Room (R)", type: "class", x: 260, y: 324, w: 180, h: 68 },
-    { id: "gd-r", label: "GD Room (R)", type: "class", x: 260, y: 394, w: 180, h: 68 },
-    { id: "store", label: "Store Room", type: "class", x: 260, y: 464, w: 180, h: 80 },
+    { id: "gd-r", label: "GD Room (R)", type: "class", x: 260, y: 324, w: 180, h: 68 },
+    { id: "store", label: "Store Room", type: "class", x: 260, y: 394, w: 180, h: 150 },
   ],
   labels: [
     { text: "▲ FRONT", x: 230, y: 14, color: "green", anchor: "middle" },
