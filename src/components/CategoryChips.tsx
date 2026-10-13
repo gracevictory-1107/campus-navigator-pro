@@ -23,7 +23,7 @@ interface Props {
 
 export default function CategoryChips({ activeFilter, onFilterChange }: Props) {
   return (
-    <div className="campus-category-chips flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1.5 px-1">
+    <div className="campus-category-chips no-scrollbar flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto px-1 py-1.5">
       <button
         onClick={() => onFilterChange(null)}
         className={cn(
