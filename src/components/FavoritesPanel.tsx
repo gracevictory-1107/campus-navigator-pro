@@ -32,7 +32,7 @@ export default function FavoritesPanel({
   const recentRooms = recentSearches.map(resolveRoom).filter(Boolean);
 
   return (
-    <div className="absolute left-0 top-0 bottom-0 w-80 max-w-full bg-card border-r border-border shadow-elevated z-20 flex flex-col animate-in slide-in-from-left duration-200">
+    <div className="absolute left-0 top-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 flex w-80 max-w-full flex-col border-r border-border bg-card shadow-elevated animate-in slide-in-from-left duration-200 sm:bottom-0">
       <div className="flex items-center justify-between p-4 border-b border-border">
         <h3 className="font-display font-bold text-foreground flex items-center gap-2">
           <Star className="h-4 w-4 text-primary" />
