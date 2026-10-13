@@ -6,8 +6,8 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 220 20% 14%;
+    --background: 210 30% 98%;
+    --foreground: 219 61% 28%;
 
     --card: 0 0% 100%;
     --card-foreground: 220 20% 14%;
@@ -15,24 +15,24 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 20% 14%;
 
-    --primary: 230 80% 56%;
+    --primary: 29 91% 54%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 94%;
-    --secondary-foreground: 220 20% 30%;
+    --secondary: 214 32% 95%;
+    --secondary-foreground: 219 45% 31%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 10% 46%;
+    --muted: 214 25% 96%;
+    --muted-foreground: 218 12% 46%;
 
-    --accent: 220 14% 90%;
-    --accent-foreground: 220 20% 14%;
+    --accent: 29 90% 94%;
+    --accent-foreground: 219 61% 28%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 14% 81%;
-    --input: 220 14% 81%;
-    --ring: 230 80% 56%;
+    --border: 214 22% 86%;
+    --input: 214 22% 86%;
+    --ring: 29 91% 54%;
 
     --radius: 0.75rem;
 
@@ -95,17 +95,17 @@
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 20% 14%;
-    --sidebar-primary: 230 80% 56%;
+    --sidebar-primary: 29 91% 54%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 14% 96%;
     --sidebar-accent-foreground: 220 20% 14%;
     --sidebar-border: 220 14% 81%;
-    --sidebar-ring: 230 80% 56%;
+    --sidebar-ring: 29 91% 54%;
 
     --font-display: 'Plus Jakarta Sans', sans-serif;
     --font-body: 'Inter', sans-serif;
 
-    --status-authorized: 145 63% 36%;
+    --status-authorized: 139 71% 30%;
     --status-restricted: 0 74% 50%;
     --status-warning: 36 92% 45%;
   }
@@ -117,7 +117,7 @@
     --card-foreground: 220 15% 92%;
     --popover: 222 20% 12%;
     --popover-foreground: 220 15% 92%;
-    --primary: 230 85% 66%;
+    --primary: 29 91% 58%;
     --primary-foreground: 222 22% 9%;
     --secondary: 222 16% 17%;
     --secondary-foreground: 220 15% 85%;
@@ -129,7 +129,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 222 14% 22%;
     --input: 222 14% 22%;
-    --ring: 230 85% 66%;
+    --ring: 29 91% 58%;
 
     --room-lab: 142 25% 18%; --room-lab-stroke: 142 35% 42%; --room-lab-text: 142 50% 78%;
     --room-class: 220 30% 19%; --room-class-stroke: 220 40% 48%; --room-class-text: 220 60% 82%;
@@ -152,7 +152,7 @@
     --sidebar-accent-foreground: 220 15% 92%;
     --sidebar-border: 222 14% 22%;
 
-    --status-authorized: 145 60% 48%;
+    --status-authorized: 139 65% 48%;
     --status-restricted: 0 80% 62%;
     --status-warning: 36 92% 58%;
   }
@@ -207,7 +207,7 @@
     isolation: isolate;
     background:
       radial-gradient(circle at 12% 0%, hsl(var(--primary) / 0.08), transparent 28rem),
-      radial-gradient(circle at 88% 12%, hsl(170 70% 45% / 0.06), transparent 24rem),
+      radial-gradient(circle at 88% 12%, hsl(139 71% 30% / 0.06), transparent 24rem),
       hsl(var(--background));
   }
 
@@ -223,7 +223,7 @@
     position: absolute;
     inset: 0 0 auto 0;
     height: 2px;
-    background: linear-gradient(90deg, hsl(var(--primary)), hsl(185 75% 45%), hsl(var(--primary)));
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(139 71% 30%), hsl(219 61% 28%));
     opacity: 0.85;
   }
 
