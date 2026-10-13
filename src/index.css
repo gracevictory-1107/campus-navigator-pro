@@ -222,6 +222,11 @@
   }
 }\n
 @layer components {
+  .welcome-page-main {
+    min-height: calc(100vh - 145px);
+    min-height: calc(100dvh - 145px);
+  }
+
   .campus-shell {
     position: relative;
     isolation: isolate;
@@ -321,12 +326,6 @@
   }
 
   @media (max-width: 640px) {
-    .campus-shell {
-      height: 100vh;
-      height: 100dvh;
-      min-height: 0;
-    }
-
     .campus-map-stage {
       background-size: auto, 24px 24px, 24px 24px, auto;
     }
