@@ -1,11 +1,12 @@
 import { buildingSections } from "@/data/floorPlans";
-import { Building2, Layers, LayoutGrid, Trees } from "lucide-react";
+import { Building2, Layers, LayoutGrid, Trees, X } from "lucide-react";
 
 interface Props {
   activeFloor: string;
   onSelectFloor: (id: string) => void;
   isOpen: boolean;
   isMobile: boolean;
+  onClose: () => void;
 }
 
 const sectionIcons: Record<string, React.ReactNode> = {
@@ -16,11 +17,11 @@ const sectionIcons: Record<string, React.ReactNode> = {
   CAMPUS: <Trees className="h-3.5 w-3.5" />,
 };
 
-export default function CampusSidebar({ activeFloor, onSelectFloor, isOpen, isMobile }: Props) {
+export default function CampusSidebar({ activeFloor, onSelectFloor, isOpen, isMobile, onClose }: Props) {
   return (
     <aside
       className={`
-        ${isMobile ? 'fixed left-0 top-0 bottom-0 z-40 pt-16' : 'relative'}
+        ${isMobile ? 'fixed inset-y-0 left-0 z-50 pt-[max(1rem,env(safe-area-inset-top))]' : 'relative'}
         w-[240px] flex-shrink-0 border-r border-border bg-card flex flex-col overflow-y-auto
         transition-transform duration-200 ease-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -29,14 +30,26 @@ export default function CampusSidebar({ activeFloor, onSelectFloor, isOpen, isMo
       `}
     >
       <div className="campus-sidebar-intro p-4 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary grid place-items-center">
-            <LayoutGrid className="h-4 w-4" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+              <LayoutGrid className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">Campus map</p>
+              <p className="text-[10px] text-muted-foreground">Choose a floor to explore</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">Campus map</p>
-            <p className="text-[10px] text-muted-foreground">Choose a floor to explore</p>
-          </div>
+          {isMobile && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close floor menu"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border bg-card text-foreground transition-colors hover:bg-accent"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 
