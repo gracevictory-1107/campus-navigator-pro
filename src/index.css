@@ -15,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 20% 14%;
 
-    --primary: 29 91% 54%;
+    --primary: 29 91% 37%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 214 32% 95%;
@@ -32,7 +32,7 @@
 
     --border: 214 22% 86%;
     --input: 214 22% 86%;
-    --ring: 29 91% 54%;
+    --ring: 29 91% 37%;
 
     --radius: 0.75rem;
 
@@ -95,12 +95,12 @@
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 20% 14%;
-    --sidebar-primary: 29 91% 54%;
+    --sidebar-primary: 29 91% 37%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 14% 96%;
     --sidebar-accent-foreground: 220 20% 14%;
     --sidebar-border: 220 14% 81%;
-    --sidebar-ring: 29 91% 54%;
+    --sidebar-ring: 29 91% 37%;
 
     --font-display: 'Plus Jakarta Sans', sans-serif;
     --font-body: 'Inter', sans-serif;
