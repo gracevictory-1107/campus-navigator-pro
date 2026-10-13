@@ -21,7 +21,7 @@ export default function CampusSidebar({ activeFloor, onSelectFloor, isOpen, isMo
   return (
     <aside
       className={`
-        ${isMobile ? 'fixed inset-y-0 left-0 z-50 pt-[max(1rem,env(safe-area-inset-top))]' : 'relative'}
+        ${isMobile ? 'fixed inset-y-0 left-0 z-50 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]' : 'relative'}
         w-[240px] flex-shrink-0 border-r border-border bg-card flex flex-col overflow-y-auto
         transition-transform duration-200 ease-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
