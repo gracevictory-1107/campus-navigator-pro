@@ -48,7 +48,7 @@ export default function PublicPageLayout({
                 key={key}
                 to={to}
                 aria-current={activePage === key ? "page" : undefined}
-                className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-2 text-xs font-medium transition-all duration-200 hover:-translate-y-0.5 sm:px-3 sm:text-sm ${
+                className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-2.5 text-xs font-medium transition-all duration-200 hover:-translate-y-0.5 sm:px-3 sm:py-2 sm:text-sm ${
                   activePage === key
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
