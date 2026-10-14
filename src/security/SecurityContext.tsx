@@ -197,6 +197,10 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   }, [role]);
 
   const simulateDetection = useCallback(async (cameraId: string, visitorId: string) => {
+    if (!can.manageCCTV(role)) {
+      toast.error("You do not have permission to simulate camera detections.");
+      throw new Error("You do not have permission to simulate camera detections.");
+    }
     const s = stateRef.current;
     const cam = cameras.find((c) => c.id === cameraId);
     const visitor = s.visitors.find((v) => v.id === visitorId);
@@ -221,7 +225,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
       toast.error(`Restricted access: ${visitor.name}`, { description: `${loc.name} · ${cameraId}` });
     }
     return event;
-  }, []);
+  }, [role]);
 
   const authorizeIndoorRoute = useCallback(async (visitorId: string | null, route: IndoorRoute, roleOverride?: Role) => {
     const s = stateRef.current;
