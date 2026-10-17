@@ -407,7 +407,7 @@ const bbFloor3: FloorPlan = {
     { id: "b2", label: "B2 — I BSc CS-2", type: "class", x: 260, y: 184, w: 240, h: 88 },
     { id: "b5", label: "B5 — I BCA-1", type: "class", x: 20, y: 274, w: 180, h: 88 },
     { id: "b3", label: "B3 — I BCA DS-2", type: "class", x: 260, y: 274, w: 240, h: 88 },
-    { id: "b4", label: "B4 — I BSc AI-1", type: "class", x: 20, y: 364, w: 180, h: 88 },
+    { id: "b4", label: "B4 — I BSc AIR-1", type: "class", x: 20, y: 364, w: 180, h: 88 },
     { id: "lift", label: "Lift", type: "lift", x: 260, y: 364, w: 240, h: 44 },
     { id: "wc", label: "Washroom", type: "wc", x: 260, y: 410, w: 240, h: 42 },
   ],
