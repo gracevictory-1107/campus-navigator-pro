@@ -213,7 +213,7 @@ select categories.person_type || ':' || locations.location_id, locations.locatio
 from categories cross join locations
 on conflict (id) do nothing;
 
--- After creating Auth users, link their UUIDs to these prepared profiles from the SQL editor.
+-- For initial privileged access, create a verified Auth user and follow supabase/ADMIN_BOOTSTRAP.md.
 
 BEGIN;
 
@@ -428,6 +428,7 @@ drop policy if exists biometric_verification_events_management_read on public.bi
 -- Do not let default grants make future public tables writable/truncatable by API roles.
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated;
 
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
