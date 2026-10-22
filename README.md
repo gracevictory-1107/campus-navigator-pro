@@ -35,7 +35,7 @@ The deployed application is independent of the local Vite server, so it remains 
 
 CCTV feeds remain in simulation mode until the college provides reachable camera/NVR connection details. An IP address alone does not create a browser stream.
 
-Supabase must be configured with the required Vite environment variables, and `supabase/schema.sql` must be applied to the project database.
+Supabase must be configured with the required Vite environment variables. For a new database, review and apply `supabase/schema.sql`; for an existing production database, apply only reviewed forward migrations from `supabase/migrations/`. Never replay historical migrations against production. The schema uses least-privilege API grants and does not seed placeholder privileged accounts. Follow `supabase/ADMIN_BOOTSTRAP.md` to provision the first Admin after verifying the person's institutional identity.
 
 ## Google sign-in setup
 
