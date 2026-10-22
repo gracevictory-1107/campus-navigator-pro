@@ -29,3 +29,11 @@ Never commit or paste the Google Client Secret into source code, GitHub, or a pu
 - Do not expose camera usernames/passwords, private IPs, or authenticated stream URLs to public users. RTSP streams cannot be played directly by most browsers; use a secured server-side gateway or an approved vendor/NVR API and a browser-supported stream transport.
 
 The annotated campus layouts should be used to map each camera and mark areas without cameras. Do not guess unknown locations from screenshots or file names.
+
+
+## Database hardening and initial Admin
+
+- The repository migration `supabase/migrations/20261022060000_harden_public_grants_and_align_visitor_schema.sql` narrows table privileges, removes unnecessary TRUNCATE/default API grants, restores visitor email nullability guarantees, and keeps biometric reads Admin/Security-only.
+- Existing production databases should receive that reviewed forward migration, not a replay of `supabase/schema.sql` or historical migrations.
+- Initial Admin/Security roles must only be assigned after college staff identity is verified. See `supabase/ADMIN_BOOTSTRAP.md`. Existing production role assignments are not automatically demoted by migrations.
+- In Supabase Dashboard, open Authentication security/password settings and enable **Leaked password protection**. The connected database tools do not expose this Auth dashboard setting, so it must be confirmed in the dashboard.
