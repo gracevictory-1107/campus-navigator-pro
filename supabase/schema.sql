@@ -35,11 +35,18 @@ create table if not exists public.visitors (
   status text not null check (status in ('Registered', 'Active', 'Checked Out', 'Blocked')),
   verified boolean not null default false,
   "returning" boolean not null default false,
+  is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 alter table public.visitors add column if not exists email text not null default '';
+alter table public.visitors add column if not exists is_active boolean not null default true;
+update public.visitors set email = '' where email is null;
+alter table public.visitors alter column email set default '';
+alter table public.visitors alter column email set not null;
+alter table public.visitors alter column is_active set default true;
+alter table public.visitors alter column is_active set not null;
 
 create table if not exists public.security_events (
   id text primary key,
@@ -186,12 +193,9 @@ grant select, insert, update on public.access_rules, public.visitors, public.sec
 revoke all on function public.current_campus_role() from public;
 grant execute on function public.current_campus_role() to authenticated;
 
-insert into public.profiles (id, full_name, email, role) values
-  ('10000000-0000-4000-8000-000000000001', 'Admin', 'admin@gmail.com', 'admin'),
-  ('10000000-0000-4000-8000-000000000002', 'Faculty', 'faculty@gmail.com', 'faculty'),
-  ('10000000-0000-4000-8000-000000000003', 'Security', 'security@gmail.com', 'security'),
-  ('10000000-0000-4000-8000-000000000004', 'Student', 'student@gmail.com', 'student')
-on conflict (email) do nothing;
+-- Do not seed privileged profiles using public/free-mail placeholders.
+-- Create and verify an institutional Auth user first, then provision the initial Admin
+-- through the secured bootstrap procedure documented in supabase/ADMIN_BOOTSTRAP.md.
 
 with categories(person_type, allowed_locations) as (
   values
@@ -415,7 +419,34 @@ drop policy if exists events_management_read on public.security_events;
 create policy events_management_read on public.security_events for select to authenticated using (public.current_campus_role() = 'management');
 drop policy if exists alerts_management_read on public.alerts;
 create policy alerts_management_read on public.alerts for select to authenticated using (public.current_campus_role() = 'management');
+-- Biometric records are intentionally limited to Admin/Security, including read access.
 drop policy if exists biometric_profiles_management_read on public.biometric_profiles;
-create policy biometric_profiles_management_read on public.biometric_profiles for select to authenticated using (public.current_campus_role() = 'management');
 drop policy if exists biometric_verification_events_management_read on public.biometric_verification_events;
-create policy biometric_verification_events_management_read on public.biometric_verification_events for select to authenticated using (public.current_campus_role() = 'management');
+
+
+-- Least-privilege API grants. RLS controls which authenticated campus roles can use each operation.
+-- Do not let default grants make future public tables writable/truncatable by API roles.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated;
+
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
+
+GRANT SELECT ON public.profiles TO authenticated;
+GRANT UPDATE (role) ON public.profiles TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.access_rules TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.visitors TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.security_events TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.alerts TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.biometric_profiles TO authenticated;
+GRANT SELECT, INSERT ON public.biometric_verification_events TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.camera_configs TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.camera_coverage_areas TO authenticated;
+
+-- Trigger-only helpers are not browser-callable RPCs.
+REVOKE ALL ON FUNCTION public.set_updated_at() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.handle_new_auth_user_profile() FROM PUBLIC, anon, authenticated;
+-- current_campus_role is required by RLS policies and intentionally callable by authenticated users.
+REVOKE ALL ON FUNCTION public.current_campus_role() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.current_campus_role() TO authenticated;
