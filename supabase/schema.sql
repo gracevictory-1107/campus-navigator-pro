@@ -107,10 +107,10 @@ returns text
 language sql
 stable
 security definer
-set search_path = public
-as $$
+set search_path = ''
+as $
   select p.role from public.profiles p where p.auth_user_id = auth.uid() limit 1;
-$$;
+$;
 
 
 -- Safe role migration: allow Management as a first-class authenticated campus role.
