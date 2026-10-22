@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { normalizeVisitorEmail } from "@/lib/visitorNormalization";
 import type { AccessRule, AlertStatus, LocationEvent, PersonType, Role, SecurityAlert, Visitor } from "@/security/types";
 
 type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
@@ -31,7 +32,8 @@ interface AccessRuleRow extends Record<string, unknown> {
 interface VisitorRow extends Record<string, unknown> {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
+  is_active?: boolean;
   mobile: string;
   person_type: string;
   visiting: string;
@@ -294,7 +296,7 @@ export async function loadSecuritySnapshot(): Promise<SupabaseSecuritySnapshot |
   const visitors = visitorsResult.data.map((row) => ({
     id: row.id,
     name: row.name,
-    email: row.email,
+    email: normalizeVisitorEmail(row.email),
     mobile: row.mobile,
     type: row.person_type as PersonType,
     visiting: row.visiting,
@@ -345,7 +347,7 @@ export async function persistSecuritySnapshot(snapshot: SupabaseSecuritySnapshot
   const visitorRows = snapshot.visitors.map((visitor) => ({
     id: visitor.id,
     name: visitor.name,
-    email: visitor.email,
+    email: normalizeVisitorEmail(visitor.email),
     mobile: visitor.mobile,
     person_type: visitor.type,
     visiting: visitor.visiting,
@@ -415,7 +417,7 @@ export async function saveVisitorRecord(visitor: Visitor): Promise<void> {
   const { error } = await supabase.from("visitors").upsert({
     id: visitor.id,
     name: visitor.name.trim(),
-    email: visitor.email.trim().toLowerCase(),
+    email: normalizeVisitorEmail(visitor.email),
     mobile: visitor.mobile.trim(),
     person_type: visitor.type,
     visiting: visitor.visiting.trim(),
