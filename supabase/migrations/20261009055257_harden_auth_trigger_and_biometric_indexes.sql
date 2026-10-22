@@ -1,3 +1,4 @@
+-- Reconciled to the remote Supabase migration version 20261009055257.
 -- Keep the auth-trigger helper callable only by PostgreSQL's trigger mechanism.
 -- It is SECURITY DEFINER and is not intended to be an exposed RPC.
 REVOKE ALL ON FUNCTION public.handle_new_auth_user_profile() FROM PUBLIC;
