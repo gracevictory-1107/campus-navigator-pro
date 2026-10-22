@@ -19,3 +19,8 @@ Do not run these already-applied historical migrations manually against producti
 - For new changes, create a new migration file, review its SQL and permission impact, commit it before applying, then use the team's approved Supabase CLI/CI workflow.
 - Before reconciling future discrepancies, compare `supabase migration list` (or the Supabase migration-list tooling) with the repository. Do not repair the live migration ledger or apply SQL just to make a CI check pass.
 - Never change a migration already applied to production to change its meaning. Add a new migration for forward fixes.
+
+
+## Duplicate version entry for the grants hardening migration
+
+The live Supabase migration ledger currently records the migration name `harden_public_grants_and_align_visitor_schema` under both versions `20261022060000` and `20261022064142`. The repository includes a matching file for each exact ledger version so CI/history checks agree with production. Both SQL files contain the same idempotent forward-hardening statements; do not manually rerun them against production. This duplicate ledger entry is historical bookkeeping, not a request to apply the security changes twice.
