@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getAuthenticatedRole, supabase } from "@/lib/supabase";
 import type { Role } from "@/security/types";
 
-type CallbackState = "loading" | "pending" | "ready" | "unregistered" | "error";
+type CallbackState = "loading" | "pending" | "ready" | "unregistered" | "registerFirst" | "error";
 
 const roleLabels: Record<Role, string> = {
   pending: "Pending approval",
@@ -25,6 +25,29 @@ export default function AuthCallback() {
     let active = true;
 
     const completeConfirmation = async () => {
+      // Supabase's Before User Created hook rejects first-time Google signups.
+      // Detect that rejection before checking for a session so stale sessions
+      // cannot hide the registration-required message.
+      const queryParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const authErrorCode = queryParams.get("error_code")
+        ?? hashParams.get("error_code")
+        ?? queryParams.get("error")
+        ?? hashParams.get("error");
+      const authErrorDescription = (
+        queryParams.get("error_description")
+        ?? hashParams.get("error_description")
+        ?? ""
+      ).toLowerCase();
+
+      if (
+        authErrorCode === "hook_rejected"
+        || authErrorDescription.includes("register with your email and password and verify your email address")
+      ) {
+        if (active) setState("registerFirst");
+        return;
+      }
+
       try {
         if (!supabase) throw new Error("Authentication is not configured for this website.");
 
@@ -65,6 +88,18 @@ export default function AuthCallback() {
           </div>
         )}
 
+        {state === "registerFirst" && (
+          <div className="grid justify-items-center gap-3 text-center">
+            <CircleAlert className="h-10 w-10 text-amber-600" aria-hidden="true" />
+            <h1 className="text-xl font-semibold text-foreground">Register and verify your email first</h1>
+            <p className="text-sm leading-6 text-muted-foreground">
+              This Google account is not registered for Campus Navigator yet. Choose Create account, register with this same email address and a password, and verify the confirmation email. After verification, return and use Continue with Google.
+            </p>
+            <Button asChild className="mt-2 w-full"><Link to="/?mode=signUp">Create account</Link></Button>
+            <Button variant="outline" asChild className="w-full"><Link to="/">Back to Sign In</Link></Button>
+          </div>
+        )}
+
         {state === "pending" && (
           <div className="grid justify-items-center gap-3 text-center">
             <Clock3 className="h-10 w-10 text-amber-600" aria-hidden="true" />
@@ -96,9 +131,9 @@ export default function AuthCallback() {
             <CircleAlert className="h-10 w-10 text-amber-600" aria-hidden="true" />
             <h1 className="text-xl font-semibold text-foreground">Campus account not registered</h1>
             <p className="text-sm leading-6 text-muted-foreground">
-              Your Google sign-in succeeded, but there is no campus profile linked to this account yet. Please return to the home page and request registration, or contact the campus administrator. If you have already requested access, wait for the administrator to complete your campus registration and role assignment.
+              There is no campus profile linked to this account yet. Choose Create account, register with your email and password, then verify your email before using Google sign-in.
             </p>
-            <Button asChild className="mt-2 w-full"><Link to="/">Return to Campus Navigator</Link></Button>
+            <Button asChild className="mt-2 w-full"><Link to="/?mode=signUp">Create account</Link></Button>
           </div>
         )}
 
