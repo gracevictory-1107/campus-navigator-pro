@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { BookOpen, House, LifeBuoy, LogOut, Navigation2, Sparkles } from "lucide-react";
+import { BookOpen, House, LifeBuoy, LogOut, Navigation2 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useSecurity } from "@/security/SecurityContext";
 
-type PublicPage = "home" | "about" | "help" | "assistant";
+type PublicPage = "home" | "about" | "help";
 
 export default function PublicPageLayout({
   children,
@@ -20,7 +20,6 @@ export default function PublicPageLayout({
     { to: "/", label: "Home", key: "home" as const, Icon: House },
     { to: "/about", label: "About", key: "about" as const, Icon: BookOpen },
     { to: "/help-desk", label: "Help Desk", key: "help" as const, Icon: LifeBuoy },
-    { to: "/ai-assistant", label: "AI Assistant", key: "assistant" as const, Icon: Sparkles },
   ];
 
   return (
