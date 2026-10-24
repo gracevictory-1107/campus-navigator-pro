@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle2, CircleAlert, Clock3, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getAuthenticatedRole, supabase } from "@/lib/supabase";
+import { getAuthenticatedRole, hasVerifiedEmailPasswordIdentity, supabase } from "@/lib/supabase";
 import type { Role } from "@/security/types";
 
-type CallbackState = "loading" | "pending" | "ready" | "unregistered" | "registerFirst" | "error";
+type CallbackState = "loading" | "pending" | "ready" | "unregistered" | "registerFirst" | "googleOnlyExisting" | "error";
 
 const roleLabels: Record<Role, string> = {
   pending: "Pending approval",
@@ -51,11 +51,19 @@ export default function AuthCallback() {
       try {
         if (!supabase) throw new Error("Authentication is not configured for this website.");
 
-        // Supabase JS detects the confirmation token in the URL and establishes the session.
+        // Supabase JS detects confirmation tokens in the URL and establishes the session.
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
         if (!data.session) {
           throw new Error("There is no active session after the sign-in callback.");
+        }
+
+        // Do not admit a Google-only account, even if an old test left a campus
+        // profile behind. Require a verified email/password identity as well.
+        if (!hasVerifiedEmailPasswordIdentity(data.session.user)) {
+          if (active) setState("googleOnlyExisting");
+          await supabase.auth.signOut();
+          return;
         }
 
         const assignedRole = await getAuthenticatedRole();
@@ -97,6 +105,17 @@ export default function AuthCallback() {
             </p>
             <Button asChild className="mt-2 w-full"><Link to="/?mode=signUp">Create account</Link></Button>
             <Button variant="outline" asChild className="w-full"><Link to="/">Back to Sign In</Link></Button>
+          </div>
+        )}
+
+        {state === "googleOnlyExisting" && (
+          <div className="grid justify-items-center gap-3 text-center">
+            <CircleAlert className="h-10 w-10 text-amber-600" aria-hidden="true" />
+            <h1 className="text-xl font-semibold text-foreground">Email registration required</h1>
+            <p className="text-sm leading-6 text-muted-foreground">
+              This Google account was used before without completing email/password registration. Campus access is blocked. Because an authentication record already exists for this address, contact the campus administrator to reset that earlier Google-only test account; then register with email and password and verify your email before using Google sign-in.
+            </p>
+            <Button asChild className="mt-2 w-full"><Link to="/">Return to Campus Navigator</Link></Button>
           </div>
         )}
 
