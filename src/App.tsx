@@ -8,7 +8,6 @@ import Index from "./pages/Index";
 import Campus from "./pages/Campus";
 import About from "./pages/About";
 import HelpDesk from "./pages/HelpDesk";
-import AIAssistant from "./pages/AIAssistant";
 import Security from "./pages/Security";
 import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
@@ -32,7 +31,6 @@ const App = () => (
                 <Route path="/security" element={<Security />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/help-desk" element={<HelpDesk />} />
-                <Route path="/ai-assistant" element={<AIAssistant />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
