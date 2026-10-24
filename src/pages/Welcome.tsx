@@ -22,7 +22,7 @@ export default function Welcome() {
   const navigate = useNavigate();
   const { signedIn, role } = useSecurity();
   const reduceMotion = Boolean(useReducedMotion());
-  const [mode, setMode] = useState<AuthMode>("signIn");
+  const [mode, setMode] = useState<AuthMode>(() => new URLSearchParams(window.location.search).get("mode") === "signUp" ? "signUp" : "signIn");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -222,28 +222,32 @@ export default function Welcome() {
                 {busy ? "Please wait…" : mode === "signIn" ? "Sign in to campus" : "Create account"}
                 {!busy && <ArrowRight className="h-4 w-4" />}
               </Button>
-              <div className="relative py-1">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-                <div className="relative flex justify-center"><span className="bg-card px-3 text-xs text-muted-foreground">or continue with</span></div>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-3 transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0"
-                onClick={() => void handleGoogleSignIn()}
-                disabled={googleBusy || busy || !supabaseConfigured}
-              >
-                <svg className="h-5 w-5" viewBox="0 0 48 48" aria-hidden="true">
-                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 37.92 46.98 31.7 46.98 24.55z" />
-                  <path fill="#FBBC05" d="M10.53 28.59a14.42 14.42 0 0 1 0-9.18l-7.98-6.19a23.93 23.93 0 0 0 0 21.56l7.98-6.19z" />
-                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.14 1.45-4.88 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-10l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
-                </svg>
-                {googleBusy ? "Opening Google..." : "Continue with Google"}
-              </Button>
+              {mode === "signIn" && (
+                <>
+                  <div className="relative py-1">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+                    <div className="relative flex justify-center"><span className="bg-card px-3 text-xs text-muted-foreground">or continue with</span></div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full gap-3 transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0"
+                    onClick={() => void handleGoogleSignIn()}
+                    disabled={googleBusy || busy || !supabaseConfigured}
+                  >
+                    <svg className="h-5 w-5" viewBox="0 0 48 48" aria-hidden="true">
+                      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 37.92 46.98 31.7 46.98 24.55z" />
+                      <path fill="#FBBC05" d="M10.53 28.59a14.42 14.42 0 0 1 0-9.18l-7.98-6.19a23.93 23.93 0 0 0 0 21.56l7.98-6.19z" />
+                      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.14 1.45-4.88 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-10l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                    </svg>
+                    {googleBusy ? "Opening Google..." : "Continue with Google"}
+                  </Button>
+                </>
+              )}
               {mode === "signUp" && (
                 <p className="text-center text-xs leading-5 text-muted-foreground">
-                  First-time Google sign-ins create an account too. New campus accounts may remain Pending until an Admin assigns a role.
+                  First, create your account with this form and verify the confirmation email. Google sign-in is available only after your email is verified.
                 </p>
               )}
               <p className="text-center text-xs leading-5 text-muted-foreground">
