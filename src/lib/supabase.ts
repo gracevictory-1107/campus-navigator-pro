@@ -157,6 +157,27 @@ export type ManagedRole = ProfileRow["role"];
 
 const mapAppRole = (role: ManagedRole): Role => role;
 
+type AuthUserRegistrationMetadata = {
+  email_confirmed_at?: string | null;
+  app_metadata?: { provider?: unknown; providers?: unknown };
+};
+
+/**
+ * Campus Google login is only allowed for an existing email/password account
+ * whose email confirmation has completed. A Google-only Auth user must not
+ * receive a campus role just because the provider has a verified email.
+ */
+export function hasVerifiedEmailPasswordIdentity(user: AuthUserRegistrationMetadata | null | undefined): boolean {
+  if (!user?.email_confirmed_at) return false;
+
+  const providers = user.app_metadata?.providers;
+  const hasEmailIdentity = Array.isArray(providers)
+    ? providers.includes("email")
+    : user.app_metadata?.provider === "email";
+
+  return hasEmailIdentity;
+}
+
 async function getSignedInProfile() {
   if (!supabase) return null;
   const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -240,6 +261,11 @@ export async function signUpWithSupabase(
 }
 
 export async function getAuthenticatedRole(): Promise<Role | null> {
+  if (!supabase) return null;
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  if (!hasVerifiedEmailPasswordIdentity(user)) return null;
+
   const profile = await getSignedInProfile();
   return profile ? mapAppRole(profile.role) : null;
 }
