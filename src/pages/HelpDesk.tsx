@@ -1,5 +1,4 @@
-import { Link } from "react-router-dom";
-import { ArrowRight, CircleHelp, MailCheck, MapPinned, ShieldCheck } from "lucide-react";
+import { CircleHelp, MailCheck, MapPinned, ShieldCheck } from "lucide-react";
 import PublicPageLayout from "@/components/PublicPageLayout";
 
 const helpItems = [
@@ -32,7 +31,6 @@ export default function HelpDesk() {
         <div className="mt-6 rounded-2xl border border-border bg-card p-5">
           <h2 className="font-semibold">Still need help?</h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">For account approvals, campus access decisions, or a physical wayfinding question, contact college reception or the campus administrator. Do not send passwords or biometric data through chat.</p>
-          <Link to="/ai-assistant" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">Ask the Campus Guide Assistant <ArrowRight className="h-4 w-4" /></Link>
         </div>
       </main>
     </PublicPageLayout>
