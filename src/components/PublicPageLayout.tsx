@@ -85,11 +85,35 @@ export default function PublicPageLayout({
       >
         {children}
       </motion.div>
-      <footer className="border-t border-border bg-card/50 px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-center text-xs text-muted-foreground">
-        <p className="font-medium">© {new Date().getFullYear()} AWDC Campus Navigator. All rights reserved.</p>
-        <p className="mx-auto mt-1 max-w-3xl leading-5">
-          Campus navigation project prototype. Mapped routes may be approximate. Follow on-site signs and campus staff guidance; this website is not an emergency service or a live CCTV monitoring system.
-        </p>
+      <footer className="border-t border-border bg-card/40 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:py-7">
+        <div className="mx-auto grid max-w-7xl gap-5 md:grid-cols-[1fr_auto] md:items-center">
+          <Link to="/" className="flex items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
+              <Navigation2 className="h-5 w-5" />
+            </span>
+            <span>
+              <span className="block text-sm font-semibold text-foreground">AWDC Campus Navigator</span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">Explore campus buildings, rooms, and routes.</span>
+            </span>
+          </Link>
+
+          <div className="grid gap-3 md:justify-items-end">
+            <nav aria-label="Footer navigation" className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-muted-foreground">
+              {links.map(({ to, label, key }) => (
+                <Link key={key} to={to} className="transition-colors hover:text-primary focus-visible:text-primary">
+                  {label}
+                </Link>
+              ))}
+            </nav>
+            <p className="text-xs text-muted-foreground">
+              © {new Date().getFullYear()} AWDC Campus Navigator <span className="mx-1.5 text-border">•</span> Campus prototype
+            </p>
+          </div>
+
+          <p className="border-t border-border/70 pt-3 text-[11px] leading-5 text-muted-foreground md:col-span-2">
+            Some mapped routes may need on-site confirmation. For emergencies, contact campus staff or local emergency services. Live CCTV monitoring is not available through this prototype.
+          </p>
+        </div>
       </footer>
     </div>
   );
