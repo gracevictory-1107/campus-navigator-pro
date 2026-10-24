@@ -216,8 +216,10 @@ const managedRoleOptions: { value: ManagedRole; label: string }[] = [
 
 function AdminUsersPanel() {
   const [profiles, setProfiles] = useState<ManagedProfile[]>([]);
+  const [approvalRoles, setApprovalRoles] = useState<Record<string, ManagedRole>>({});
   const [backendAdmin, setBackendAdmin] = useState(false);
   const [loading, setLoading] = useState(supabaseConfigured);
+  const pendingProfiles = profiles.filter((profile) => profile.role === "pending");
 
   useEffect(() => {
     if (!supabaseConfigured) {
@@ -262,8 +264,86 @@ function AdminUsersPanel() {
     toast.error("Supabase authentication is required to manage real campus profiles.");
   };
 
+  const approveProfile = (id: string) => {
+    const nextRole = approvalRoles[id];
+    if (!nextRole || nextRole === "pending" || nextRole === "admin") {
+      toast.error("Choose an eligible campus role before approving this account.");
+      return;
+    }
+    void changeRole(id, nextRole);
+  };
+
   return (
-    <section className="grid gap-3">
+    <section className="grid gap-4">
+      {backendAdmin && (
+        <section
+          aria-labelledby="pending-approvals-title"
+          className={`grid gap-3 rounded-xl border p-4 ${pendingProfiles.length ? "border-amber-500/40 bg-amber-500/5" : "border-border bg-card"}`}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-amber-500/10 text-amber-600">
+                <UserPlus className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 id="pending-approvals-title" className="text-base font-semibold text-foreground">Pending Approvals</h2>
+                <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
+                  Newly registered accounts waiting for campus access. Verify the person and assign the appropriate role to approve them.
+                </p>
+              </div>
+            </div>
+            <Badge variant={pendingProfiles.length > 0 ? "destructive" : "secondary"}>
+              {loading ? "Loading…" : `${pendingProfiles.length} pending`}
+            </Badge>
+          </div>
+
+          {loading ? (
+            <p className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">Loading pending accounts…</p>
+          ) : pendingProfiles.length > 0 ? (
+            <div className="grid gap-2">
+              {pendingProfiles.map((profile) => (
+                <div key={profile.id} className="grid gap-3 rounded-lg border border-border bg-card p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-foreground">{profile.full_name || "Name not provided"}</p>
+                    <p className="break-all text-xs text-muted-foreground">{profile.email}</p>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <Select
+                      value={approvalRoles[profile.id]}
+                      onValueChange={(value) => setApprovalRoles((current) => ({ ...current, [profile.id]: value as ManagedRole }))}
+                    >
+                      <SelectTrigger className="w-full sm:w-48" aria-label={`Choose approval role for ${profile.full_name}`}>
+                        <SelectValue placeholder="Choose campus role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {managedRoleOptions
+                          .filter((option) => option.value !== "pending" && option.value !== "admin")
+                          .map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      className="shrink-0"
+                      disabled={!approvalRoles[profile.id] || approvalRoles[profile.id] === "pending" || approvalRoles[profile.id] === "admin"}
+                      onClick={() => approveProfile(profile.id)}
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Approve & Assign
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+              No pending approvals right now. New registered accounts will appear here when they are ready for review.
+            </p>
+          )}
+          <p className="text-[11px] leading-5 text-muted-foreground">
+            Approval changes the account’s campus role. Admin access is assigned separately from the full Users &amp; Roles list.
+          </p>
+        </section>
+      )}
+
       <div>
         <h2 className="text-sm font-semibold text-foreground">Users & Roles</h2>
         <p className="mt-1 text-xs text-muted-foreground">
