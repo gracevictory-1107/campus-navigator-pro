@@ -15,7 +15,7 @@ type AuthMode = "signIn" | "signUp";
 const highlights = [
   { title: "Find campus rooms", text: "Explore mapped buildings and floors." },
   { title: "Plan a route", text: "Choose a starting point and destination." },
-  { title: "Get campus help", text: "Open Help Desk or ask the Campus Guide Assistant." },
+  { title: "Get campus support", text: "Visit the Help Desk for account and navigation guidance." },
 ];
 
 export default function Welcome() {
@@ -108,7 +108,7 @@ export default function Welcome() {
           </div>
           <div className="space-y-4">
             <h1 className="max-w-2xl font-display text-3xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              Your campus. <span className="text-primary">One clear route.</span>
+              Explore your campus. <span className="text-primary">Find your way.</span>
             </h1>
             <p className="max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
               Sign in to explore the AWDC campus map, search rooms, and plan routes between mapped locations.
@@ -150,9 +150,6 @@ export default function Welcome() {
             </Link>
             <Link to="/help-desk" className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2.5 text-sm font-medium hover:bg-accent">
               Help Desk
-            </Link>
-            <Link to="/ai-assistant" className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2.5 text-sm font-medium hover:bg-accent">
-              Campus AI Assistant
             </Link>
           </div>
         </motion.section>
@@ -216,7 +213,7 @@ export default function Welcome() {
                   </button>
                 </div>
               </div>
-              {mode === "signUp" && <p className="text-xs leading-5 text-muted-foreground">New accounts may show Pending until a campus Admin assigns the correct role.</p>}
+              {mode === "signUp" && <p className="text-xs leading-5 text-muted-foreground">New accounts remain Pending until a campus Admin assigns the appropriate role.</p>}
               {!supabaseConfigured && <p role="alert" className="text-xs text-destructive">Account access is not configured. Contact the campus administrator.</p>}
               <Button type="submit" className="mt-1 w-full gap-2 transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0" disabled={busy || !supabaseConfigured}>
                 {busy ? "Please wait…" : mode === "signIn" ? "Sign in to campus" : "Create account"}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, Bell, BellOff, Camera, CheckCircle2, Eye, Lock, LogIn, LogOut, MapPin, Radio, Search, ShieldAlert, UserPlus, Users, Video } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bell, BellOff, Camera, CheckCircle2, Eye, Lock, LogIn, LogOut, MapPin, Search, ShieldAlert, UserPlus, Users, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,21 +46,18 @@ function Stat({ icon: Icon, label, value, alert }: { icon: typeof Users; label: 
   );
 }
 
-function SimulatedFeed({ camId, status }: { camId: string; status: "online" | "offline" }) {
+function CameraStreamStatus({ camId }: { camId: string }) {
   return (
     <div className="relative grid aspect-video place-content-center gap-2 overflow-hidden rounded-lg border border-border bg-secondary/40 text-center">
       <div className="absolute left-2 top-2 rounded bg-card/90 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-        {camId} · SIMULATION MODE
+        {camId} · STREAM STATUS
       </div>
       <Video className="mx-auto h-8 w-8 text-muted-foreground/60" />
       <div className="px-3">
-        <p className="text-sm font-medium text-foreground">Live feed unavailable</p>
+        <p className="text-sm font-medium text-foreground">Live stream not connected</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          {status === "online" ? "No live stream is connected." : "Camera is currently offline."}
+          No live camera stream is configured for this entry.
         </p>
-      </div>
-      <div className="absolute bottom-2 inset-x-2 text-[10px] text-muted-foreground">
-        Simulated camera events only · No video stream
       </div>
     </div>
   );
@@ -211,7 +208,7 @@ const managedRoleOptions: { value: ManagedRole; label: string }[] = [
   { value: "faculty", label: "Faculty" },
   { value: "security", label: "Security" },
   { value: "pending", label: "Pending approval" },
-  { value: "student", label: "Student (legacy)" },
+  { value: "student", label: "Student" },
 ];
 
 function AdminUsersPanel() {
@@ -234,8 +231,8 @@ function AdminUsersPanel() {
         setProfiles(rows ?? []);
       })
       .catch((error: unknown) => {
-        if (active) toast.error("Could not load Supabase user profiles", {
-          description: error instanceof Error ? error.message : "Check profile table access and row-level security.",
+        if (active) toast.error("Could not load campus accounts", {
+          description: error instanceof Error ? error.message : "Please check your account permissions and try again.",
         });
       })
       .finally(() => {
@@ -247,21 +244,21 @@ function AdminUsersPanel() {
   const changeRole = async (id: string, nextRole: ManagedRole) => {
     if (supabaseConfigured) {
       if (!backendAdmin) {
-        toast.error("A linked Supabase Admin account is required to change roles.");
+        toast.error("An authorised Admin account is required to change campus roles.");
         return;
       }
       try {
         const updated = await updateManagedProfileRole(id, nextRole);
         setProfiles((current) => current.map((profile) => profile.id === id ? updated : profile));
-        toast.success("User role updated in Supabase.");
+        toast.success("Campus role updated successfully.");
       } catch (error) {
         toast.error("The user role was not changed", {
-          description: error instanceof Error ? error.message : "The database rejected this role update.",
+          description: error instanceof Error ? error.message : "Your account does not have permission to make this change.",
         });
       }
       return;
     }
-    toast.error("Supabase authentication is required to manage real campus profiles.");
+    toast.error("Sign in with an authorised Admin account to manage campus profiles.");
   };
 
   const approveProfile = (id: string) => {
@@ -347,24 +344,24 @@ function AdminUsersPanel() {
       <div>
         <h2 className="text-sm font-semibold text-foreground">Users & Roles</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          "Profiles are managed in Supabase. Role changes require an authenticated Admin account and are enforced by database row-level security."
+          Campus accounts and roles are managed centrally. Only an authorised Admin can assign or change roles.
         </p>
       </div>
       {!supabaseConfigured && (
         <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-          Account management is unavailable until Supabase authentication is configured.
+          Account management is temporarily unavailable. Please contact the site administrator.
         </p>
       )}
       {supabaseConfigured && !backendAdmin && !loading && (
         <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-          Sign in with a real Supabase Auth account linked to an Admin profile to load and manage users. New accounts start as Pending approval and cannot grant themselves access.
+          Sign in with an approved Admin account to view and manage campus users. New accounts remain pending until an Admin assigns the appropriate role.
         </p>
       )}
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <Table>
           <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead></TableRow></TableHeader>
           <TableBody>
-            {loading && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">Loading Supabase profiles…</TableCell></TableRow>}
+            {loading && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">Loading campus accounts…</TableCell></TableRow>}
             {!loading && profiles.map((profile) => (
               <TableRow key={profile.id}>
                 <TableCell className="font-medium">{profile.full_name}</TableCell>
@@ -388,7 +385,7 @@ function AdminUsersPanel() {
         </Table>
       </div>
       {supabaseConfigured && backendAdmin && (
-        <p className="text-xs text-muted-foreground">Profile records are linked to real Supabase Auth accounts. New email sign-ups remain Pending approval until an Admin assigns the appropriate campus role.</p>
+        <p className="text-xs text-muted-foreground">Accounts are linked to verified email addresses. New email registrations remain pending until an Admin assigns the appropriate campus role.</p>
       )}
     </section>
   );
@@ -414,8 +411,6 @@ export default function Security() {
   const [visitorAccessFilter, setVisitorAccessFilter] = useState("all");
   const [alertOpen, setAlertOpen] = useState<string | null>(null);
   const [mapFloor, setMapFloor] = useState("mb-gf");
-  const [simCam, setSimCam] = useState("CAM-01");
-  const [simPerson, setSimPerson] = useState("");
   const [signInOpen, setSignInOpen] = useState(false);
   const [tab, setTab] = useState(role === "management" ? "management" : "dashboard");
   const [cameraConfigs, setCameraConfigs] = useState<Record<string, CameraConfig>>(() => Object.fromEntries(cameraRegistry.map((camera) => [camera.id, { cameraId: camera.id, ipAddress: "", streamUrl: "" }])));
@@ -431,7 +426,7 @@ export default function Security() {
       }
     }).catch((error) => {
       if (active) toast.error("CCTV configuration could not be loaded", {
-        description: error instanceof Error ? error.message : "Camera configuration is available locally.",
+        description: error instanceof Error ? error.message : "Check your connection and camera-register permissions.",
       });
     });
     return () => { active = false; };
@@ -458,7 +453,7 @@ export default function Security() {
       });
     } catch (error) {
       toast.error("Could not save " + cameraId, {
-        description: error instanceof Error ? error.message : "Check Supabase permissions and try again.",
+        description: error instanceof Error ? error.message : "Check your access permissions and try again.",
       });
     } finally {
       setCameraConfigSaving(null);
@@ -495,7 +490,7 @@ export default function Security() {
   const restrictedDestinations = Array.from(
     restrictedEvents.reduce((counts, event) => {
       const location = locationById(event.locationId);
-      const name = location?.name ?? event.locationName ?? "Unknown location";
+      const name = location?.name ?? event.locationName ?? "Location not recorded";
       const key = `${event.floorId}:${event.locationId}`;
       const current = counts.get(key);
       counts.set(key, { name, floor: location?.floorLabel ?? allFloorPlans[event.floorId]?.title ?? event.floorId, count: (current?.count ?? 0) + 1 });
@@ -637,8 +632,8 @@ export default function Security() {
         </div>
       </div>
       <div className="rounded-xl border border-border bg-card p-3 grid gap-2 content-start max-h-[470px] overflow-y-auto">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Current Visitors · Simulated Activity</p>
-        {floorEvents.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">No current visitor locations on this floor.</p>}
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Visitor Activity · Recent Events</p>
+        {floorEvents.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">No visitor activity recorded on this floor.</p>}
         {floorEvents.map((e) => (
           <button key={e.personId} onClick={() => setPersonOpen(e.personId)} className="text-left rounded-lg border border-border p-2.5 hover:bg-accent transition-colors">
             <div className="flex justify-between"><span className="text-sm font-medium text-foreground">{e.personName}</span><AccessPill access={e.access} /></div>
@@ -655,7 +650,7 @@ export default function Security() {
     <section className="grid gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Live Activity · Current Visitors</h2>
+          <h2 className="text-sm font-semibold text-foreground">Latest Visitor Activity</h2>
           <p className="text-[11px] text-muted-foreground">Activity updates from security events · camera locations are not GPS tracking</p>
         </div>
       </div>
@@ -675,7 +670,7 @@ export default function Security() {
               setPersonOpen(visitor.id);
             };
             const routeDestination = activityEvent?.source === "route"
-              ? activityLocation?.name ?? activityEvent.locationName ?? "Unknown destination"
+              ? activityLocation?.name ?? activityEvent.locationName ?? "Destination not recorded"
               : undefined;
             return (
               <button
@@ -697,18 +692,18 @@ export default function Security() {
                 </div>
                 <div className="grid gap-2 text-xs">
                   <div>
-                    <span className="text-muted-foreground">Camera-reported location: </span>
+                    <span className="text-muted-foreground">Last recorded location: </span>
                     <span className="font-medium text-foreground">
-                      {locationEvent ? location?.name ?? locationEvent.locationName ?? "Unknown location" : "Not available"}
+                      {locationEvent ? location?.name ?? locationEvent.locationName ?? "Location not recorded" : "Not available"}
                     </span>
-                    {locationEvent && <span className="block text-[11px] text-muted-foreground">{location?.floorLabel ?? allFloorPlans[locationEvent.floorId]?.title ?? "Unknown floor"}</span>}
+                    {locationEvent && <span className="block text-[11px] text-muted-foreground">{location?.floorLabel ?? allFloorPlans[locationEvent.floorId]?.title ?? "Floor not recorded"}</span>}
                   </div>
                   <div>
                     <span className="text-muted-foreground">{activityEvent?.source === "route" ? (activityEvent.access === "restricted" ? "Attempted destination: " : "Route destination: ") : "Latest activity: "}</span>
                     <span className="font-medium text-foreground">
-                      {routeDestination ?? (activityEvent ? activityLocation?.name ?? activityEvent.locationName ?? "Unknown location" : "No recent activity")}
+                      {routeDestination ?? (activityEvent ? activityLocation?.name ?? activityEvent.locationName ?? "Location not recorded" : "No recent activity")}
                     </span>
-                    {activityEvent && <span className="block text-[11px] text-muted-foreground">{activityEvent.source === "route" ? `Route planner · ${allFloorPlans[activityEvent.floorId]?.title ?? "Unknown floor"}` : `${activityCamera?.name ?? activityEvent.cameraId} · ${allFloorPlans[activityEvent.floorId]?.title ?? "Unknown floor"}`}</span>}
+                    {activityEvent && <span className="block text-[11px] text-muted-foreground">{activityEvent.source === "route" ? `Route planner · ${allFloorPlans[activityEvent.floorId]?.title ?? "Floor not recorded"}` : `${activityCamera?.name ?? activityEvent.cameraId} · ${allFloorPlans[activityEvent.floorId]?.title ?? "Floor not recorded"}`}</span>}
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2 text-[11px] text-muted-foreground">
                     <span>Camera: {activityCamera?.name ?? currentCamera?.name ?? "Not associated"}</span>
@@ -723,26 +718,6 @@ export default function Security() {
     </section>
   );
 
-  const Simulator = manageCCTV && (
-    <div className="rounded-xl border border-dashed border-border bg-card p-4 grid gap-3">
-      <div className="flex items-center gap-2"><Radio className="h-4 w-4 text-primary" /><p className="text-sm font-semibold text-foreground">CCTV Event Simulator</p><Badge variant="secondary" className="text-[10px]">Demo</Badge></div>
-      <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-2">
-        <Select value={simCam} onValueChange={setSimCam}>
-          <SelectTrigger aria-label="Select camera"><SelectValue /></SelectTrigger>
-          <SelectContent>{cameras.map((c) => <SelectItem key={c.id} value={c.id}>{c.id} — {locationById(c.locationId)?.name}</SelectItem>)}</SelectContent>
-        </Select>
-        <Select value={simPerson} onValueChange={setSimPerson}>
-          <SelectTrigger aria-label="Select person"><SelectValue placeholder="Select person" /></SelectTrigger>
-          <SelectContent>{activeVisitors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name} ({v.type})</SelectItem>)}</SelectContent>
-        </Select>
-        <Button disabled={!simPerson} onClick={async () => {
-          const ev = await sec.simulateDetection(simCam, simPerson);
-          if (ev) setMapFloor(ev.floorId);
-        }}>Simulate Detection</Button>
-      </div>
-      <p className="text-[11px] text-muted-foreground">Camera detects person → location identified → access checked → green/red marker → alert if restricted.</p>
-    </div>
-  );
 
   const AlertsList = ({ list }: { list: SecurityAlert[] }) => (
     <div className="grid gap-3">
@@ -765,8 +740,8 @@ export default function Security() {
             <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
               <p><span className="font-medium text-foreground">Attempted destination:</span> {loc?.name ?? a.event.locationName ?? "Location"}</p>
               <p><span className="font-medium text-foreground">Floor:</span> {loc?.floorLabel ?? allFloorPlans[a.event.floorId]?.title ?? a.event.floorId}</p>
-              <p><span className="font-medium text-foreground">Source:</span> {a.event.source === "route" ? "Route planner" : `${eventCamera?.name ?? a.event.cameraId} · ${locationById(a.event.locationId)?.name ?? a.event.locationName ?? "Camera location"}`}</p>
-              {a.event.source === "route" && visitorLocation && <p><span className="font-medium text-foreground">Latest camera-reported location:</span> {locationById(visitorLocation.locationId)?.name ?? visitorLocation.locationName} · {cameras.find((cameraItem) => cameraItem.id === visitorLocation.cameraId)?.name ?? visitorLocation.cameraId}</p>}
+              <p><span className="font-medium text-foreground">Source:</span> {a.event.source === "route" ? "Route planner" : `${eventCamera?.name ?? a.event.cameraId} · ${locationById(a.event.locationId)?.name ?? a.event.locationName ?? "Recorded location"}`}</p>
+              {a.event.source === "route" && visitorLocation && <p><span className="font-medium text-foreground">Latest recorded location:</span> {locationById(visitorLocation.locationId)?.name ?? visitorLocation.locationName} · {cameras.find((cameraItem) => cameraItem.id === visitorLocation.cameraId)?.name ?? visitorLocation.cameraId}</p>}
               <p><span className="font-medium text-foreground">Access:</span> <span className={bad}>Restricted</span></p>
               <p><span className="font-medium text-foreground">Date &amp; time:</span> {dateTime}</p>
             </div>
@@ -785,14 +760,14 @@ export default function Security() {
   const CctvConfiguration = viewCCTV && (
     <section className="grid gap-3 rounded-xl border border-border bg-card p-4">
       <div>
-        <h2 className="text-base font-semibold text-foreground">Campus CCTV Register · {CAMPUS_REPORTED_CAMERA_COUNT} cameras</h2>
+        <h2 className="text-base font-semibold text-foreground">CCTV Configuration Register · {CAMPUS_REPORTED_CAMERA_COUNT} entries</h2>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          The campus has reported {CAMPUS_REPORTED_CAMERA_COUNT} cameras. CAM-01 to CAM-109 are provisional tracking IDs for configuration and must be checked against the college NVR labels.
-          Six entries currently have demonstration map links; the rest await the annotated floor layouts. IP addresses and stream URLs are blank until supplied by the campus CCTV/NVR administrator.
+          The campus has reported {CAMPUS_REPORTED_CAMERA_COUNT} cameras. Register IDs CAM-01 to CAM-109 must be matched to the physical camera/NVR inventory before deployment.
+          Six entries have preliminary map associations; remaining locations require floor-plan review. Connection details must be supplied by an authorised campus CCTV administrator.
         </p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
           {manageCCTV
-            ? "Management/Admin can save network details for each camera. Saving a URL does not by itself prove the stream is live or supported by the browser."
+            ? "Management/Admin can maintain the connection details. Saving an address does not confirm that the camera is reachable or that its stream is supported."
             : "Security has view-only access. Only Management/Admin can change camera configuration."}
         </p>
       </div>
@@ -802,11 +777,11 @@ export default function Security() {
           <p className="mt-1 text-2xl font-bold text-foreground">{cameraRegistry.length}</p>
         </div>
         <div className="rounded-xl border border-border bg-secondary/30 p-3">
-          <p className="text-xs text-muted-foreground">Demo-linked entries</p>
+          <p className="text-xs text-muted-foreground">Preliminary map links</p>
           <p className="mt-1 text-2xl font-bold text-foreground">{cameras.length}</p>
         </div>
         <div className="col-span-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 sm:col-span-1">
-          <p className="text-xs text-muted-foreground">Awaiting layout mapping</p>
+          <p className="text-xs text-muted-foreground">Locations to verify</p>
           <p className="mt-1 text-2xl font-bold text-foreground">{cameraRegistry.length - cameras.length}</p>
         </div>
       </div>
@@ -816,7 +791,7 @@ export default function Security() {
           id="camera-registry-search"
           value={cameraSearch}
           onChange={(event) => setCameraSearch(event.target.value)}
-          placeholder="Search CAM-01, CAM-109, or a demo-linked location"
+          placeholder="Search camera ID or mapped location"
         />
       </div>
       <div className="grid max-h-[min(68vh,760px)] gap-3 overflow-y-auto pr-1">
@@ -825,10 +800,10 @@ export default function Security() {
           if (!query) return true;
           const mappedCamera = cameras.find((candidate) => candidate.id === entry.id);
           const locationName = mappedCamera ? locationById(mappedCamera.locationId)?.name ?? "" : "";
-          return `${entry.id} ${locationName} ${mappedCamera ? "demo linked" : "location pending"}`.toLowerCase().includes(query);
+          return `${entry.id} ${locationName} ${mappedCamera ? "map linked" : "location pending"}`.toLowerCase().includes(query);
         }).map((entry) => {
           const mappedCamera = cameras.find((candidate) => candidate.id === entry.id);
-          const locationName = mappedCamera ? locationById(mappedCamera.locationId)?.name ?? "Demo location" : "Location awaiting annotated layout";
+          const locationName = mappedCamera ? locationById(mappedCamera.locationId)?.name ?? "Location to verify" : "Location not assigned";
           const config = cameraConfigs[entry.id] ?? { cameraId: entry.id, ipAddress: "", streamUrl: "" };
           return (
             <div key={entry.id} className="grid gap-2 rounded-lg border border-border p-3">
@@ -837,12 +812,12 @@ export default function Security() {
                   <p className="text-sm font-semibold text-foreground">{entry.id} · {locationName}</p>
                   <p className="mt-1 text-[11px] text-muted-foreground">
                     {mappedCamera
-                      ? "Prototype map association only. Confirm the physical location against the annotated floor layout."
-                      : "Provisional camera ID. Physical location and camera-free areas await the annotated floor layout."}
+                      ? "Preliminary map association. Verify the physical location against the approved floor plan."
+                      : "Physical location and coverage have not yet been verified against the floor plan."}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{mappedCamera ? "Demo linked" : "Mapping pending"}</Badge>
+                  <Badge variant="secondary">{mappedCamera ? "Map linked" : "Needs mapping"}</Badge>
                   {manageCCTV && (
                     <Button size="sm" onClick={() => void persistCameraConfig(entry.id)} disabled={cameraConfigSaving === entry.id}>
                       {cameraConfigSaving === entry.id ? "Saving..." : "Save"}
@@ -877,7 +852,7 @@ export default function Security() {
         })}
       </div>
       <p className="text-[11px] leading-5 text-muted-foreground">
-        Live CCTV remains disconnected until the real NVR/provider details, authentication, browser-compatible stream transport, and network permissions are verified. Never paste camera passwords or private keys into public chat.
+        Live video requires approved NVR/provider details, a supported stream transport, and authorised network access. Do not store camera passwords or private keys in client-side fields.
       </p>
     </section>
   );
@@ -962,26 +937,26 @@ export default function Security() {
         const hl = sec.highlightedCameraId === c.id;
         return (
           <button key={c.id} type="button" onClick={() => setCameraOpen(c.id)} className={`grid gap-3 rounded-xl border bg-card p-3 text-left transition-shadow hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${hl ? "border-[hsl(var(--status-restricted))]" : "border-border"}`}>
-            <SimulatedFeed camId={c.id} status={c.status} />
+            <CameraStreamStatus camId={c.id} />
             <div className="grid gap-2">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-foreground">{c.name}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{loc?.name ?? "Unknown location"}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{loc?.name ?? "Location not recorded"}</p>
                 </div>
                 {(() => {
                   const configured = Boolean(cameraConfigs[c.id]?.ipAddress?.trim() || cameraConfigs[c.id]?.streamUrl?.trim());
-                  const label = c.source === "simulated" ? (configured ? "Configured · Simulation" : "Simulation") : (configured ? "Configured" : "Unavailable");
+                  const label = configured ? "Details entered" : "Details needed";
                   return (
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      <span className={`h-2 w-2 rounded-full ${configured && c.source !== "simulated" ? "bg-[hsl(var(--status-authorized))]" : "bg-amber-500"}`} />
+                      <span className="h-2 w-2 rounded-full bg-amber-500" />
                       {label}
                     </span>
                   );
                 })()}
               </div>
               <p className="font-mono text-[11px] text-muted-foreground">Camera ID: {c.id}</p>
-              <p className="font-mono text-[11px] text-muted-foreground">CCTV IP: {cameraConfigs[c.id]?.ipAddress || "Pending from college"}</p>
+              <p className="font-mono text-[11px] text-muted-foreground">CCTV IP: {cameraConfigs[c.id]?.ipAddress || "Not provided"}</p>
               {last ? (
                 <div className="rounded-lg bg-secondary/60 p-2">
                   <div className="flex flex-wrap items-center justify-between gap-1">
@@ -990,7 +965,7 @@ export default function Security() {
                   </div>
                   <p className="mt-1 text-[11px] text-muted-foreground">{locationById(last.locationId)?.name ?? last.locationName ?? "Location"} · {formatTime(last.at)}</p>
                 </div>
-              ) : <p className="text-xs text-muted-foreground">No detection events recorded</p>}
+              ) : <p className="text-xs text-muted-foreground">No activity recorded</p>}
             </div>
           </button>
         );
@@ -1002,7 +977,7 @@ export default function Security() {
     <section className="grid gap-3">
       <div>
         <h2 className="text-base font-semibold text-foreground">Visitor Management</h2>
-        <p className="text-xs text-muted-foreground">Registered visitor records, camera-reported locations, access activity, and visit lifecycle.</p>
+        <p className="text-xs text-muted-foreground">Visitor records, latest recorded activity, access decisions, and visit status.</p>
       </div>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <div className="relative sm:col-span-2 xl:col-span-1">
@@ -1047,7 +1022,7 @@ export default function Security() {
               <TableCell>{v.mobile || "Not available"}</TableCell>
               <TableCell className="whitespace-nowrap">{v.checkIn ? new Date(v.checkIn).toLocaleString() : "Not available"}</TableCell>
               <TableCell><Badge variant={v.status === "Blocked" || (lastEvent?.access === "restricted" && v.status === "Active") ? "destructive" : v.status === "Active" ? "default" : "secondary"}>{v.status}</Badge></TableCell>
-              <TableCell>{locationEvent ? <span className="text-xs">{locationById(locationEvent.locationId)?.name ?? locationEvent.locationName ?? "Unknown location"}<span className="block text-muted-foreground">{locationById(locationEvent.locationId)?.floorLabel ?? allFloorPlans[locationEvent.floorId]?.title ?? "Unknown floor"}</span></span> : <span className="text-xs text-muted-foreground">Not available</span>}</TableCell>
+              <TableCell>{locationEvent ? <span className="text-xs">{locationById(locationEvent.locationId)?.name ?? locationEvent.locationName ?? "Location not recorded"}<span className="block text-muted-foreground">{locationById(locationEvent.locationId)?.floorLabel ?? allFloorPlans[locationEvent.floorId]?.title ?? "Floor not recorded"}</span></span> : <span className="text-xs text-muted-foreground">Not available</span>}</TableCell>
               <TableCell>
                 {lastEvent ? (
                 <div className="grid gap-1">
@@ -1204,12 +1179,12 @@ export default function Security() {
             {sec.events.length === 0 && <p className="p-5 text-center text-sm text-muted-foreground">No recent activity.</p>}
             {sec.events.slice(0, 12).map((event) => {
               const relatedAlert = sec.alerts.find((item) => item.event.id === event.id);
-              const eventLocation = locationById(event.locationId)?.name ?? event.locationName ?? "Unknown location";
+              const eventLocation = locationById(event.locationId)?.name ?? event.locationName ?? "Location not recorded";
               return (
                 <button key={event.id} type="button" onClick={() => relatedAlert ? setAlertOpen(relatedAlert.id) : setPersonOpen(event.personId)} className="flex w-full flex-wrap items-center justify-between gap-2 p-3 text-left transition-colors hover:bg-accent/40">
                   <span className="grid gap-1">
                     <span className="text-sm font-medium text-foreground">{event.personName} <span className="font-normal text-muted-foreground">· {event.personType}</span></span>
-                    <span className="text-xs text-muted-foreground">{event.source === "route" ? (event.access === "restricted" ? "Attempted destination" : "Route destination") : "Camera-reported location"}: {eventLocation} · {event.source === "route" ? "Route planner" : event.cameraId}</span>
+                    <span className="text-xs text-muted-foreground">{event.source === "route" ? (event.access === "restricted" ? "Attempted destination" : "Route destination") : "Recorded location"}: {eventLocation} · {event.source === "route" ? "Route planner" : event.cameraId}</span>
                   </span>
                   <span className="flex flex-wrap items-center gap-2">
                     <AccessPill access={event.access} />
@@ -1267,7 +1242,7 @@ export default function Security() {
             className={sec.backendReady
               ? "border-[hsl(var(--status-authorized)/0.35)] text-[hsl(var(--status-authorized))]"
               : "border-border text-muted-foreground"}
-            title={sec.backendReady ? "Security data is connected to Supabase." : "Waiting for an authorised Supabase session and database sync."}
+            title={sec.backendReady ? "Security data is synced." : "Waiting for an authorised session and data sync."}
           >
             <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${sec.backendReady ? "bg-[hsl(var(--status-authorized))]" : "bg-muted-foreground"}`} />
             {sec.backendReady ? "Database synced" : "Not synced"}
@@ -1287,7 +1262,7 @@ export default function Security() {
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="flex-wrap h-auto mb-4">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="map">Live Security</TabsTrigger>
+            <TabsTrigger value="map">Security Map</TabsTrigger>
             <TabsTrigger value="cctv">CCTV</TabsTrigger>
             <TabsTrigger value="alerts">Alerts{activeAlerts.length ? ` (${activeAlerts.length})` : ""}</TabsTrigger>
             {(can.manageSecurity(role) || can.viewManagement(role)) && <TabsTrigger value="reports">Reports</TabsTrigger>}
@@ -1305,7 +1280,7 @@ export default function Security() {
               <Stat icon={MapPin} label="Security Events" value={sec.events.length} />
               <Stat
                 icon={Camera}
-                label="Configured CCTV"
+                label="Camera details entered"
                 value={Object.values(cameraConfigs).filter((config) => Boolean(config.ipAddress?.trim() || config.streamUrl?.trim())).length}
               />
             </div>
@@ -1319,7 +1294,6 @@ export default function Security() {
               </div>
               <AlertsList list={sec.alerts.slice(0, 5)} />
             </section>
-            {Simulator}
             {LiveMap}
             {CurrentVisitors}
             <div className="grid lg:grid-cols-2 gap-4">
@@ -1329,8 +1303,8 @@ export default function Security() {
             <h2 className="text-sm font-semibold text-foreground">Visitor List</h2>{VisitorTable}
             <h2 className="text-sm font-semibold text-foreground">CCTV Cameras</h2>{CctvConfiguration}{CctvGrid}
           </TabsContent>
-          <TabsContent value="map" className="grid gap-4">{Simulator}{LiveMap}</TabsContent>
-          <TabsContent value="cctv" className="grid gap-4"><p className="text-xs text-muted-foreground">Camera feeds remain simulated until the college provides reachable CCTV/NVR connection details.</p>{CctvAccessPolicy}{CctvEvidenceSummary}{CctvConfiguration}{Simulator}{CctvGrid}</TabsContent>
+          <TabsContent value="map" className="grid gap-4">{LiveMap}</TabsContent>
+          <TabsContent value="cctv" className="grid gap-4"><p className="text-xs text-muted-foreground">Live camera streams are not connected. Camera records and connection settings are listed below.</p>{CctvAccessPolicy}{CctvEvidenceSummary}{CctvConfiguration}{CctvGrid}</TabsContent>
           <TabsContent value="alerts" className="grid gap-4">
             <section className="grid gap-3">
               <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold text-foreground">Security Alerts · Active &amp; Acknowledged</h2><span className="text-xs text-muted-foreground">{activeAlerts.length} active · {acknowledgedAlerts.length} acknowledged</span></div>
@@ -1354,7 +1328,7 @@ export default function Security() {
                 {personTypes.map((type) => <Stat key={type} icon={Users} label={type} value={typeCount(type)} />)}
                 <Stat icon={AlertTriangle} label="Security Alerts" value={sec.alerts.length} alert />
                 <Stat icon={ShieldAlert} label="Restricted Events" value={restrictedEvents.length} alert />
-                <Stat icon={Camera} label="Cameras Online" value={cameras.length} />
+                <Stat icon={Camera} label="Mapped camera entries" value={cameras.length} />
                 <Stat icon={MapPin} label="Detections" value={sec.events.length} />
               </div>
               <h2 className="text-sm font-semibold text-foreground">Visitor Activity</h2><RecentEvents list={sec.events} />
@@ -1391,16 +1365,16 @@ export default function Security() {
       <Dialog open={!!camera} onOpenChange={(o) => !o && setCameraOpen(null)}>
         <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{camera?.name} · {camera && (locationById(camera.locationId)?.name ?? "Unknown location")}</DialogTitle>
+            <DialogTitle>{camera?.name} · {camera && (locationById(camera.locationId)?.name ?? "Location not recorded")}</DialogTitle>
             <DialogDescription>
-              {camera?.id} · {camera?.status === "online" ? "Online" : "Offline"} · Simulation mode; no live video stream is connected.
+              Camera ID: {camera?.id} · Live stream not connected.
             </DialogDescription>
           </DialogHeader>
-          {camera && <SimulatedFeed camId={camera.id} status={camera.status} />}
+          {camera && <CameraStreamStatus camId={camera.id} />}
           {camera && (
             <section className="grid gap-2 rounded-xl border border-border bg-card p-3" aria-label="Latest camera event">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-foreground">Latest detection / event</h3>
+                <h3 className="text-sm font-semibold text-foreground">Latest recorded event</h3>
                 {cameraEvent && <AccessPill access={cameraEvent.access} />}
               </div>
               {cameraEvent ? (
@@ -1432,17 +1406,17 @@ export default function Security() {
             <div className="grid gap-1.5 text-sm">
               <div>Visitor: {selectedVisitor.name}</div>
               <div>Category: {selectedVisitor.type}</div>
-              <div>Camera-reported location: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.name ?? selectedVisitorLocation.locationName ?? "Location not mapped" : "No camera location recorded"}</div>
-              <div>Camera-reported floor: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.floorLabel ?? allFloorPlans[selectedVisitorLocation.floorId]?.title ?? "Unknown floor" : "Unknown until a camera event"}</div>
+              <div>Last recorded location: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.name ?? selectedVisitorLocation.locationName ?? "Location not mapped" : "No location recorded"}</div>
+              <div>Last recorded floor: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.floorLabel ?? allFloorPlans[selectedVisitorLocation.floorId]?.title ?? "Floor not recorded" : "Not recorded yet"}</div>
               <div>Access status: {selectedAccess ? <Badge className={selectedAccess === "restricted" ? "" : "bg-emerald-600 text-white hover:bg-emerald-600"} variant={selectedAccess === "restricted" ? "destructive" : "default"}>{selectedAccess === "restricted" ? "Restricted" : "Allowed"}</Badge> : <Badge variant="secondary">No activity</Badge>}</div>
               <div>Latest activity: {personLatestEvent ? `${personLatestEvent.source === "route" ? "Route planner" : personLatestEvent.cameraId} · ${personLatestEvent.access === "restricted" ? "Restricted" : "Allowed"}` : "No security event recorded"}</div>
               <div>Destination / attempt: {personLatestEvent ? locationById(personLatestEvent.locationId)?.name ?? personLatestEvent.locationName ?? "Location" : "—"}</div>
-              <div>{personLatestEvent?.source === "route" ? "Destination floor" : "Activity floor"}: {personLatestEvent ? locationById(personLatestEvent.locationId)?.floorLabel ?? allFloorPlans[personLatestEvent.floorId]?.title ?? "Unknown floor" : "—"}</div>
+              <div>{personLatestEvent?.source === "route" ? "Destination floor" : "Activity floor"}: {personLatestEvent ? locationById(personLatestEvent.locationId)?.floorLabel ?? allFloorPlans[personLatestEvent.floorId]?.title ?? "Floor not recorded" : "—"}</div>
               <div>Latest event time: {personLatestEvent ? formatTime(personLatestEvent.at) : "—"}</div>
               {personCamera && <div>Associated camera: {personCamera.name} ({personCamera.id})</div>}
               {personLatestEvent && (
                 <div className="border-t border-border pt-2 text-xs text-muted-foreground">
-                  Related security event: {personLatestEvent.id} · {personLatestEvent.source === "route" ? "Route attempt" : "Camera detection"}
+                  Related security event: {personLatestEvent.id} · {personLatestEvent.source === "route" ? "Route attempt" : "Recorded activity"}
                 </div>
               )}
             </div>
@@ -1466,7 +1440,7 @@ export default function Security() {
                   <p><span className="text-muted-foreground">Visit status:</span> <Badge variant={profile.status === "Blocked" ? "destructive" : profile.status === "Active" ? "default" : "secondary"}>{profile.status}</Badge></p>
                   <p><span className="text-muted-foreground">Registration / visit start:</span> {profile.checkIn ? new Date(profile.checkIn).toLocaleString() : "Not available"}</p>
                   <p><span className="text-muted-foreground">Checkout time:</span> {profile.checkedOutAt ? new Date(profile.checkedOutAt).toLocaleString() : profile.status === "Checked Out" ? "Not available" : "Not checked out"}</p>
-                  <p className="sm:col-span-2"><span className="text-muted-foreground">Current camera-reported location:</span> {physicalEvent ? `${locationById(physicalEvent.locationId)?.name ?? physicalEvent.locationName ?? "Unknown location"} · ${locationById(physicalEvent.locationId)?.floorLabel ?? allFloorPlans[physicalEvent.floorId]?.title ?? "Unknown floor"} · ${cameras.find((cameraItem) => cameraItem.id === physicalEvent.cameraId)?.name ?? physicalEvent.cameraId}` : "Not available"}</p>
+                  <p className="sm:col-span-2"><span className="text-muted-foreground">Latest recorded location:</span> {physicalEvent ? `${locationById(physicalEvent.locationId)?.name ?? physicalEvent.locationName ?? "Location not recorded"} · ${locationById(physicalEvent.locationId)?.floorLabel ?? allFloorPlans[physicalEvent.floorId]?.title ?? "Floor not recorded"} · ${cameras.find((cameraItem) => cameraItem.id === physicalEvent.cameraId)?.name ?? physicalEvent.cameraId}` : "Not available"}</p>
                   <p><span className="text-muted-foreground">Visiting:</span> {profile.visiting || "Not available"}</p>
                   <p><span className="text-muted-foreground">Purpose:</span> {profile.purpose || "Not available"}</p>
                 </section>
@@ -1476,12 +1450,12 @@ export default function Security() {
                   {activity[0] ? (
                     <div className="rounded-lg border border-border bg-card p-3 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span>{activity[0].source === "route" ? (activity[0].access === "restricted" ? "Restricted route attempt" : "Allowed route") : "Camera-reported activity"}</span>
+                        <span>{activity[0].source === "route" ? (activity[0].access === "restricted" ? "Restricted route attempt" : "Allowed route") : "Recorded activity"}</span>
                         <AccessPill access={activity[0].access} />
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {activity[0].source === "route" ? "Destination / attempt: " : "Camera location: "}
-                        {locationById(activity[0].locationId)?.name ?? activity[0].locationName ?? "Unknown location"}
+                        {locationById(activity[0].locationId)?.name ?? activity[0].locationName ?? "Location not recorded"}
                         {" · "}{activity[0].source === "route" ? "Route planner" : `${cameras.find((cameraItem) => cameraItem.id === activity[0].cameraId)?.name ?? activity[0].cameraId} · ${allFloorPlans[activity[0].floorId]?.title ?? activity[0].floorId}`}
                         {" · "}{new Date(activity[0].at).toLocaleString()}
                       </p>
@@ -1495,7 +1469,7 @@ export default function Security() {
                     <div className="rounded-lg border border-border divide-y divide-border">
                       {activity.filter((event) => event.source === "route").map((event) => (
                         <div key={event.id} className="flex flex-wrap items-center justify-between gap-2 p-2.5 text-xs">
-                          <span>{event.access === "restricted" ? "Attempted destination: " : "Route destination: "}{locationById(event.locationId)?.name ?? event.locationName ?? "Unknown location"} · {allFloorPlans[event.floorId]?.title ?? event.floorId}</span>
+                          <span>{event.access === "restricted" ? "Attempted destination: " : "Route destination: "}{locationById(event.locationId)?.name ?? event.locationName ?? "Location not recorded"} · {allFloorPlans[event.floorId]?.title ?? event.floorId}</span>
                           <span className="flex items-center gap-2"><AccessPill access={event.access} />{new Date(event.at).toLocaleString()}</span>
                         </div>
                       ))}
@@ -1507,7 +1481,7 @@ export default function Security() {
                   <h3 className="text-sm font-semibold text-foreground">Related security alerts</h3>
                   {visitorAlerts.length ? visitorAlerts.map((item) => (
                     <button key={item.id} type="button" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card p-2.5 text-left text-xs hover:bg-accent/40" onClick={() => setAlertOpen(item.id)}>
-                      <span>{item.event.source === "route" ? "Attempted destination: " : "Camera location: "}{locationById(item.event.locationId)?.name ?? item.event.locationName ?? "Unknown location"} · {item.severity} severity</span>
+                      <span>{item.event.source === "route" ? "Attempted destination: " : "Camera location: "}{locationById(item.event.locationId)?.name ?? item.event.locationName ?? "Location not recorded"} · {item.severity} severity</span>
                       <span className="flex items-center gap-2"><Badge variant={item.status === "Active" ? "destructive" : "secondary"}>{item.status}</Badge>{new Date(item.event.at).toLocaleString()}</span>
                     </button>
                   )) : <p className="text-sm text-muted-foreground">No related alerts.</p>}
@@ -1566,7 +1540,7 @@ export default function Security() {
                   <p><span className="text-muted-foreground">Floor:</span> {eventLocation?.floorLabel ?? allFloorPlans[alert.event.floorId]?.title ?? alert.event.floorId}</p>
                   <p><span className="text-muted-foreground">Access status:</span> <span className={bad}>Restricted</span></p>
                   <p><span className="text-muted-foreground">Source:</span> {alert.event.source === "route" ? "Route planner" : `${camera?.name ?? alert.event.cameraId} · ${eventLocation?.name ?? alert.event.locationName}`}</p>
-                  {alert.event.source === "route" && cameraLocation && <p><span className="text-muted-foreground">Latest camera-reported location:</span> {locationById(cameraLocation.locationId)?.name ?? cameraLocation.locationName} · {cameras.find((item) => item.id === cameraLocation.cameraId)?.name ?? cameraLocation.cameraId}</p>}
+                  {alert.event.source === "route" && cameraLocation && <p><span className="text-muted-foreground">Latest recorded location:</span> {locationById(cameraLocation.locationId)?.name ?? cameraLocation.locationName} · {cameras.find((item) => item.id === cameraLocation.cameraId)?.name ?? cameraLocation.cameraId}</p>}
                   <p><span className="text-muted-foreground">Date &amp; time:</span> {new Date(alert.event.at).toLocaleString()}</p>
                   <p><span className="text-muted-foreground">Severity:</span> {alert.severity}</p>
                 </section>

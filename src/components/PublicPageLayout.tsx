@@ -105,13 +105,9 @@ export default function PublicPageLayout({
               ))}
             </nav>
             <p className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} AWDC Campus Navigator <span className="mx-1.5 text-border">•</span> Campus prototype
+              © {new Date().getFullYear()} AWDC Campus Navigator
             </p>
           </div>
-
-          <p className="border-t border-border/70 pt-3 text-[11px] leading-5 text-muted-foreground md:col-span-2">
-            Some mapped routes may need on-site confirmation. For emergencies, contact campus staff or local emergency services. Live CCTV monitoring is not available through this prototype.
-          </p>
         </div>
       </footer>
     </div>

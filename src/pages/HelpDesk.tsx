@@ -3,9 +3,9 @@ import PublicPageLayout from "@/components/PublicPageLayout";
 
 const helpItems = [
   { Icon: MailCheck, title: "I can’t sign in", answer: "Check that your email and password are correct. If you just created an account, open the latest email verification link first. Expired links need a fresh verification email." },
-  { Icon: MapPinned, title: "How do I start directions?", answer: "After signing in, open Directions, choose a From room and a To room from the search results, then select Start Navigation. Some routes are approximate because the floor plans are not physically calibrated." },
-  { Icon: ShieldCheck, title: "My account says Pending", answer: "A campus Admin must assign the correct role before role-restricted features become available. Contact your campus administrator or reception for account-role help." },
-  { Icon: CircleHelp, title: "A room or path looks wrong", answer: "Do not rely on a guessed path. Ask reception or campus staff to confirm the destination and safest route. The floor layout may need a mapping update." },
+  { Icon: MapPinned, title: "How do I start directions?", answer: "After signing in, open Directions, select a starting room and a destination from the suggestions, then choose Start Navigation. Walking times are estimates; confirm any route segment marked for review with reception or campus staff." },
+  { Icon: ShieldCheck, title: "My account says Pending", answer: "Your account remains pending until a campus administrator assigns the appropriate role. Contact the administrator or college reception for approval updates." },
+  { Icon: CircleHelp, title: "A room or path looks wrong", answer: "Report missing rooms or incorrect paths to the campus administrator so the map can be reviewed. For directions while on campus, ask reception or campus staff to confirm the route." },
 ];
 
 export default function HelpDesk() {

@@ -1,6 +1,6 @@
-# Google Sign-in and CCTV Integration Setup
+# Authentication and CCTV Integration Setup
 
-This project now includes a Google sign-in button and a 109-entry CCTV configuration register. Provider credentials and live camera streams are intentionally not stored in the repository.
+This guide covers Google OAuth configuration and the campus CCTV register. OAuth secrets, camera credentials, and private stream details belong in the approved provider or server settings, never in source code.
 
 ## Enable Google sign-in
 
@@ -16,7 +16,8 @@ This project now includes a Google sign-in button and a 109-entry CCTV configura
    - Set **Site URL** to `https://campus-navigator-pro.vercel.app`.
    - Add `https://campus-navigator-pro.vercel.app/auth/callback` to the redirect URL allow list.
    - For local development only, add `http://localhost:5173/auth/callback`.
-6. Save settings and test from the stable production URL. New Google accounts are created with the default **Pending** campus role until an Admin approves the role.
+6. In Supabase Dashboard, open **Authentication → Hooks → Before User Created**. Select **Postgres**, schema `public`, and function `hook_reject_google_signups`, then save. This hook blocks creation of new Google-only Auth accounts.
+7. Test the workflow from the stable production URL: create an account with email/password, verify its email, then use the same email with Google sign-in. Campus access still depends on the role assigned by an Admin. Do not delete production accounts to repeat this test.
 
 Never commit or paste the Google Client Secret into source code, GitHub, or a public chat.
 

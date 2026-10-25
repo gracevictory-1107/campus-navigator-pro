@@ -19,7 +19,7 @@ type Phase =
   | "verified"
   | "complete";
 
-export default function DemoFaceVerification({ onContinue, onCancel, identityRequired = true }: Props) {
+export default function FaceVerificationPanel({ onContinue, onCancel, identityRequired = true }: Props) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);

@@ -1,39 +1,37 @@
 import type { AccessRule, AccessStatus, Visitor } from "./types";
 
 /**
- * Service seams. No NVR / VMS / ONVIF or face-verification provider backend is
- * integrated yet, so each service has a simulated adapter.
- * A real API / NVR / VMS / ONVIF / face-verification provider replaces the adapter
- * and becomes the source of truth; the UI only consumes these interfaces.
- * Never put camera credentials, private IPs or API keys in this file.
+ * Evaluates the configured campus visitor-access rules for a location.
+ * This policy check is independent of any camera hardware or video stream.
  */
 export interface AccessService {
   check(visitor: Visitor, locationId: string, rules: AccessRule[]): Promise<AccessStatus>;
 }
 
-export interface FaceVerificationService {
-  verify(input: { name: string; mobile: string }, known: Visitor[]): Promise<{ verified: boolean; existing?: Visitor }>;
-}
-
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-export const simulatedAccessService: AccessService = {
+export const accessService: AccessService = {
   async check(visitor, locationId, rules) {
     if (visitor.status === "Blocked") return "restricted";
     if (visitor.authorizedLocationId === locationId) return "authorized";
-    const rule = rules.find((r) => r.personType === visitor.type && r.locationId === locationId);
+    const rule = rules.find((candidate) => candidate.personType === visitor.type && candidate.locationId === locationId);
     return rule?.allowed ? "authorized" : "restricted";
   },
 };
 
-// Simulation only: no image is captured, stored or processed.
-export const simulatedFaceVerification: FaceVerificationService = {
-  async verify(input, known) {
-    await wait(1400);
-    const existing = known.find((v) => v.mobile === input.mobile && v.name.toLowerCase() === input.name.toLowerCase());
-    return { verified: true, existing };
-  },
-};
+/**
+ * Finds a possible existing visitor record using the details supplied at registration.
+ * A record lookup is not identity verification; face-template matching and a physical
+ * identity check remain separate steps in the visitor workflow.
+ */
+export function findExistingVisitorByDetails(
+  input: { name: string; mobile: string },
+  knownVisitors: Visitor[],
+): Visitor | undefined {
+  const name = input.name.trim().toLocaleLowerCase();
+  const mobile = input.mobile.replace(/\D/g, "");
+  if (!name || !mobile) return undefined;
 
-export const accessService: AccessService = simulatedAccessService;
-export const faceVerificationService: FaceVerificationService = simulatedFaceVerification;
+  return knownVisitors.find((visitor) =>
+    visitor.mobile.replace(/\D/g, "") === mobile &&
+    visitor.name.trim().toLocaleLowerCase() === name
+  );
+}
