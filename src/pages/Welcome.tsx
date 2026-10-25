@@ -151,9 +151,6 @@ export default function Welcome() {
             <Link to="/help-desk" className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2.5 text-sm font-medium hover:bg-accent">
               Help Desk
             </Link>
-            <Link to="/ai-assistant" className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2.5 text-sm font-medium hover:bg-accent">
-              Campus AI Assistant
-            </Link>
           </div>
         </motion.section>
 
