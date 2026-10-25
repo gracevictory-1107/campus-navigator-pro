@@ -231,8 +231,8 @@ function AdminUsersPanel() {
         setProfiles(rows ?? []);
       })
       .catch((error: unknown) => {
-        if (active) toast.error("Could not load Supabase user profiles", {
-          description: error instanceof Error ? error.message : "Check profile table access and row-level security.",
+        if (active) toast.error("Could not load campus accounts", {
+          description: error instanceof Error ? error.message : "Please check your account permissions and try again.",
         });
       })
       .finally(() => {
@@ -244,21 +244,21 @@ function AdminUsersPanel() {
   const changeRole = async (id: string, nextRole: ManagedRole) => {
     if (supabaseConfigured) {
       if (!backendAdmin) {
-        toast.error("A linked Supabase Admin account is required to change roles.");
+        toast.error("An authorised Admin account is required to change campus roles.");
         return;
       }
       try {
         const updated = await updateManagedProfileRole(id, nextRole);
         setProfiles((current) => current.map((profile) => profile.id === id ? updated : profile));
-        toast.success("User role updated in Supabase.");
+        toast.success("Campus role updated successfully.");
       } catch (error) {
         toast.error("The user role was not changed", {
-          description: error instanceof Error ? error.message : "The database rejected this role update.",
+          description: error instanceof Error ? error.message : "Your account does not have permission to make this change.",
         });
       }
       return;
     }
-    toast.error("Supabase authentication is required to manage real campus profiles.");
+    toast.error("Sign in with an authorised Admin account to manage campus profiles.");
   };
 
   const approveProfile = (id: string) => {
@@ -344,24 +344,24 @@ function AdminUsersPanel() {
       <div>
         <h2 className="text-sm font-semibold text-foreground">Users & Roles</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          "Profiles are managed in Supabase. Role changes require an authenticated Admin account and are enforced by database row-level security."
+          "Campus accounts and roles are managed centrally. Only an authorised Admin can assign or change roles."
         </p>
       </div>
       {!supabaseConfigured && (
         <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-          Account management is unavailable until Supabase authentication is configured.
+          Account management is temporarily unavailable. Please contact the site administrator.
         </p>
       )}
       {supabaseConfigured && !backendAdmin && !loading && (
         <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-          Sign in with a real Supabase Auth account linked to an Admin profile to load and manage users. New accounts start as Pending approval and cannot grant themselves access.
+          Sign in with an approved Admin account to view and manage campus users. New accounts remain pending until an Admin assigns the appropriate role.
         </p>
       )}
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <Table>
           <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead></TableRow></TableHeader>
           <TableBody>
-            {loading && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">Loading Supabase profiles…</TableCell></TableRow>}
+            {loading && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">Loading campus accounts…</TableCell></TableRow>}
             {!loading && profiles.map((profile) => (
               <TableRow key={profile.id}>
                 <TableCell className="font-medium">{profile.full_name}</TableCell>
@@ -385,7 +385,7 @@ function AdminUsersPanel() {
         </Table>
       </div>
       {supabaseConfigured && backendAdmin && (
-        <p className="text-xs text-muted-foreground">Profile records are linked to real Supabase Auth accounts. New email sign-ups remain Pending approval until an Admin assigns the appropriate campus role.</p>
+        <p className="text-xs text-muted-foreground">Accounts are linked to verified email addresses. New email registrations remain pending until an Admin assigns the appropriate campus role.</p>
       )}
     </section>
   );
@@ -453,7 +453,7 @@ export default function Security() {
       });
     } catch (error) {
       toast.error("Could not save " + cameraId, {
-        description: error instanceof Error ? error.message : "Check Supabase permissions and try again.",
+        description: error instanceof Error ? error.message : "Check your access permissions and try again.",
       });
     } finally {
       setCameraConfigSaving(null);
@@ -490,7 +490,7 @@ export default function Security() {
   const restrictedDestinations = Array.from(
     restrictedEvents.reduce((counts, event) => {
       const location = locationById(event.locationId);
-      const name = location?.name ?? event.locationName ?? "Unknown location";
+      const name = location?.name ?? event.locationName ?? "Location not recorded";
       const key = `${event.floorId}:${event.locationId}`;
       const current = counts.get(key);
       counts.set(key, { name, floor: location?.floorLabel ?? allFloorPlans[event.floorId]?.title ?? event.floorId, count: (current?.count ?? 0) + 1 });
@@ -670,7 +670,7 @@ export default function Security() {
               setPersonOpen(visitor.id);
             };
             const routeDestination = activityEvent?.source === "route"
-              ? activityLocation?.name ?? activityEvent.locationName ?? "Unknown destination"
+              ? activityLocation?.name ?? activityEvent.locationName ?? "Destination not recorded"
               : undefined;
             return (
               <button
@@ -696,7 +696,7 @@ export default function Security() {
                     <span className="font-medium text-foreground">
                       {locationEvent ? location?.name ?? locationEvent.locationName ?? "Unknown location" : "Not available"}
                     </span>
-                    {locationEvent && <span className="block text-[11px] text-muted-foreground">{location?.floorLabel ?? allFloorPlans[locationEvent.floorId]?.title ?? "Unknown floor"}</span>}
+                    {locationEvent && <span className="block text-[11px] text-muted-foreground">{location?.floorLabel ?? allFloorPlans[locationEvent.floorId]?.title ?? "Floor not recorded"}</span>}
                   </div>
                   <div>
                     <span className="text-muted-foreground">{activityEvent?.source === "route" ? (activityEvent.access === "restricted" ? "Attempted destination: " : "Route destination: ") : "Latest activity: "}</span>
@@ -1242,7 +1242,7 @@ export default function Security() {
             className={sec.backendReady
               ? "border-[hsl(var(--status-authorized)/0.35)] text-[hsl(var(--status-authorized))]"
               : "border-border text-muted-foreground"}
-            title={sec.backendReady ? "Security data is connected to Supabase." : "Waiting for an authorised Supabase session and database sync."}
+            title={sec.backendReady ? "Security data is synced." : "Waiting for an authorised session and data sync."}
           >
             <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${sec.backendReady ? "bg-[hsl(var(--status-authorized))]" : "bg-muted-foreground"}`} />
             {sec.backendReady ? "Database synced" : "Not synced"}
@@ -1407,7 +1407,7 @@ export default function Security() {
               <div>Visitor: {selectedVisitor.name}</div>
               <div>Category: {selectedVisitor.type}</div>
               <div>Camera-reported location: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.name ?? selectedVisitorLocation.locationName ?? "Location not mapped" : "No camera location recorded"}</div>
-              <div>Camera-reported floor: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.floorLabel ?? allFloorPlans[selectedVisitorLocation.floorId]?.title ?? "Unknown floor" : "Unknown until a camera event"}</div>
+              <div>Camera-reported floor: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.floorLabel ?? allFloorPlans[selectedVisitorLocation.floorId]?.title ?? "Unknown floor" : "Not recorded yet"}</div>
               <div>Access status: {selectedAccess ? <Badge className={selectedAccess === "restricted" ? "" : "bg-emerald-600 text-white hover:bg-emerald-600"} variant={selectedAccess === "restricted" ? "destructive" : "default"}>{selectedAccess === "restricted" ? "Restricted" : "Allowed"}</Badge> : <Badge variant="secondary">No activity</Badge>}</div>
               <div>Latest activity: {personLatestEvent ? `${personLatestEvent.source === "route" ? "Route planner" : personLatestEvent.cameraId} · ${personLatestEvent.access === "restricted" ? "Restricted" : "Allowed"}` : "No security event recorded"}</div>
               <div>Destination / attempt: {personLatestEvent ? locationById(personLatestEvent.locationId)?.name ?? personLatestEvent.locationName ?? "Location" : "—"}</div>
