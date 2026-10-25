@@ -344,7 +344,7 @@ function AdminUsersPanel() {
       <div>
         <h2 className="text-sm font-semibold text-foreground">Users & Roles</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          "Campus accounts and roles are managed centrally. Only an authorised Admin can assign or change roles."
+          Campus accounts and roles are managed centrally. Only an authorised Admin can assign or change roles.
         </p>
       </div>
       {!supabaseConfigured && (
@@ -740,7 +740,7 @@ export default function Security() {
             <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
               <p><span className="font-medium text-foreground">Attempted destination:</span> {loc?.name ?? a.event.locationName ?? "Location"}</p>
               <p><span className="font-medium text-foreground">Floor:</span> {loc?.floorLabel ?? allFloorPlans[a.event.floorId]?.title ?? a.event.floorId}</p>
-              <p><span className="font-medium text-foreground">Source:</span> {a.event.source === "route" ? "Route planner" : `${eventCamera?.name ?? a.event.cameraId} · ${locationById(a.event.locationId)?.name ?? a.event.locationName ?? "Camera location"}`}</p>
+              <p><span className="font-medium text-foreground">Source:</span> {a.event.source === "route" ? "Route planner" : `${eventCamera?.name ?? a.event.cameraId} · ${locationById(a.event.locationId)?.name ?? a.event.locationName ?? "Recorded location"}`}</p>
               {a.event.source === "route" && visitorLocation && <p><span className="font-medium text-foreground">Latest recorded location:</span> {locationById(visitorLocation.locationId)?.name ?? visitorLocation.locationName} · {cameras.find((cameraItem) => cameraItem.id === visitorLocation.cameraId)?.name ?? visitorLocation.cameraId}</p>}
               <p><span className="font-medium text-foreground">Access:</span> <span className={bad}>Restricted</span></p>
               <p><span className="font-medium text-foreground">Date &amp; time:</span> {dateTime}</p>
