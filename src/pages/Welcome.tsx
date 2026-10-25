@@ -15,7 +15,7 @@ type AuthMode = "signIn" | "signUp";
 const highlights = [
   { title: "Find campus rooms", text: "Explore mapped buildings and floors." },
   { title: "Plan a route", text: "Choose a starting point and destination." },
-  { title: "Get campus help", text: "Open Help Desk or ask the Campus Guide Assistant." },
+  { title: "Get campus support", text: "Visit the Help Desk for account and navigation guidance." },
 ];
 
 export default function Welcome() {
