@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { cameras, defaultRules, locationById, securityLocations } from "./data";
+import { defaultRules, locationById, securityLocations } from "./data";
 import { can } from "./permissions";
 import { evaluateIndoorRouteAccess } from "./routeAccess";
 import { playAlertChime } from "./sound";
