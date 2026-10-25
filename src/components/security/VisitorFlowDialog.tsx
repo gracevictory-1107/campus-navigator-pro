@@ -7,13 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSecurity } from "@/security/SecurityContext";
 import { securityLocations } from "@/security/data";
-import { faceVerificationService } from "@/security/services";
+import { findExistingVisitorByDetails } from "@/security/services";
 import { compareBiometricEmbeddings, describeBiometricScore, type BiometricCaptureResult } from "@/security/biometrics";
 import { getBiometricEmbedding, loadAllBiometricEmbeddings, recordBiometricVerificationEvent, saveBiometricEmbedding, saveVisitorRecord } from "@/lib/supabase";
 import { toast } from "sonner";
 import { personTypes, type PersonType, type Visitor } from "@/security/types";
 import VisitorProfileCard from "./VisitorProfileCard";
-import DemoFaceVerification from "./DemoFaceVerification";
+import FaceVerificationPanel from "./FaceVerificationPanel";
 
 type Step = "form" | "face" | "done";
 const empty = { name: "", email: "", mobile: "", type: "Parent" as PersonType, visiting: "", purpose: "", authorizedLocationId: "reception", expectedExit: "" };
@@ -46,7 +46,7 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
     setManualIdentityConfirmed(false);
     setBiometricCapture(capture);
 
-    const formIdentity = await faceVerificationService.verify({ name: form.name, mobile: form.mobile }, visitors);
+    const formIdentity = { existing: findExistingVisitorByDetails({ name: form.name, mobile: form.mobile }, visitors) };
     const enrolledProfiles = await loadAllBiometricEmbeddings();
     let matchedVisitor: Visitor | null = null;
     let bestSimilarity = -1;
@@ -261,7 +261,7 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
 
         {step === "face" && (
           <div className="grid gap-4">
-            <DemoFaceVerification
+            <FaceVerificationPanel
               onContinue={completeVerification}
               onCancel={() => { setVerificationComplete(false); setStep("form"); }}
             />
