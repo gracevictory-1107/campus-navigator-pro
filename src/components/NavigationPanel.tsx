@@ -316,11 +316,10 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
                   <ShieldCheck className="h-4 w-4" /> Access Allowed
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Approx. {route.distanceMeters.toFixed(1)} m mapped distance · {route.walkingMinutes} min walking
+                  Estimated walking time · {route.walkingMinutes} min
                 </p>
                 <p className="mt-1 text-[10px] text-muted-foreground">
-                  Estimate assumes 0.05 m per map unit; floor plans are not calibrated to physical scale.
-                  {route.legs.length > 1 && " Vertical/outdoor transition distance is not included."}
+                  Actual time may vary by pace and floor or building transitions.
                 </p>
               </div>
             )}
