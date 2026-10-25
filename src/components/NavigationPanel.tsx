@@ -92,7 +92,7 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
       const sourceLeg = route?.legs[0];
       const destinationLeg = route?.legs[route.legs.length - 1];
       steps.push({ text: `Exit ${fromBuilding} at ${sourceLeg?.endLabel || "a mapped entrance/exit"}`, icon: "🚪" });
-      steps.push({ text: `Continue outdoors to ${toBuilding}; no between-building route geometry is available`, icon: "🚶" });
+      steps.push({ text: `Follow campus signage outdoors to ${toBuilding}`, icon: "🚶" });
       steps.push({ text: `Enter ${toBuilding} at ${destinationLeg?.startLabel || "a mapped entrance/exit"}`, icon: "🚪" });
       const toFloorNum = getFloorOrder(toRoom.floorId) % 10;
       if (toFloorNum > 0) {
@@ -326,9 +326,9 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
 
             {routeDecision?.allowed && route.legs.some((leg) => leg.pathQuality === "approximate") && (
               <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3" role="note">
-                <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">Floor-map connection needs verification</p>
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">Confirm this route segment</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  The map does not show a continuous corridor/door connection for part of this route, so that segment is a best-effort estimate. Confirm it with reception before following it.
+                  A corridor or doorway connection is not mapped for part of this route. Ask reception to confirm this segment before proceeding.
                 </p>
               </div>
             )}
@@ -380,13 +380,13 @@ export default function NavigationPanel({ onClose, onNavigate, visitors, onCheck
             <Navigation2 className="h-10 w-10 opacity-20" />
             {fromRoom && toRoom ? (
               <>
-                <p className="text-sm font-semibold text-foreground">No connected route found</p>
-                <p className="max-w-xs text-xs leading-5">The current floor-plan graph does not connect these two rooms. Try another mapped room or confirm the path with reception.</p>
+                <p className="text-sm font-semibold text-foreground">No mapped route available</p>
+                <p className="max-w-xs text-xs leading-5">A continuous mapped path is not available between these rooms. Choose another room or ask reception for directions.</p>
               </>
             ) : (
               <>
                 <p className="text-sm font-semibold text-foreground">Plan your route</p>
-                <p className="max-w-xs text-xs leading-5">Choose a starting room and a destination from the search suggestions. The Start Navigation button will stay visible below.</p>
+                <p className="max-w-xs text-xs leading-5">Choose a starting room and destination, then select Check Access & Preview Route.</p>
               </>
             )}
           </div>
