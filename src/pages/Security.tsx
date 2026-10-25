@@ -633,7 +633,7 @@ export default function Security() {
       </div>
       <div className="rounded-xl border border-border bg-card p-3 grid gap-2 content-start max-h-[470px] overflow-y-auto">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Visitor Activity · Recent Events</p>
-        {floorEvents.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">No current visitor locations on this floor.</p>}
+        {floorEvents.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">No visitor activity recorded on this floor.</p>}
         {floorEvents.map((e) => (
           <button key={e.personId} onClick={() => setPersonOpen(e.personId)} className="text-left rounded-lg border border-border p-2.5 hover:bg-accent transition-colors">
             <div className="flex justify-between"><span className="text-sm font-medium text-foreground">{e.personName}</span><AccessPill access={e.access} /></div>
@@ -692,18 +692,18 @@ export default function Security() {
                 </div>
                 <div className="grid gap-2 text-xs">
                   <div>
-                    <span className="text-muted-foreground">Camera-reported location: </span>
+                    <span className="text-muted-foreground">Last recorded location: </span>
                     <span className="font-medium text-foreground">
-                      {locationEvent ? location?.name ?? locationEvent.locationName ?? "Unknown location" : "Not available"}
+                      {locationEvent ? location?.name ?? locationEvent.locationName ?? "Location not recorded" : "Not available"}
                     </span>
                     {locationEvent && <span className="block text-[11px] text-muted-foreground">{location?.floorLabel ?? allFloorPlans[locationEvent.floorId]?.title ?? "Floor not recorded"}</span>}
                   </div>
                   <div>
                     <span className="text-muted-foreground">{activityEvent?.source === "route" ? (activityEvent.access === "restricted" ? "Attempted destination: " : "Route destination: ") : "Latest activity: "}</span>
                     <span className="font-medium text-foreground">
-                      {routeDestination ?? (activityEvent ? activityLocation?.name ?? activityEvent.locationName ?? "Unknown location" : "No recent activity")}
+                      {routeDestination ?? (activityEvent ? activityLocation?.name ?? activityEvent.locationName ?? "Location not recorded" : "No recent activity")}
                     </span>
-                    {activityEvent && <span className="block text-[11px] text-muted-foreground">{activityEvent.source === "route" ? `Route planner · ${allFloorPlans[activityEvent.floorId]?.title ?? "Unknown floor"}` : `${activityCamera?.name ?? activityEvent.cameraId} · ${allFloorPlans[activityEvent.floorId]?.title ?? "Unknown floor"}`}</span>}
+                    {activityEvent && <span className="block text-[11px] text-muted-foreground">{activityEvent.source === "route" ? `Route planner · ${allFloorPlans[activityEvent.floorId]?.title ?? "Floor not recorded"}` : `${activityCamera?.name ?? activityEvent.cameraId} · ${allFloorPlans[activityEvent.floorId]?.title ?? "Floor not recorded"}`}</span>}
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2 text-[11px] text-muted-foreground">
                     <span>Camera: {activityCamera?.name ?? currentCamera?.name ?? "Not associated"}</span>
@@ -741,7 +741,7 @@ export default function Security() {
               <p><span className="font-medium text-foreground">Attempted destination:</span> {loc?.name ?? a.event.locationName ?? "Location"}</p>
               <p><span className="font-medium text-foreground">Floor:</span> {loc?.floorLabel ?? allFloorPlans[a.event.floorId]?.title ?? a.event.floorId}</p>
               <p><span className="font-medium text-foreground">Source:</span> {a.event.source === "route" ? "Route planner" : `${eventCamera?.name ?? a.event.cameraId} · ${locationById(a.event.locationId)?.name ?? a.event.locationName ?? "Camera location"}`}</p>
-              {a.event.source === "route" && visitorLocation && <p><span className="font-medium text-foreground">Latest camera-reported location:</span> {locationById(visitorLocation.locationId)?.name ?? visitorLocation.locationName} · {cameras.find((cameraItem) => cameraItem.id === visitorLocation.cameraId)?.name ?? visitorLocation.cameraId}</p>}
+              {a.event.source === "route" && visitorLocation && <p><span className="font-medium text-foreground">Latest recorded location:</span> {locationById(visitorLocation.locationId)?.name ?? visitorLocation.locationName} · {cameras.find((cameraItem) => cameraItem.id === visitorLocation.cameraId)?.name ?? visitorLocation.cameraId}</p>}
               <p><span className="font-medium text-foreground">Access:</span> <span className={bad}>Restricted</span></p>
               <p><span className="font-medium text-foreground">Date &amp; time:</span> {dateTime}</p>
             </div>
@@ -942,7 +942,7 @@ export default function Security() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-foreground">{c.name}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{loc?.name ?? "Unknown location"}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{loc?.name ?? "Location not recorded"}</p>
                 </div>
                 {(() => {
                   const configured = Boolean(cameraConfigs[c.id]?.ipAddress?.trim() || cameraConfigs[c.id]?.streamUrl?.trim());
@@ -977,7 +977,7 @@ export default function Security() {
     <section className="grid gap-3">
       <div>
         <h2 className="text-base font-semibold text-foreground">Visitor Management</h2>
-        <p className="text-xs text-muted-foreground">Registered visitor records, camera-reported locations, access activity, and visit lifecycle.</p>
+        <p className="text-xs text-muted-foreground">Visitor records, latest recorded activity, access decisions, and visit status.</p>
       </div>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <div className="relative sm:col-span-2 xl:col-span-1">
@@ -1022,7 +1022,7 @@ export default function Security() {
               <TableCell>{v.mobile || "Not available"}</TableCell>
               <TableCell className="whitespace-nowrap">{v.checkIn ? new Date(v.checkIn).toLocaleString() : "Not available"}</TableCell>
               <TableCell><Badge variant={v.status === "Blocked" || (lastEvent?.access === "restricted" && v.status === "Active") ? "destructive" : v.status === "Active" ? "default" : "secondary"}>{v.status}</Badge></TableCell>
-              <TableCell>{locationEvent ? <span className="text-xs">{locationById(locationEvent.locationId)?.name ?? locationEvent.locationName ?? "Unknown location"}<span className="block text-muted-foreground">{locationById(locationEvent.locationId)?.floorLabel ?? allFloorPlans[locationEvent.floorId]?.title ?? "Unknown floor"}</span></span> : <span className="text-xs text-muted-foreground">Not available</span>}</TableCell>
+              <TableCell>{locationEvent ? <span className="text-xs">{locationById(locationEvent.locationId)?.name ?? locationEvent.locationName ?? "Location not recorded"}<span className="block text-muted-foreground">{locationById(locationEvent.locationId)?.floorLabel ?? allFloorPlans[locationEvent.floorId]?.title ?? "Floor not recorded"}</span></span> : <span className="text-xs text-muted-foreground">Not available</span>}</TableCell>
               <TableCell>
                 {lastEvent ? (
                 <div className="grid gap-1">
@@ -1179,12 +1179,12 @@ export default function Security() {
             {sec.events.length === 0 && <p className="p-5 text-center text-sm text-muted-foreground">No recent activity.</p>}
             {sec.events.slice(0, 12).map((event) => {
               const relatedAlert = sec.alerts.find((item) => item.event.id === event.id);
-              const eventLocation = locationById(event.locationId)?.name ?? event.locationName ?? "Unknown location";
+              const eventLocation = locationById(event.locationId)?.name ?? event.locationName ?? "Location not recorded";
               return (
                 <button key={event.id} type="button" onClick={() => relatedAlert ? setAlertOpen(relatedAlert.id) : setPersonOpen(event.personId)} className="flex w-full flex-wrap items-center justify-between gap-2 p-3 text-left transition-colors hover:bg-accent/40">
                   <span className="grid gap-1">
                     <span className="text-sm font-medium text-foreground">{event.personName} <span className="font-normal text-muted-foreground">· {event.personType}</span></span>
-                    <span className="text-xs text-muted-foreground">{event.source === "route" ? (event.access === "restricted" ? "Attempted destination" : "Route destination") : "Camera-reported location"}: {eventLocation} · {event.source === "route" ? "Route planner" : event.cameraId}</span>
+                    <span className="text-xs text-muted-foreground">{event.source === "route" ? (event.access === "restricted" ? "Attempted destination" : "Route destination") : "Recorded location"}: {eventLocation} · {event.source === "route" ? "Route planner" : event.cameraId}</span>
                   </span>
                   <span className="flex flex-wrap items-center gap-2">
                     <AccessPill access={event.access} />
@@ -1365,7 +1365,7 @@ export default function Security() {
       <Dialog open={!!camera} onOpenChange={(o) => !o && setCameraOpen(null)}>
         <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{camera?.name} · {camera && (locationById(camera.locationId)?.name ?? "Unknown location")}</DialogTitle>
+            <DialogTitle>{camera?.name} · {camera && (locationById(camera.locationId)?.name ?? "Location not recorded")}</DialogTitle>
             <DialogDescription>
               Camera ID: {camera?.id} · Live stream not connected.
             </DialogDescription>
@@ -1406,17 +1406,17 @@ export default function Security() {
             <div className="grid gap-1.5 text-sm">
               <div>Visitor: {selectedVisitor.name}</div>
               <div>Category: {selectedVisitor.type}</div>
-              <div>Camera-reported location: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.name ?? selectedVisitorLocation.locationName ?? "Location not mapped" : "No camera location recorded"}</div>
-              <div>Camera-reported floor: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.floorLabel ?? allFloorPlans[selectedVisitorLocation.floorId]?.title ?? "Unknown floor" : "Not recorded yet"}</div>
+              <div>Last recorded location: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.name ?? selectedVisitorLocation.locationName ?? "Location not mapped" : "No location recorded"}</div>
+              <div>Last recorded floor: {selectedVisitorLocation ? locationById(selectedVisitorLocation.locationId)?.floorLabel ?? allFloorPlans[selectedVisitorLocation.floorId]?.title ?? "Floor not recorded" : "Not recorded yet"}</div>
               <div>Access status: {selectedAccess ? <Badge className={selectedAccess === "restricted" ? "" : "bg-emerald-600 text-white hover:bg-emerald-600"} variant={selectedAccess === "restricted" ? "destructive" : "default"}>{selectedAccess === "restricted" ? "Restricted" : "Allowed"}</Badge> : <Badge variant="secondary">No activity</Badge>}</div>
               <div>Latest activity: {personLatestEvent ? `${personLatestEvent.source === "route" ? "Route planner" : personLatestEvent.cameraId} · ${personLatestEvent.access === "restricted" ? "Restricted" : "Allowed"}` : "No security event recorded"}</div>
               <div>Destination / attempt: {personLatestEvent ? locationById(personLatestEvent.locationId)?.name ?? personLatestEvent.locationName ?? "Location" : "—"}</div>
-              <div>{personLatestEvent?.source === "route" ? "Destination floor" : "Activity floor"}: {personLatestEvent ? locationById(personLatestEvent.locationId)?.floorLabel ?? allFloorPlans[personLatestEvent.floorId]?.title ?? "Unknown floor" : "—"}</div>
+              <div>{personLatestEvent?.source === "route" ? "Destination floor" : "Activity floor"}: {personLatestEvent ? locationById(personLatestEvent.locationId)?.floorLabel ?? allFloorPlans[personLatestEvent.floorId]?.title ?? "Floor not recorded" : "—"}</div>
               <div>Latest event time: {personLatestEvent ? formatTime(personLatestEvent.at) : "—"}</div>
               {personCamera && <div>Associated camera: {personCamera.name} ({personCamera.id})</div>}
               {personLatestEvent && (
                 <div className="border-t border-border pt-2 text-xs text-muted-foreground">
-                  Related security event: {personLatestEvent.id} · {personLatestEvent.source === "route" ? "Route attempt" : "Camera detection"}
+                  Related security event: {personLatestEvent.id} · {personLatestEvent.source === "route" ? "Route attempt" : "Recorded activity"}
                 </div>
               )}
             </div>
@@ -1440,7 +1440,7 @@ export default function Security() {
                   <p><span className="text-muted-foreground">Visit status:</span> <Badge variant={profile.status === "Blocked" ? "destructive" : profile.status === "Active" ? "default" : "secondary"}>{profile.status}</Badge></p>
                   <p><span className="text-muted-foreground">Registration / visit start:</span> {profile.checkIn ? new Date(profile.checkIn).toLocaleString() : "Not available"}</p>
                   <p><span className="text-muted-foreground">Checkout time:</span> {profile.checkedOutAt ? new Date(profile.checkedOutAt).toLocaleString() : profile.status === "Checked Out" ? "Not available" : "Not checked out"}</p>
-                  <p className="sm:col-span-2"><span className="text-muted-foreground">Current camera-reported location:</span> {physicalEvent ? `${locationById(physicalEvent.locationId)?.name ?? physicalEvent.locationName ?? "Unknown location"} · ${locationById(physicalEvent.locationId)?.floorLabel ?? allFloorPlans[physicalEvent.floorId]?.title ?? "Unknown floor"} · ${cameras.find((cameraItem) => cameraItem.id === physicalEvent.cameraId)?.name ?? physicalEvent.cameraId}` : "Not available"}</p>
+                  <p className="sm:col-span-2"><span className="text-muted-foreground">Latest recorded location:</span> {physicalEvent ? `${locationById(physicalEvent.locationId)?.name ?? physicalEvent.locationName ?? "Location not recorded"} · ${locationById(physicalEvent.locationId)?.floorLabel ?? allFloorPlans[physicalEvent.floorId]?.title ?? "Floor not recorded"} · ${cameras.find((cameraItem) => cameraItem.id === physicalEvent.cameraId)?.name ?? physicalEvent.cameraId}` : "Not available"}</p>
                   <p><span className="text-muted-foreground">Visiting:</span> {profile.visiting || "Not available"}</p>
                   <p><span className="text-muted-foreground">Purpose:</span> {profile.purpose || "Not available"}</p>
                 </section>
@@ -1450,12 +1450,12 @@ export default function Security() {
                   {activity[0] ? (
                     <div className="rounded-lg border border-border bg-card p-3 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span>{activity[0].source === "route" ? (activity[0].access === "restricted" ? "Restricted route attempt" : "Allowed route") : "Camera-reported activity"}</span>
+                        <span>{activity[0].source === "route" ? (activity[0].access === "restricted" ? "Restricted route attempt" : "Allowed route") : "Recorded activity"}</span>
                         <AccessPill access={activity[0].access} />
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {activity[0].source === "route" ? "Destination / attempt: " : "Camera location: "}
-                        {locationById(activity[0].locationId)?.name ?? activity[0].locationName ?? "Unknown location"}
+                        {locationById(activity[0].locationId)?.name ?? activity[0].locationName ?? "Location not recorded"}
                         {" · "}{activity[0].source === "route" ? "Route planner" : `${cameras.find((cameraItem) => cameraItem.id === activity[0].cameraId)?.name ?? activity[0].cameraId} · ${allFloorPlans[activity[0].floorId]?.title ?? activity[0].floorId}`}
                         {" · "}{new Date(activity[0].at).toLocaleString()}
                       </p>
@@ -1469,7 +1469,7 @@ export default function Security() {
                     <div className="rounded-lg border border-border divide-y divide-border">
                       {activity.filter((event) => event.source === "route").map((event) => (
                         <div key={event.id} className="flex flex-wrap items-center justify-between gap-2 p-2.5 text-xs">
-                          <span>{event.access === "restricted" ? "Attempted destination: " : "Route destination: "}{locationById(event.locationId)?.name ?? event.locationName ?? "Unknown location"} · {allFloorPlans[event.floorId]?.title ?? event.floorId}</span>
+                          <span>{event.access === "restricted" ? "Attempted destination: " : "Route destination: "}{locationById(event.locationId)?.name ?? event.locationName ?? "Location not recorded"} · {allFloorPlans[event.floorId]?.title ?? event.floorId}</span>
                           <span className="flex items-center gap-2"><AccessPill access={event.access} />{new Date(event.at).toLocaleString()}</span>
                         </div>
                       ))}
@@ -1481,7 +1481,7 @@ export default function Security() {
                   <h3 className="text-sm font-semibold text-foreground">Related security alerts</h3>
                   {visitorAlerts.length ? visitorAlerts.map((item) => (
                     <button key={item.id} type="button" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card p-2.5 text-left text-xs hover:bg-accent/40" onClick={() => setAlertOpen(item.id)}>
-                      <span>{item.event.source === "route" ? "Attempted destination: " : "Camera location: "}{locationById(item.event.locationId)?.name ?? item.event.locationName ?? "Unknown location"} · {item.severity} severity</span>
+                      <span>{item.event.source === "route" ? "Attempted destination: " : "Camera location: "}{locationById(item.event.locationId)?.name ?? item.event.locationName ?? "Location not recorded"} · {item.severity} severity</span>
                       <span className="flex items-center gap-2"><Badge variant={item.status === "Active" ? "destructive" : "secondary"}>{item.status}</Badge>{new Date(item.event.at).toLocaleString()}</span>
                     </button>
                   )) : <p className="text-sm text-muted-foreground">No related alerts.</p>}
@@ -1540,7 +1540,7 @@ export default function Security() {
                   <p><span className="text-muted-foreground">Floor:</span> {eventLocation?.floorLabel ?? allFloorPlans[alert.event.floorId]?.title ?? alert.event.floorId}</p>
                   <p><span className="text-muted-foreground">Access status:</span> <span className={bad}>Restricted</span></p>
                   <p><span className="text-muted-foreground">Source:</span> {alert.event.source === "route" ? "Route planner" : `${camera?.name ?? alert.event.cameraId} · ${eventLocation?.name ?? alert.event.locationName}`}</p>
-                  {alert.event.source === "route" && cameraLocation && <p><span className="text-muted-foreground">Latest camera-reported location:</span> {locationById(cameraLocation.locationId)?.name ?? cameraLocation.locationName} · {cameras.find((item) => item.id === cameraLocation.cameraId)?.name ?? cameraLocation.cameraId}</p>}
+                  {alert.event.source === "route" && cameraLocation && <p><span className="text-muted-foreground">Latest recorded location:</span> {locationById(cameraLocation.locationId)?.name ?? cameraLocation.locationName} · {cameras.find((item) => item.id === cameraLocation.cameraId)?.name ?? cameraLocation.cameraId}</p>}
                   <p><span className="text-muted-foreground">Date &amp; time:</span> {new Date(alert.event.at).toLocaleString()}</p>
                   <p><span className="text-muted-foreground">Severity:</span> {alert.severity}</p>
                 </section>
