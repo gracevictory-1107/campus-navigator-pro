@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { defaultRules, locationById, securityLocations } from "./data";
+import { cameras, defaultRules, locationById, securityLocations } from "./data";
 import { can } from "./permissions";
+import { accessService } from "./services";
 import { evaluateIndoorRouteAccess } from "./routeAccess";
 import { playAlertChime } from "./sound";
 import { allFloorPlans } from "@/data/floorPlans";
@@ -28,6 +29,8 @@ interface Ctx extends State {
   setHighlightedCameraId: (id: string | null) => void;
   registerVisitor: (v: Omit<Visitor, "id" | "checkIn" | "status" | "verified" | "returning">, existing?: Visitor) => Visitor;
   setVisitorStatus: (id: string, status: VisitorStatus) => void;
+  /** Internal test seam for checking camera-event authorization logic. Not exposed in the UI. */
+  simulateDetection: (cameraId: string, visitorId: string) => Promise<LocationEvent | null>;
   authorizeIndoorRoute: (visitorId: string | null, route: IndoorRoute, roleOverride?: Role) => Promise<RouteAccessDecision>;
   setAlertStatus: (id: string, status: AlertStatus) => void;
   setRule: (id: string, allowed: boolean) => void;
@@ -195,6 +198,58 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   }, [role]);
 
 
+  // Internal test seam for event-policy coverage. The production UI does not expose this.
+  const simulateDetection = useCallback(async (cameraId: string, visitorId: string) => {
+    if (!can.manageCCTV(role)) {
+      toast.error("You do not have permission to simulate camera detections.");
+      throw new Error("You do not have permission to simulate camera detections.");
+    }
+    const s = stateRef.current;
+    const cam = cameras.find((candidate) => candidate.id === cameraId);
+    const visitor = s.visitors.find((candidate) => candidate.id === visitorId);
+    const loc = cam && locationById(cam.locationId);
+    if (!cam || !visitor || !loc) return null;
+
+    const access = await accessService.check(visitor, loc.id, s.rules);
+    const event: LocationEvent = {
+      id: crypto.randomUUID(),
+      personId: visitor.id,
+      personName: visitor.name,
+      personType: visitor.type,
+      cameraId,
+      locationId: loc.id,
+      building: loc.building,
+      floorId: loc.floorId,
+      roomId: loc.roomId,
+      access,
+      at: Date.now(),
+    };
+    let newAlert: SecurityAlert | null = null;
+    if (access === "restricted") {
+      newAlert = {
+        id: `ALT-${crypto.randomUUID().slice(0, 8)}`,
+        event,
+        severity: "High",
+        status: "Active",
+        history: [{ status: "Active", at: event.at, by: "security" }],
+      };
+      setHighlightedCameraId(cameraId);
+    }
+    setState((previous) => ({
+      ...previous,
+      events: [event, ...previous.events].slice(0, 200),
+      alerts: newAlert ? [newAlert, ...previous.alerts] : previous.alerts,
+    }));
+    if (newAlert) {
+      if (!s.muted) playAlertChime();
+      toast.error(`Restricted access: ${visitor.name}`, {
+        description: `${loc.name} · ${cameraId}`,
+      });
+    }
+    return event;
+  }, [role]);
+
+
   const authorizeIndoorRoute = useCallback(async (visitorId: string | null, route: IndoorRoute, roleOverride?: Role) => {
     const s = stateRef.current;
     const activeRole = roleOverride ?? role;
@@ -320,7 +375,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
 
   const value: Ctx = {
     ...state, role, backendReady, signedIn, signOut, highlightedCameraId, setHighlightedCameraId, registerVisitor, setVisitorStatus,
-    authorizeIndoorRoute, setAlertStatus, setRule, setMuted, currentLocations,
+    simulateDetection, authorizeIndoorRoute, setAlertStatus, setRule, setMuted, currentLocations,
   };
   return <SecurityCtx.Provider value={value}>{children}</SecurityCtx.Provider>;
 }
