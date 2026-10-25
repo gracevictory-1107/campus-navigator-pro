@@ -56,7 +56,7 @@ function CameraStreamStatus({ camId }: { camId: string }) {
       <div className="px-3">
         <p className="text-sm font-medium text-foreground">Live stream not connected</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          A verified camera stream has not been configured for this entry.
+          No live camera stream is configured for this entry.
         </p>
       </div>
     </div>
@@ -800,7 +800,7 @@ export default function Security() {
           if (!query) return true;
           const mappedCamera = cameras.find((candidate) => candidate.id === entry.id);
           const locationName = mappedCamera ? locationById(mappedCamera.locationId)?.name ?? "" : "";
-          return `${entry.id} ${locationName} ${mappedCamera ? "demo linked" : "location pending"}`.toLowerCase().includes(query);
+          return `${entry.id} ${locationName} ${mappedCamera ? "map linked" : "location pending"}`.toLowerCase().includes(query);
         }).map((entry) => {
           const mappedCamera = cameras.find((candidate) => candidate.id === entry.id);
           const locationName = mappedCamera ? locationById(mappedCamera.locationId)?.name ?? "Location to verify" : "Location not assigned";
@@ -946,10 +946,10 @@ export default function Security() {
                 </div>
                 {(() => {
                   const configured = Boolean(cameraConfigs[c.id]?.ipAddress?.trim() || cameraConfigs[c.id]?.streamUrl?.trim());
-                  const label = c.source === "simulated" ? (configured ? "Details entered" : "Details needed") : (configured ? "Details entered" : "Details needed");
+                  const label = configured ? "Details entered" : "Details needed";
                   return (
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      <span className={`h-2 w-2 rounded-full ${configured && c.source !== "simulated" ? "bg-[hsl(var(--status-authorized))]" : "bg-amber-500"}`} />
+                      <span className="h-2 w-2 rounded-full bg-amber-500" />
                       {label}
                     </span>
                   );
@@ -965,7 +965,7 @@ export default function Security() {
                   </div>
                   <p className="mt-1 text-[11px] text-muted-foreground">{locationById(last.locationId)?.name ?? last.locationName ?? "Location"} · {formatTime(last.at)}</p>
                 </div>
-              ) : <p className="text-xs text-muted-foreground">No detection events recorded</p>}
+              ) : <p className="text-xs text-muted-foreground">No activity recorded</p>}
             </div>
           </button>
         );
