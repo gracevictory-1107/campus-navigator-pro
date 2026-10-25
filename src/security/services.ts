@@ -1,4 +1,21 @@
-import type { Visitor } from "./types";
+import type { AccessRule, AccessStatus, Visitor } from "./types";
+
+/**
+ * Evaluates the configured campus visitor-access rules for a location.
+ * This policy check is independent of any camera hardware or video stream.
+ */
+export interface AccessService {
+  check(visitor: Visitor, locationId: string, rules: AccessRule[]): Promise<AccessStatus>;
+}
+
+export const accessService: AccessService = {
+  async check(visitor, locationId, rules) {
+    if (visitor.status === "Blocked") return "restricted";
+    if (visitor.authorizedLocationId === locationId) return "authorized";
+    const rule = rules.find((candidate) => candidate.personType === visitor.type && candidate.locationId === locationId);
+    return rule?.allowed ? "authorized" : "restricted";
+  },
+};
 
 /**
  * Finds a possible existing visitor record using the details supplied at registration.
