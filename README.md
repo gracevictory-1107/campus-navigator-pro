@@ -1,60 +1,57 @@
 # AWDC Campus Navigator
 
-AWDC Campus Navigator is a React + TypeScript indoor campus navigation and security dashboard for Aditya Women's Degree College, Kakinada.
+AWDC Campus Navigator is a campus mapping and indoor wayfinding web application for Aditya Women's Degree College, Kakinada. It brings floor maps, room search, route planning, account approval, and role-based campus security tools into one interface.
 
-## Core features
+## Features
 
-- Interactive multi-floor campus maps and room search
-- Indoor route planning with role-based access checks
-- Visitor registration with AI face biometric verification
-- Security dashboard with visitors, events, alerts and access control
-- CCTV configuration for college-provided camera IP and NVR/stream details
-- Supabase persistence with row-level security
-- Responsive interface with light and dark themes
+- Campus overview and floor-specific maps with room search
+- Indoor route planning across the mapped rooms and corridors
+- Email/password registration, email verification, and eligible Google sign-in
+- Admin-managed pending account approvals and role assignment
+- Role-based security dashboard, visitor records, access rules, alerts, and event history
+- Browser-based visitor face-template capture and matching
+- Responsive layouts, saved places, and light/dark themes
 
-## Development
+## Technology
+
+React, TypeScript, Vite, Tailwind CSS, shadcn/ui, Supabase, Vitest, and Capacitor.
+
+## Local development
+
+Requirements: a supported Node.js version and npm.
 
 ```sh
 npm install
 npm run dev
 ```
 
-The local Vite development server runs on port 8080.
+Vite runs on port 8080 by default.
 
 ## Validation
 
+Run these checks before submitting code changes:
+
 ```sh
-npm run build
-npm run test
 npm run lint
+npm run test
+npm run typecheck
+npm run build
 ```
 
-## Production notes
+## Supabase configuration
 
-The deployed application is independent of the local Vite server, so it remains available after closing VS Code.
+Set the following environment variables for local development and the production deployment:
 
-CCTV feeds remain in simulation mode until the college provides reachable camera/NVR connection details. An IP address alone does not create a browser stream.
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
 
-Supabase must be configured with the required Vite environment variables. For a new database, review and apply `supabase/schema.sql`; for an existing production database, apply only reviewed forward migrations from `supabase/migrations/`. Never replay historical migrations against production. The schema uses least-privilege API grants and does not seed placeholder privileged accounts. Follow `supabase/ADMIN_BOOTSTRAP.md` to provision the first Admin after verifying the person's institutional identity.
+Only use a publishable/anon key in browser code. Never place a Supabase service-role key, Google OAuth client secret, camera password, or other privileged credential in a `VITE_*` variable or the repository.
 
-## Google sign-in setup
+For Google OAuth, account approval, and CCTV setup, follow [INTEGRATION_SETUP.md](./INTEGRATION_SETUP.md). Initial Admin and Security roles must be assigned only after institutional identity has been verified; see [supabase/ADMIN_BOOTSTRAP.md](./supabase/ADMIN_BOOTSTRAP.md).
 
-The public welcome page already includes the **Continue with Google** OAuth flow. It will work after the Google provider is configured:
+## Operational notes
 
-1. In Google Cloud Console, create an OAuth Client ID with application type **Web application**.
-2. Add this exact URI under the Google OAuth client's **Authorized redirect URIs**: `https://spcmsiyoeaiejyvnjkqe.supabase.co/auth/v1/callback`.
-3. In Supabase Dashboard, open **Authentication → Sign In / Providers → Google**, enable Google, and enter the Google Client ID and Client Secret.
-4. In Supabase **Authentication → URL Configuration**, set the Site URL to `https://campus-navigator-pro.vercel.app` and allow `https://campus-navigator-pro.vercel.app/auth/callback`. Add your localhost callback only for local development.
-5. Save and test Google sign-in with a test account. New campus profiles default to **Pending** until an Admin assigns the appropriate role.
-
-Never put the Google Client Secret in this repository or in a `VITE_*` environment variable. The secret belongs only in the Supabase provider settings.
-
-## CCTV integration checklist
-
-The database now has 109 placeholder configuration records (`CAM-01` through `CAM-109`) with blank IP/stream fields, plus a restricted `camera_coverage_areas` table for mapped camera areas and camera-free zones. These IDs are provisional; confirm them against the actual NVR labels before connecting feeds.
-
-When the college provides camera details, verify the NVR/vendor, network reachability, supported browser transport (for example HLS/WebRTC/MJPEG where appropriate), stream authentication, and whether a secure server-side relay is required. RTSP URLs and private camera credentials must not be exposed directly in public browser code. A stored URL is not proof that a camera feed is live.
-
-## Technology
-
-React, TypeScript, Vite, Tailwind CSS, shadcn/ui, Supabase, Vitest
+- Route geometry and walking-time estimates depend on the mapped floor plans. Review routes on site before relying on them for physical wayfinding.
+- The CCTV register stores configuration details, but live camera streams are not connected. Entering a camera IP or stream URL does not confirm that a feed is reachable.
+- Visitor face-template capture and matching should be used only with institutional approval, appropriate consent, and an approved identity-check process. A face match alone is not proof of institutional identity.
+- Enable Supabase leaked-password protection and review the project's security advisories before production use.
