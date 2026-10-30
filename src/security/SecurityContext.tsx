@@ -315,7 +315,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     let newAlert: SecurityAlert | null = null;
     if (access === "restricted") {
       newAlert = {
-        id: `ALT-${event.id.replaceAll("-", "").slice(0, 8).toUpperCase()}`,
+        id: `ALT-${event.id.replaceAll("-", "").toUpperCase()}`,
         event,
         severity: "High",
         status: "Active",
@@ -401,7 +401,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     };
     const duplicateAlert = s.alerts.some((alert) => alert.event.id === event.id);
     const alert: SecurityAlert | null = duplicateAlert ? null : {
-      id: `ALT-${event.id.replaceAll("-", "").slice(0, 8).toUpperCase()}`,
+      id: `ALT-${event.id.replaceAll("-", "").toUpperCase()}`,
       event,
       severity: "High",
       status: "Active",
