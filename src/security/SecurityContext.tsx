@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { cameras, defaultRules, locationById, securityLocations } from "./data";
 import { can } from "./permissions";
@@ -23,6 +24,7 @@ interface Ctx extends State {
   role: Role;
   /** True when the current security session has loaded and can persist data through Supabase. */
   backendReady: boolean;
+  realtimeReady: boolean;
   signedIn: boolean;
   signOut: () => void;
   highlightedCameraId: string | null;
@@ -57,12 +59,60 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   const [signedIn, setSignedIn] = useState(false);
   const [highlightedCameraId, setHighlightedCameraId] = useState<string | null>(null);
   const [backendReady, setBackendReady] = useState(false);
+  const [realtimeReady, setRealtimeReady] = useState(false);
+  const knownAlertIdsRef = useRef<Set<string>>(new Set());
   const stateRef = useRef(state);
   stateRef.current = state;
 
   useEffect(() => {
     if (!supabase) return;
     let active = true;
+    let liveChannel: RealtimeChannel | null = null;
+
+    const refreshSecuritySnapshot = async (incomingEventId?: string) => {
+      try {
+        const remote = await loadSecuritySnapshot();
+        if (!active || !remote) return;
+
+        const unseenAlerts = remote.alerts.filter((alert) =>
+          !knownAlertIdsRef.current.has(alert.id)
+          && !stateRef.current.alerts.some((known) => known.event.id === alert.event.id)
+        );
+        remote.alerts.forEach((alert) => knownAlertIdsRef.current.add(alert.id));
+
+        const incomingEvent = incomingEventId
+          ? remote.events.find((event) => event.id === incomingEventId)
+          : undefined;
+
+        setState((local) => ({
+          ...local,
+          visitors: mergeRecords(local.visitors, remote.visitors),
+          rules: mergeRecords(local.rules, remote.rules),
+          events: mergeRecords(local.events, remote.events).sort((left, right) => right.at - left.at),
+          alerts: mergeRecords(local.alerts, remote.alerts).sort((left, right) => right.event.at - left.event.at),
+        }));
+
+        if (incomingEvent?.access === "restricted" && incomingEvent.cameraId !== "ROUTE-PLANNER") {
+          setHighlightedCameraId(incomingEvent.cameraId);
+        }
+
+        unseenAlerts
+          .filter((alert) => alert.status === "Active" && alert.event.access === "restricted")
+          .forEach((alert) => {
+            if (!stateRef.current.muted) playAlertChime();
+            toast.error(`Restricted access: ${alert.event.personName}`, {
+              description: `${alert.event.locationName ?? locationById(alert.event.locationId)?.name ?? "Restricted area"} · ${allFloorPlans[alert.event.floorId]?.title ?? alert.event.floorId}`,
+            });
+          });
+      } catch (error) {
+        if (active) {
+          toast.error("Live security updates could not be refreshed", {
+            description: error instanceof Error ? error.message : "Check the live database connection and Security permissions.",
+          });
+        }
+      }
+    };
+
     const synchronizeSession = async () => {
       try {
         const authenticatedRole = await getAuthenticatedRole();
@@ -79,7 +129,11 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         setSignedIn(true);
         if (supabaseConfigured) setState(emptySecurityState());
         const remote = await loadSecuritySnapshot();
-        if (!active || !remote) return;
+        if (!active || !remote) {
+          setRealtimeReady(false);
+          return;
+        }
+        knownAlertIdsRef.current = new Set(remote.alerts.map((alert) => alert.id));
         setState((local) => ({
           ...local,
           visitors: mergeRecords(local.visitors, remote.visitors),
@@ -87,10 +141,30 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           events: mergeRecords(local.events, remote.events).sort((left, right) => right.at - left.at),
           alerts: mergeRecords(local.alerts, remote.alerts).sort((left, right) => right.event.at - left.event.at),
         }));
+
+        if (liveChannel) void supabase.removeChannel(liveChannel);
+        liveChannel = supabase
+          .channel("security-live-map-feed")
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "security_events" }, (payload) => {
+            const eventId = String((payload.new as { id?: string }).id ?? "");
+            if (eventId) void refreshSecuritySnapshot(eventId);
+          })
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "alerts" }, () => {
+            void refreshSecuritySnapshot();
+          })
+          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "alerts" }, () => {
+            void refreshSecuritySnapshot();
+          })
+          .subscribe((status) => {
+            if (status === "SUBSCRIBED") setRealtimeReady(true);
+            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setRealtimeReady(false);
+          });
+
         setBackendReady(true);
       } catch (error) {
         if (active) {
           setBackendReady(false);
+          setRealtimeReady(false);
           toast.error("Supabase security data could not be loaded", {
             description: error instanceof Error ? error.message : "Check the Supabase URL, key, schema, and row-level security policies.",
           });
@@ -102,6 +176,12 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         if (session) void synchronizeSession();
         else {
           setBackendReady(false);
+          setRealtimeReady(false);
+          if (liveChannel) {
+            void supabase.removeChannel(liveChannel);
+            liveChannel = null;
+          }
+          knownAlertIdsRef.current.clear();
           setRoleState("student");
           setSignedIn(false);
           setState(emptySecurityState());
@@ -117,6 +197,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
       subscription.unsubscribe();
+      if (liveChannel) void supabase.removeChannel(liveChannel);
     };
   }, []);
   useEffect(() => {
@@ -140,6 +221,8 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     setRoleState("student");
     setSignedIn(false);
     setBackendReady(false);
+    setRealtimeReady(false);
+    knownAlertIdsRef.current.clear();
     setState(emptySecurityState());
     for (let index = localStorage.length - 1; index >= 0; index -= 1) {
       const key = localStorage.key(index);
@@ -241,6 +324,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
       alerts: newAlert ? [newAlert, ...previous.alerts] : previous.alerts,
     }));
     if (newAlert) {
+      knownAlertIdsRef.current.add(newAlert.id);
       if (!s.muted) playAlertChime();
       toast.error(`Restricted access: ${visitor.name}`, {
         description: `${loc.name} · ${cameraId}`,
@@ -323,6 +407,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
       alerts: alert ? [alert, ...previous.alerts] : previous.alerts,
     }));
     if (alert) {
+      knownAlertIdsRef.current.add(alert.id);
       if (!s.muted) playAlertChime();
       toast.error(`Restricted route attempt: ${visitor.name}`, {
         description: `${restrictedArea.label} · ${plan?.title ?? restrictedArea.floorId}`,
@@ -374,7 +459,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   }, [state.events, state.visitors]);
 
   const value: Ctx = {
-    ...state, role, backendReady, signedIn, signOut, highlightedCameraId, setHighlightedCameraId, registerVisitor, setVisitorStatus,
+    ...state, role, backendReady, realtimeReady, signedIn, signOut, highlightedCameraId, setHighlightedCameraId, registerVisitor, setVisitorStatus,
     simulateDetection, authorizeIndoorRoute, setAlertStatus, setRule, setMuted, currentLocations,
   };
   return <SecurityCtx.Provider value={value}>{children}</SecurityCtx.Provider>;
