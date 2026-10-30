@@ -61,6 +61,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   const [backendReady, setBackendReady] = useState(false);
   const [realtimeReady, setRealtimeReady] = useState(false);
   const knownAlertIdsRef = useRef<Set<string>>(new Set());
+  const notifiedAlertIdsRef = useRef<Set<string>>(new Set());
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -76,6 +77,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
 
         const unseenAlerts = remote.alerts.filter((alert) =>
           !knownAlertIdsRef.current.has(alert.id)
+          && !notifiedAlertIdsRef.current.has(alert.id)
           && !stateRef.current.alerts.some((known) => known.event.id === alert.event.id)
         );
         remote.alerts.forEach((alert) => knownAlertIdsRef.current.add(alert.id));
@@ -99,6 +101,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         unseenAlerts
           .filter((alert) => alert.status === "Active" && alert.event.access === "restricted")
           .forEach((alert) => {
+            notifiedAlertIdsRef.current.add(alert.id);
             if (!stateRef.current.muted) playAlertChime();
             toast.error(`Restricted access: ${alert.event.personName}`, {
               description: `${alert.event.locationName ?? locationById(alert.event.locationId)?.name ?? "Restricted area"} · ${allFloorPlans[alert.event.floorId]?.title ?? alert.event.floorId}`,
@@ -182,6 +185,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
             liveChannel = null;
           }
           knownAlertIdsRef.current.clear();
+          notifiedAlertIdsRef.current.clear();
           setRoleState("student");
           setSignedIn(false);
           setState(emptySecurityState());
@@ -223,6 +227,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     setBackendReady(false);
     setRealtimeReady(false);
     knownAlertIdsRef.current.clear();
+    notifiedAlertIdsRef.current.clear();
     setState(emptySecurityState());
     for (let index = localStorage.length - 1; index >= 0; index -= 1) {
       const key = localStorage.key(index);
@@ -310,7 +315,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     let newAlert: SecurityAlert | null = null;
     if (access === "restricted") {
       newAlert = {
-        id: `ALT-${crypto.randomUUID().slice(0, 8)}`,
+        id: `ALT-${event.id.replaceAll("-", "").slice(0, 8).toUpperCase()}`,
         event,
         severity: "High",
         status: "Active",
@@ -325,6 +330,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     }));
     if (newAlert) {
       knownAlertIdsRef.current.add(newAlert.id);
+      notifiedAlertIdsRef.current.add(newAlert.id);
       if (!s.muted) playAlertChime();
       toast.error(`Restricted access: ${visitor.name}`, {
         description: `${loc.name} · ${cameraId}`,
@@ -395,7 +401,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     };
     const duplicateAlert = s.alerts.some((alert) => alert.event.id === event.id);
     const alert: SecurityAlert | null = duplicateAlert ? null : {
-      id: `ALT-${crypto.randomUUID().slice(0, 8)}`,
+      id: `ALT-${event.id.replaceAll("-", "").slice(0, 8).toUpperCase()}`,
       event,
       severity: "High",
       status: "Active",
@@ -408,6 +414,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     }));
     if (alert) {
       knownAlertIdsRef.current.add(alert.id);
+      notifiedAlertIdsRef.current.add(alert.id);
       if (!s.muted) playAlertChime();
       toast.error(`Restricted route attempt: ${visitor.name}`, {
         description: `${restrictedArea.label} · ${plan?.title ?? restrictedArea.floorId}`,
