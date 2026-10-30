@@ -15,7 +15,7 @@ import FloorPlanSVG from "@/components/FloorPlanSVG";
 import ThemeToggle from "@/components/ThemeToggle";
 import VisitorFlowDialog from "@/components/security/VisitorFlowDialog";
 import VisitorProfileCard from "@/components/security/VisitorProfileCard";
-import { allFloorPlans } from "@/data/floorPlans";
+import { allFloorPlans, buildingSections } from "@/data/floorPlans";
 import { cameras, locationById, securityLocations } from "@/security/data";
 import { cameraRegistry, CAMPUS_REPORTED_CAMERA_COUNT } from "@/security/cameraRegistry";
 import { cctvEvidence, cctvEvidenceCaptureCounts, identifiedCctvEvidence } from "@/security/cctvInventory";
@@ -609,7 +609,7 @@ export default function Security() {
           <span className="text-sm font-medium text-foreground">{plan?.title}</span>
           <Select value={mapFloor} onValueChange={setMapFloor}>
             <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>{["mb-gf", "mb-f1"].map((id) => <SelectItem key={id} value={id}>{allFloorPlans[id].title}</SelectItem>)}</SelectContent>
+            <SelectContent>{buildingSections.flatMap((section) => section.floors.map((floor) => <SelectItem key={floor.id} value={floor.id}>{section.name} · {floor.label}</SelectItem>))}</SelectContent>
           </Select>
         </div>
         <div className="h-[420px] bg-secondary/30">
