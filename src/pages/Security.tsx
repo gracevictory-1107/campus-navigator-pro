@@ -207,6 +207,7 @@ const managedRoleOptions: { value: ManagedRole; label: string }[] = [
   { value: "admin", label: "Admin" },
   { value: "management", label: "Management" },
   { value: "faculty", label: "Faculty" },
+  { value: "staff", label: "Staff" },
   { value: "security", label: "Security" },
   { value: "pending", label: "Pending approval" },
   { value: "student", label: "Student" },
