@@ -127,14 +127,7 @@ const allowByType: Record<PersonType, string[]> = {
     ...seminarIds,
     ...staircaseIds,
   ],
-  "Faculty/Staff": [
-    "main-gate",
-    "ground-floor-corridor",
-    "canteen",
-    ...officeIds,
-    ...seminarIds,
-    ...staircaseIds,
-  ],
+  "Faculty/Staff": securityLocations.map((location) => location.id),
   "General Visitor": [
     "main-gate",
     "ground-floor-corridor",
