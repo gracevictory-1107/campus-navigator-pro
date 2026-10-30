@@ -405,10 +405,14 @@ function chooseConnectorPair(fromPlan: FloorPlan, toPlan: FloorPlan, from: Room,
     for (const toConnector of toConnectors) {
       if (fromConnector.type !== toConnector.type) continue;
       const sameIdPenalty = fromConnector.id === toConnector.id ? 0 : 150;
+      // Prefer stairs when both floors have them: stairs are explicitly open to
+      // every visitor category, while lift access has not been granted by policy.
+      const liftPreferencePenalty = fromConnector.type === "lift" ? 250 : 0;
       const score =
         distance(center(from), center(fromConnector)) +
         distance(center(to), center(toConnector)) +
-        sameIdPenalty;
+        sameIdPenalty +
+        liftPreferencePenalty;
       if (!best || score < best.score) best = { from: fromConnector, to: toConnector, score };
     }
   }
