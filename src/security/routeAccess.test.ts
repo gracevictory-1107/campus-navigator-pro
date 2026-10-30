@@ -93,6 +93,8 @@ describe("campus visitor access policy", () => {
   it("blocks Parents from classrooms, seminar halls, Board Room and Innovation Center", async () => {
     const restrictedTargets: [string, string][] = [
       ["mb-f3", "classroom-a"],
+      ["fb-f1", "room4"],
+      ["fb-f1", "room2"],
       ["mb-gf", "board-room"],
       ["mb-f5", "mini-seminar"],
       ["sheds", "seminar-hall"],
