@@ -1049,6 +1049,9 @@ export default function Security() {
         <p className="text-xs text-muted-foreground">
           Rules below control registered visitor routes. Student, Faculty and Staff campus accounts retain full campus access.
         </p>
+        <p className="text-xs text-muted-foreground">
+          Staircases are open to every visitor category. Mapped corridors are treated as pass-through paths; the destination rule applies only when a corridor is selected as the route destination.
+        </p>
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-5 text-muted-foreground">
           <span className="font-semibold text-foreground">Admissions-only rule:</span> Parent access to the Library is disabled by default. An authorised Admin or Security user can enable the Parent · Library switch during the admissions period and must turn it off when admissions ends.
         </p>
