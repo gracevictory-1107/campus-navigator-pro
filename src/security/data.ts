@@ -37,9 +37,9 @@ const fixedLocations: SecurityLocation[] = [
 const mappedPathLocations: SecurityLocation[] = Object.values(allFloorPlans)
   .filter((plan) => plan.id !== "campus")
   .flatMap((plan) => plan.rooms
-    .filter((room) => room.type === "corridor" || room.type === "stairs" || room.type === "lift")
+    .filter((room) => room.type === "corridor" || room.type === "stairs" || room.type === "lift" || (plan.id === "mb-gf" && room.id === "free-space-2"))
     .map((room) => {
-      const isPath = room.type === "corridor" || room.type === "stairs";
+      const isPath = room.type === "corridor" || room.type === "stairs" || room.type === "open";
       const building = plan.id.startsWith("mb-")
         ? "Main Building"
         : plan.id.startsWith("fb-")
@@ -89,6 +89,9 @@ const staircaseIds = mappedPathLocations
 const mainGroundFloorCorridorIds = mappedPathLocations
   .filter((location) => location.floorId === "mb-gf" && location.name.startsWith("Corridor"))
   .map((location) => location.id);
+const mainGroundFloorOpenSpaceIds = mappedPathLocations
+  .filter((location) => location.floorId === "mb-gf" && location.roomId === "free-space-2")
+  .map((location) => location.id);
 const recruiterOnlyIds = ["innovation-center", "dining-room"];
 const seminarIds = ["mini-seminar-hall", "seminar-hall"];
 const allowByType: Record<PersonType, string[]> = {
@@ -96,12 +99,14 @@ const allowByType: Record<PersonType, string[]> = {
     "main-gate",
     "ground-floor-corridor",
     ...mainGroundFloorCorridorIds,
+    ...mainGroundFloorOpenSpaceIds,
     "canteen",
     ...officeIds,
     ...staircaseIds,
   ],
   Recruiter: [
     "main-gate",
+    ...mainGroundFloorOpenSpaceIds,
     "canteen",
     "library",
     ...officeIds,
@@ -113,6 +118,7 @@ const allowByType: Record<PersonType, string[]> = {
     "main-gate",
     "ground-floor-corridor",
     ...mainGroundFloorCorridorIds,
+    ...mainGroundFloorOpenSpaceIds,
     "canteen",
     ...officeIds,
     ...seminarIds,
@@ -122,6 +128,7 @@ const allowByType: Record<PersonType, string[]> = {
     "main-gate",
     "ground-floor-corridor",
     ...mainGroundFloorCorridorIds,
+    ...mainGroundFloorOpenSpaceIds,
     "canteen",
     ...officeIds,
     ...seminarIds,
@@ -132,6 +139,7 @@ const allowByType: Record<PersonType, string[]> = {
     "main-gate",
     "ground-floor-corridor",
     ...mainGroundFloorCorridorIds,
+    ...mainGroundFloorOpenSpaceIds,
     "canteen",
     ...officeIds,
     ...seminarIds,

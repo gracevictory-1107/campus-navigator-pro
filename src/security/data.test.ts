@@ -20,6 +20,12 @@ describe("default visitor access rules", () => {
     expect(defaultRules.find((rule) => rule.id === admissionsOnlyRuleId)?.allowed).toBe(false);
   });
 
+  it("maps the Ground Floor Open Space as an allowed visitor path", () => {
+    const openSpace = securityLocations.find((location) => location.floorId === "mb-gf" && location.roomId === "free-space-2");
+    expect(openSpace?.isPublicPath).toBe(true);
+    expect(defaultRules.filter((rule) => rule.locationId === openSpace?.id && rule.allowed)).toHaveLength(personTypes.length);
+  });
+
   it("marks corridors and staircases as pass-through paths", () => {
     expect(securityLocations.some((location) => location.id === "ground-floor-corridor" && location.isPublicPath)).toBe(true);
     expect(securityLocations.some((location) => location.name.startsWith("Stairs") && location.isPublicPath)).toBe(true);

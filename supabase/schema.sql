@@ -5,7 +5,7 @@ create table if not exists public.profiles (
   auth_user_id uuid unique references auth.users(id) on delete set null,
   full_name text not null,
   email text not null unique,
-  role text not null default 'pending' check (role in ('admin', 'faculty', 'management', 'security', 'student', 'pending')),
+  role text not null default 'pending' check (role in ('admin', 'faculty', 'staff', 'management', 'security', 'student', 'pending')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -115,7 +115,7 @@ $;
 
 -- Safe role migration: allow Management as a first-class authenticated campus role.
 alter table public.profiles drop constraint if exists profiles_role_check;
-alter table public.profiles add constraint profiles_role_check check (role in ('admin', 'faculty', 'management', 'security', 'student', 'pending'));
+alter table public.profiles add constraint profiles_role_check check (role in ('admin', 'faculty', 'staff', 'management', 'security', 'student', 'pending'));
 alter table public.profiles alter column role set default 'pending';
 
 alter table public.profiles enable row level security;
@@ -125,9 +125,9 @@ alter table public.security_events enable row level security;
 alter table public.alerts enable row level security;
 
 drop policy if exists profiles_select_self_or_admin on public.profiles;
-create policy profiles_select_self_or_admin on public.profiles for select to authenticated using (auth_user_id = auth.uid() or public.current_campus_role() = 'admin');
+create policy profiles_select_self_or_admin on public.profiles for select to authenticated using (auth_user_id = (select auth.uid()) or (select public.current_campus_role()) = 'admin');
 drop policy if exists profiles_admin_update on public.profiles;
-create policy profiles_admin_update on public.profiles for update to authenticated using (public.current_campus_role() = 'admin' and auth_user_id is distinct from auth.uid()) with check (public.current_campus_role() = 'admin' and auth_user_id is distinct from auth.uid());
+create policy profiles_admin_update on public.profiles for update to authenticated using ((select public.current_campus_role()) = 'admin' and auth_user_id is distinct from (select auth.uid())) with check ((select public.current_campus_role()) = 'admin' and auth_user_id is distinct from (select auth.uid()));
 
 -- Newly registered accounts have no campus privileges until an Admin assigns a role.
 drop trigger if exists on_auth_user_created_student_profile on auth.users;
@@ -158,29 +158,29 @@ $function$;
 create trigger on_auth_user_created_profile after insert on auth.users for each row execute function public.handle_new_auth_user_profile();
 drop function if exists public.handle_new_auth_user_student_profile();
 
-drop policy if exists access_rules_security_read on public.access_rules;
-create policy access_rules_security_read on public.access_rules for select to authenticated using (public.current_campus_role() in ('admin', 'management', 'security'));
+drop policy if exists access_rules_privileged_read on public.access_rules;
+create policy access_rules_privileged_read on public.access_rules for select to authenticated using (public.current_campus_role() in ('admin', 'management', 'security'));
 drop policy if exists access_rules_security_insert on public.access_rules;
 create policy access_rules_security_insert on public.access_rules for insert to authenticated with check (public.current_campus_role() in ('admin', 'security'));
 drop policy if exists access_rules_security_update on public.access_rules;
 create policy access_rules_security_update on public.access_rules for update to authenticated using (public.current_campus_role() in ('admin', 'security')) with check (public.current_campus_role() in ('admin', 'security'));
 
-drop policy if exists visitors_security_select on public.visitors;
-create policy visitors_security_select on public.visitors for select to authenticated using (public.current_campus_role() in ('admin', 'management', 'security'));
+drop policy if exists visitors_privileged_read on public.visitors;
+create policy visitors_privileged_read on public.visitors for select to authenticated using (public.current_campus_role() in ('admin', 'management', 'security'));
 drop policy if exists visitors_security_insert on public.visitors;
 create policy visitors_security_insert on public.visitors for insert to authenticated with check (public.current_campus_role() in ('admin', 'security'));
 drop policy if exists visitors_security_update on public.visitors;
 create policy visitors_security_update on public.visitors for update to authenticated using (public.current_campus_role() in ('admin', 'security')) with check (public.current_campus_role() in ('admin', 'security'));
 
-drop policy if exists events_security_select on public.security_events;
-create policy events_security_select on public.security_events for select to authenticated using (public.current_campus_role() in ('admin', 'management', 'security'));
+drop policy if exists security_events_privileged_read on public.security_events;
+create policy security_events_privileged_read on public.security_events for select to authenticated using (public.current_campus_role() in ('admin', 'management', 'security'));
 drop policy if exists events_security_insert on public.security_events;
 create policy events_security_insert on public.security_events for insert to authenticated with check (public.current_campus_role() in ('admin', 'security'));
 drop policy if exists events_security_update on public.security_events;
 create policy events_security_update on public.security_events for update to authenticated using (public.current_campus_role() in ('admin', 'security')) with check (public.current_campus_role() in ('admin', 'security'));
 
-drop policy if exists alerts_security_select on public.alerts;
-create policy alerts_security_select on public.alerts for select to authenticated using (public.current_campus_role() in ('admin', 'management', 'security'));
+drop policy if exists alerts_privileged_read on public.alerts;
+create policy alerts_privileged_read on public.alerts for select to authenticated using (public.current_campus_role() in ('admin', 'management', 'security'));
 drop policy if exists alerts_security_insert on public.alerts;
 create policy alerts_security_insert on public.alerts for insert to authenticated with check (public.current_campus_role() in ('admin', 'security'));
 drop policy if exists alerts_security_update on public.alerts;
@@ -296,8 +296,8 @@ CREATE POLICY biometric_profiles_security_update ON public.biometric_profiles FO
 DROP POLICY IF EXISTS biometric_profiles_security_delete ON public.biometric_profiles;
 CREATE POLICY biometric_profiles_security_delete ON public.biometric_profiles FOR DELETE TO authenticated USING (public.current_campus_role() IN ('admin', 'security'));
 
-DROP POLICY IF EXISTS biometric_verification_events_security_select ON public.biometric_verification_events;
-CREATE POLICY biometric_verification_events_security_select ON public.biometric_verification_events FOR SELECT TO authenticated USING (public.current_campus_role() IN ('admin', 'management', 'security'));
+DROP POLICY IF EXISTS biometric_verification_security_events_privileged_read ON public.biometric_verification_events;
+CREATE POLICY biometric_verification_security_events_privileged_read ON public.biometric_verification_events FOR SELECT TO authenticated USING (public.current_campus_role() IN ('admin', 'management', 'security'));
 DROP POLICY IF EXISTS biometric_verification_events_security_insert ON public.biometric_verification_events;
 CREATE POLICY biometric_verification_events_security_insert ON public.biometric_verification_events FOR INSERT TO authenticated WITH CHECK (public.current_campus_role() IN ('admin', 'security'));
 
@@ -376,29 +376,27 @@ CREATE INDEX IF NOT EXISTS camera_coverage_areas_camera_idx ON public.camera_cov
 ALTER TABLE public.camera_coverage_areas ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS camera_coverage_areas_security_read ON public.camera_coverage_areas;
-CREATE POLICY camera_coverage_areas_security_read
+DROP POLICY IF EXISTS camera_coverage_areas_management_write ON public.camera_coverage_areas;
+CREATE POLICY camera_coverage_areas_privileged_read
   ON public.camera_coverage_areas FOR SELECT TO authenticated
   USING (public.current_campus_role() IN ('admin', 'management', 'security'));
-
-DROP POLICY IF EXISTS camera_coverage_areas_management_write ON public.camera_coverage_areas;
-CREATE POLICY camera_coverage_areas_management_write
-  ON public.camera_coverage_areas FOR ALL TO authenticated
+CREATE POLICY camera_coverage_areas_management_insert
+  ON public.camera_coverage_areas FOR INSERT TO authenticated
+  WITH CHECK (public.current_campus_role() IN ('admin', 'management'));
+CREATE POLICY camera_coverage_areas_management_update
+  ON public.camera_coverage_areas FOR UPDATE TO authenticated
   USING (public.current_campus_role() IN ('admin', 'management'))
   WITH CHECK (public.current_campus_role() IN ('admin', 'management'));
+CREATE POLICY camera_coverage_areas_management_delete
+  ON public.camera_coverage_areas FOR DELETE TO authenticated
+  USING (public.current_campus_role() IN ('admin', 'management'));
 
 DROP TRIGGER IF EXISTS camera_coverage_areas_set_updated_at ON public.camera_coverage_areas;
 CREATE TRIGGER camera_coverage_areas_set_updated_at BEFORE UPDATE ON public.camera_coverage_areas
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
--- Management is read-only for security operations.
-drop policy if exists access_rules_management_read on public.access_rules;
-create policy access_rules_management_read on public.access_rules for select to authenticated using (public.current_campus_role() = 'management');
-drop policy if exists visitors_management_read on public.visitors;
-create policy visitors_management_read on public.visitors for select to authenticated using (public.current_campus_role() = 'management');
-drop policy if exists events_management_read on public.security_events;
-create policy events_management_read on public.security_events for select to authenticated using (public.current_campus_role() = 'management');
-drop policy if exists alerts_management_read on public.alerts;
-create policy alerts_management_read on public.alerts for select to authenticated using (public.current_campus_role() = 'management');
+-- Management read access is already included in the single privileged-reader
+-- policies above. Keep Management read-only for the operational/security tables.
 -- Biometric records are intentionally limited to Admin/Security, including read access.
 drop policy if exists biometric_profiles_management_read on public.biometric_profiles;
 drop policy if exists biometric_verification_events_management_read on public.biometric_verification_events;
@@ -434,7 +432,8 @@ GRANT EXECUTE ON FUNCTION public.current_campus_role() TO authenticated;
 
 -- Final visitor access matrix shared by the app and the bootstrap schema.
 -- Signed-in Student, Faculty and Staff roles receive unrestricted access in role authorization.
--- Faculty/Staff as a visitor category also receives full mapped campus access.
+-- Faculty/Staff as an employee access category receives full mapped campus access, including lifts.
+-- All visitor categories may access the Main Building Ground Floor Open Space; external visitor lift access remains blocked.
 -- Parent Library is disabled by default; enable Parent:library only during admissions.
 WITH locations(location_id) AS (
   VALUES
@@ -449,6 +448,7 @@ WITH locations(location_id) AS (
     ('innovation-center'),
     ('dining-room'),
     ('ground-floor-corridor'),
+    ('path:mb-gf:free-space-2'),
     ('principal-office'),
     ('placement-cell'),
     ('administrative-office'),
@@ -519,7 +519,7 @@ INSERT INTO public.access_rules (id, location_id, person_type, allowed)
 SELECT c.person_type || ':' || l.location_id,
        l.location_id,
        c.person_type,
-       l.location_id = ANY (c.allowed_locations)
+       (l.location_id = 'path:mb-gf:free-space-2' OR l.location_id = ANY (c.allowed_locations))
 FROM categories c
 CROSS JOIN locations l
 ON CONFLICT (id)

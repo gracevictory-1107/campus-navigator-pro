@@ -206,7 +206,8 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
 const managedRoleOptions: { value: ManagedRole; label: string }[] = [
   { value: "admin", label: "Admin" },
   { value: "management", label: "Management" },
-  { value: "faculty", label: "Faculty" },
+  { value: "faculty", label: "Faculty · Teaching & Technical/Lab" },
+  { value: "staff", label: "Staff · Office & Support/Maintenance" },
   { value: "security", label: "Security" },
   { value: "pending", label: "Pending approval" },
   { value: "student", label: "Student" },
@@ -347,6 +348,10 @@ function AdminUsersPanel() {
         <p className="mt-1 text-xs text-muted-foreground">
           Campus accounts and roles are managed centrally. Only an authorised Admin can assign or change roles.
         </p>
+        <div className="mt-2 grid gap-1 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground sm:grid-cols-2">
+          <p><strong className="text-foreground">Faculty:</strong> teaching faculty and non-teaching academic, technical or lab staff.</p>
+          <p><strong className="text-foreground">Staff:</strong> office and administrative staff, ayahs, cleaners, maintenance technicians and campus support staff.</p>
+        </div>
       </div>
       {!supabaseConfigured && (
         <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
