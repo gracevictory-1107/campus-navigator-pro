@@ -42,7 +42,7 @@ describe("campus visitor access policy", () => {
   it("allows general, business and motivational visitors to offices, canteen, ground corridor and seminar halls", () => {
     const allowedRoomIds = [
       "principal", "director", "admin-desk", "vp-cabin", "help-desk", "office-desk",
-      "canteen", "free-space-2", "mini-seminar", "seminar-hall",
+      "canteen", "free-space-1", "free-space-2", "mini-seminar", "seminar-hall",
     ];
     const types: PersonType[] = ["General Visitor", "Product/Business Visitor", "Inspirational/Motivational Visitor"];
     for (const type of types) {
@@ -57,13 +57,25 @@ describe("campus visitor access policy", () => {
   it("keeps Parent access to offices, ground-floor corridor and canteen, with Library off by default", () => {
     const parentAllowed = [
       "principal-office", "placement-cell", "administrative-office", "vice-principal-office",
-      "reception", "office-desk", "cash-counter", "ground-floor-corridor", "canteen", "main-gate",
+      "reception", "office-desk", "cash-counter", "ground-floor-corridor", "path:mb-gf:free-space-1", "canteen", "main-gate",
     ];
     for (const locationId of parentAllowed) {
       expect(defaultRules.find((item) => item.id === `Parent:${locationId}`)?.allowed, locationId).toBe(true);
     }
     expect(admissionsOnlyRuleId).toBe("Parent:library");
     expect(defaultRules.find((item) => item.id === admissionsOnlyRuleId)?.allowed).toBe(false);
+  });
+
+  it("allows Parents and standard visitors to reach the mapped ground-floor corridor", async () => {
+    const corridor = securityLocations.find((location) =>
+      location.floorId === "mb-gf" && location.roomId === "free-space-1"
+    );
+    expect(corridor?.id).toBe("path:mb-gf:free-space-1");
+
+    for (const type of ["Parent", "General Visitor", "Product/Business Visitor", "Inspirational/Motivational Visitor"] as const) {
+      const decision = await decide(type, ["mb-gf", "main-entrance"], ["mb-gf", "free-space-1"]);
+      expect(decision.allowed, `${type} should be allowed in the ground-floor corridor`).toBe(true);
+    }
   });
 
   it("allows Parent Library access only when the admissions rule is enabled", async () => {
