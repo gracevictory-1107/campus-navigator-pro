@@ -5,7 +5,7 @@ create table if not exists public.profiles (
   auth_user_id uuid unique references auth.users(id) on delete set null,
   full_name text not null,
   email text not null unique,
-  role text not null default 'pending' check (role in ('admin', 'faculty', 'management', 'security', 'student', 'pending')),
+  role text not null default 'pending' check (role in ('admin', 'faculty', 'staff', 'management', 'security', 'student', 'pending')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -115,7 +115,7 @@ $;
 
 -- Safe role migration: allow Management as a first-class authenticated campus role.
 alter table public.profiles drop constraint if exists profiles_role_check;
-alter table public.profiles add constraint profiles_role_check check (role in ('admin', 'faculty', 'management', 'security', 'student', 'pending'));
+alter table public.profiles add constraint profiles_role_check check (role in ('admin', 'faculty', 'staff', 'management', 'security', 'student', 'pending'));
 alter table public.profiles alter column role set default 'pending';
 
 alter table public.profiles enable row level security;
@@ -434,7 +434,8 @@ GRANT EXECUTE ON FUNCTION public.current_campus_role() TO authenticated;
 
 -- Final visitor access matrix shared by the app and the bootstrap schema.
 -- Signed-in Student, Faculty and Staff roles receive unrestricted access in role authorization.
--- Faculty/Staff as a visitor category also receives full mapped campus access.
+-- Faculty/Staff as an employee access category receives full mapped campus access, including lifts.
+-- All visitor categories may access the Main Building Ground Floor Open Space; external visitor lift access remains blocked.
 -- Parent Library is disabled by default; enable Parent:library only during admissions.
 WITH locations(location_id) AS (
   VALUES
@@ -449,6 +450,7 @@ WITH locations(location_id) AS (
     ('innovation-center'),
     ('dining-room'),
     ('ground-floor-corridor'),
+    ('path:mb-gf:free-space-2'),
     ('principal-office'),
     ('placement-cell'),
     ('administrative-office'),
@@ -519,7 +521,7 @@ INSERT INTO public.access_rules (id, location_id, person_type, allowed)
 SELECT c.person_type || ':' || l.location_id,
        l.location_id,
        c.person_type,
-       l.location_id = ANY (c.allowed_locations)
+       (l.location_id = 'path:mb-gf:free-space-2' OR l.location_id = ANY (c.allowed_locations))
 FROM categories c
 CROSS JOIN locations l
 ON CONFLICT (id)
