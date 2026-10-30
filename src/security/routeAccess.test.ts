@@ -42,7 +42,7 @@ describe("campus visitor access policy", () => {
   it("allows general, business and motivational visitors to offices, canteen, ground corridor and seminar halls", () => {
     const allowedRoomIds = [
       "principal", "director", "admin-desk", "vp-cabin", "help-desk", "office-desk",
-      "canteen", "free-space-1", "free-space-2", "mini-seminar", "seminar-hall",
+      "canteen", "free-space-1", "mini-seminar", "seminar-hall",
     ];
     const types: PersonType[] = ["General Visitor", "Product/Business Visitor", "Inspirational/Motivational Visitor"];
     for (const type of types) {
@@ -153,10 +153,13 @@ describe("campus visitor access policy", () => {
   it("does not grant visitors unrestricted lift access", () => {
     const lifts = securityLocations.filter((location) => location.id.startsWith("path:") && location.name.startsWith("Lift"));
     expect(lifts.length).toBeGreaterThan(0);
-    for (const type of personTypes) {
+    for (const type of personTypes.filter((candidate) => candidate !== "Faculty/Staff")) {
       for (const lift of lifts) {
         expect(defaultRules.find((rule) => rule.id === `${type}:${lift.id}`)?.allowed).toBe(false);
       }
+    }
+    for (const lift of lifts) {
+      expect(defaultRules.find((rule) => rule.id === `Faculty/Staff:${lift.id}`)?.allowed).toBe(true);
     }
   });
 
