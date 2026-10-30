@@ -20,6 +20,8 @@ const empty = { name: "", email: "", mobile: "", type: "Parent" as PersonType, v
 
 export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { visitors, rules, registerVisitor, setVisitorStatus } = useSecurity();
+  const [step, setStep] = useState<Step>("form");
+  const [form, setForm] = useState(empty);
   const allowedDestinations = useMemo(
     () => securityLocations.filter((location) => {
       const rule = rules.find((candidate) => candidate.id === `${form.type}:${location.id}`);
@@ -27,8 +29,6 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
     }),
     [form.type, rules],
   );
-  const [step, setStep] = useState<Step>("form");
-  const [form, setForm] = useState(empty);
   const [verificationComplete, setVerificationComplete] = useState(false);
   const [existing, setExisting] = useState<Visitor | undefined>();
   const [result, setResult] = useState<Visitor | null>(null);
@@ -275,7 +275,7 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
             <div className="grid gap-1.5"><Label>Authorized Destination</Label>
               <Select value={form.authorizedLocationId} onValueChange={set("authorizedLocationId")}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{securityLocations.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{allowedDestinations.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <Button type="submit" disabled={!valid}>Continue to Face Verification</Button>
