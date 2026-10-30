@@ -72,6 +72,14 @@ describe("campus visitor access policy", () => {
     }
   });
 
+  it("allows every visitor category to access the Main Building Ground Floor Open Space", async () => {
+    const openSpace = securityLocations.find((location) => location.floorId === "mb-gf" && location.roomId === "free-space-2");
+    expect(openSpace).toBeDefined();
+    for (const type of personTypes) {
+      expect(defaultRules.find((rule) => rule.id === `${type}:${openSpace!.id}`)?.allowed, `${type} should access Open Space`).toBe(true);
+    }
+  });
+
   it("allows Parents and standard visitors to reach the mapped ground-floor corridor", async () => {
     const corridor = securityLocations.find((location) =>
       location.floorId === "mb-gf" && location.roomId === "free-space-1"
@@ -150,13 +158,17 @@ describe("campus visitor access policy", () => {
     }
   });
 
-  it("does not grant visitors unrestricted lift access", () => {
+  it("allows Faculty/Staff employee passes to use lifts but blocks external visitor categories", () => {
     const lifts = securityLocations.filter((location) => location.id.startsWith("path:") && location.name.startsWith("Lift"));
     expect(lifts.length).toBeGreaterThan(0);
-    for (const type of personTypes) {
+    const externalVisitorTypes = personTypes.filter((type) => type !== "Faculty/Staff");
+    for (const type of externalVisitorTypes) {
       for (const lift of lifts) {
-        expect(defaultRules.find((rule) => rule.id === `${type}:${lift.id}`)?.allowed).toBe(false);
+        expect(defaultRules.find((rule) => rule.id === `${type}:${lift.id}`)?.allowed, `${type} must not use ${lift.name}`).toBe(false);
       }
+    }
+    for (const lift of lifts) {
+      expect(defaultRules.find((rule) => rule.id === `Faculty/Staff:${lift.id}`)?.allowed, lift.name).toBe(true);
     }
   });
 
