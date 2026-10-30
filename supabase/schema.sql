@@ -542,7 +542,7 @@ SELECT c.person_type || ':' || l.location_id,
        l.location_id = ANY (c.allowed_locations)
 FROM categories c
 CROSS JOIN locations l
-ON CONFLICT (location_id, person_type)
+ON CONFLICT (id)
 DO UPDATE SET
   id = EXCLUDED.id,
   allowed = EXCLUDED.allowed,
