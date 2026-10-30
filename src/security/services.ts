@@ -11,9 +11,12 @@ export interface AccessService {
 export const accessService: AccessService = {
   async check(visitor, locationId, rules) {
     if (visitor.status === "Blocked") return "restricted";
-    if (visitor.authorizedLocationId === locationId) return "authorized";
     const rule = rules.find((candidate) => candidate.personType === visitor.type && candidate.locationId === locationId);
-    return rule?.allowed ? "authorized" : "restricted";
+    // A category-level restriction cannot be bypassed by choosing that room as the
+    // visitor's one-time destination. Explicit destination authorization only applies
+    // when no category rule exists for the location.
+    if (rule) return rule.allowed ? "authorized" : "restricted";
+    return visitor.authorizedLocationId === locationId ? "authorized" : "restricted";
   },
 };
 
