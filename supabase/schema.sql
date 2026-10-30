@@ -125,9 +125,9 @@ alter table public.security_events enable row level security;
 alter table public.alerts enable row level security;
 
 drop policy if exists profiles_select_self_or_admin on public.profiles;
-create policy profiles_select_self_or_admin on public.profiles for select to authenticated using (auth_user_id = auth.uid() or public.current_campus_role() = 'admin');
+create policy profiles_select_self_or_admin on public.profiles for select to authenticated using (auth_user_id = (select auth.uid()) or (select public.current_campus_role()) = 'admin');
 drop policy if exists profiles_admin_update on public.profiles;
-create policy profiles_admin_update on public.profiles for update to authenticated using (public.current_campus_role() = 'admin' and auth_user_id is distinct from auth.uid()) with check (public.current_campus_role() = 'admin' and auth_user_id is distinct from auth.uid());
+create policy profiles_admin_update on public.profiles for update to authenticated using ((select public.current_campus_role()) = 'admin' and auth_user_id is distinct from (select auth.uid())) with check ((select public.current_campus_role()) = 'admin' and auth_user_id is distinct from (select auth.uid()));
 
 -- Newly registered accounts have no campus privileges until an Admin assigns a role.
 drop trigger if exists on_auth_user_created_student_profile on auth.users;
@@ -376,29 +376,27 @@ CREATE INDEX IF NOT EXISTS camera_coverage_areas_camera_idx ON public.camera_cov
 ALTER TABLE public.camera_coverage_areas ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS camera_coverage_areas_security_read ON public.camera_coverage_areas;
-CREATE POLICY camera_coverage_areas_security_read
+DROP POLICY IF EXISTS camera_coverage_areas_management_write ON public.camera_coverage_areas;
+CREATE POLICY camera_coverage_areas_privileged_read
   ON public.camera_coverage_areas FOR SELECT TO authenticated
   USING (public.current_campus_role() IN ('admin', 'management', 'security'));
-
-DROP POLICY IF EXISTS camera_coverage_areas_management_write ON public.camera_coverage_areas;
-CREATE POLICY camera_coverage_areas_management_write
-  ON public.camera_coverage_areas FOR ALL TO authenticated
+CREATE POLICY camera_coverage_areas_management_insert
+  ON public.camera_coverage_areas FOR INSERT TO authenticated
+  WITH CHECK (public.current_campus_role() IN ('admin', 'management'));
+CREATE POLICY camera_coverage_areas_management_update
+  ON public.camera_coverage_areas FOR UPDATE TO authenticated
   USING (public.current_campus_role() IN ('admin', 'management'))
   WITH CHECK (public.current_campus_role() IN ('admin', 'management'));
+CREATE POLICY camera_coverage_areas_management_delete
+  ON public.camera_coverage_areas FOR DELETE TO authenticated
+  USING (public.current_campus_role() IN ('admin', 'management'));
 
 DROP TRIGGER IF EXISTS camera_coverage_areas_set_updated_at ON public.camera_coverage_areas;
 CREATE TRIGGER camera_coverage_areas_set_updated_at BEFORE UPDATE ON public.camera_coverage_areas
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
--- Management is read-only for security operations.
-drop policy if exists access_rules_management_read on public.access_rules;
-create policy access_rules_management_read on public.access_rules for select to authenticated using (public.current_campus_role() = 'management');
-drop policy if exists visitors_management_read on public.visitors;
-create policy visitors_management_read on public.visitors for select to authenticated using (public.current_campus_role() = 'management');
-drop policy if exists events_management_read on public.security_events;
-create policy events_management_read on public.security_events for select to authenticated using (public.current_campus_role() = 'management');
-drop policy if exists alerts_management_read on public.alerts;
-create policy alerts_management_read on public.alerts for select to authenticated using (public.current_campus_role() = 'management');
+-- Management read access is already included in the single privileged-reader
+-- policies above. Keep Management read-only for the operational/security tables.
 -- Biometric records are intentionally limited to Admin/Security, including read access.
 drop policy if exists biometric_profiles_management_read on public.biometric_profiles;
 drop policy if exists biometric_verification_events_management_read on public.biometric_verification_events;
