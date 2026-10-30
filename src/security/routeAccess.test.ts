@@ -57,7 +57,7 @@ describe("campus visitor access policy", () => {
   it("keeps Parent access to offices, ground-floor corridor and canteen, with Library off by default", () => {
     const parentAllowed = [
       "principal-office", "placement-cell", "administrative-office", "vice-principal-office",
-      "reception", "office-desk", "cash-counter", "ground-floor-corridor", "path:mb-gf:free-space-1", "canteen", "main-gate",
+      "reception", "office-desk", "cash-counter", "ground-floor-corridor", "canteen", "main-gate",
     ];
     for (const locationId of parentAllowed) {
       expect(defaultRules.find((item) => item.id === `Parent:${locationId}`)?.allowed, locationId).toBe(true);
@@ -66,11 +66,17 @@ describe("campus visitor access policy", () => {
     expect(defaultRules.find((item) => item.id === admissionsOnlyRuleId)?.allowed).toBe(false);
   });
 
+  it("grants the Faculty/Staff visitor category full access to every mapped area", () => {
+    for (const location of securityLocations) {
+      expect(defaultRules.find((rule) => rule.id === `Faculty/Staff:${location.id}`)?.allowed, location.name).toBe(true);
+    }
+  });
+
   it("allows Parents and standard visitors to reach the mapped ground-floor corridor", async () => {
     const corridor = securityLocations.find((location) =>
       location.floorId === "mb-gf" && location.roomId === "free-space-1"
     );
-    expect(corridor?.id).toBe("path:mb-gf:free-space-1");
+    expect(corridor?.id).toBe("ground-floor-corridor");
 
     for (const type of ["Parent", "General Visitor", "Product/Business Visitor", "Inspirational/Motivational Visitor"] as const) {
       const decision = await decide(type, ["mb-gf", "main-entrance"], ["mb-gf", "free-space-1"]);
