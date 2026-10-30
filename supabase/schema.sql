@@ -307,27 +307,7 @@ GRANT SELECT, INSERT ON public.biometric_verification_events TO authenticated;
 
 COMMIT;
 
--- Parent access policy: only Reception Office, Principal Office, Cash Counter and Canteen.
-insert into public.access_rules (id, location_id, person_type, allowed)
-select 'Parent:' || l.location_id,
-       l.location_id,
-       'Parent',
-       (l.location_id in ('main-gate', 'reception', 'principal-office', 'cash-counter', 'canteen'))
-from (values
-  ('main-gate'),
-  ('reception'),
-  ('principal-office'),
-  ('cash-counter'),
-  ('canteen'),
-  ('meeting-room'),
-  ('library'),
-  ('placement-cell'),
-  ('cse-lab'),
-  ('staff-room')
-) as l(location_id)
-on conflict (location_id, person_type)
-do update set allowed = excluded.allowed, updated_at = now();
-
+-- The complete visitor-category matrix is seeded after the security and CCTV tables below.
 
 -- CCTV network configuration. The college can provide the IP address and optional browser/NVR stream URL later.
 CREATE TABLE IF NOT EXISTS public.camera_configs (
