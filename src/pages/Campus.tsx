@@ -18,7 +18,7 @@ export default function Campus() {
         if (active) setCampusRole(role);
       })
       .catch(() => {
-        if (active) setHasCampusAccount(false);
+        if (active) setCampusRole(null);
       })
       .finally(() => {
         if (active) setCheckingAccess(false);
