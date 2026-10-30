@@ -206,8 +206,8 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
 const managedRoleOptions: { value: ManagedRole; label: string }[] = [
   { value: "admin", label: "Admin" },
   { value: "management", label: "Management" },
-  { value: "faculty", label: "Faculty" },
-  { value: "staff", label: "Staff" },
+  { value: "faculty", label: "Faculty · Teaching & Technical/Lab" },
+  { value: "staff", label: "Staff · Office & Support/Maintenance" },
   { value: "security", label: "Security" },
   { value: "pending", label: "Pending approval" },
   { value: "student", label: "Student" },
