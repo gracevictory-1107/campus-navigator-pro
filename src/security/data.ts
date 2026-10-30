@@ -86,12 +86,16 @@ const officeIds = officeLocations.map((location) => location.id);
 const staircaseIds = mappedPathLocations
   .filter((location) => location.name.startsWith("Stairs"))
   .map((location) => location.id);
+const mainGroundFloorCorridorIds = mappedPathLocations
+  .filter((location) => location.floorId === "mb-gf" && location.name.startsWith("Corridor"))
+  .map((location) => location.id);
 const recruiterOnlyIds = ["innovation-center", "dining-room"];
 const seminarIds = ["mini-seminar-hall", "seminar-hall"];
 const allowByType: Record<PersonType, string[]> = {
   Parent: [
     "main-gate",
     "ground-floor-corridor",
+    ...mainGroundFloorCorridorIds,
     "canteen",
     ...officeIds,
     ...staircaseIds,
@@ -108,6 +112,7 @@ const allowByType: Record<PersonType, string[]> = {
   "Product/Business Visitor": [
     "main-gate",
     "ground-floor-corridor",
+    ...mainGroundFloorCorridorIds,
     "canteen",
     ...officeIds,
     ...seminarIds,
@@ -116,6 +121,7 @@ const allowByType: Record<PersonType, string[]> = {
   "Inspirational/Motivational Visitor": [
     "main-gate",
     "ground-floor-corridor",
+    ...mainGroundFloorCorridorIds,
     "canteen",
     ...officeIds,
     ...seminarIds,
@@ -132,6 +138,7 @@ const allowByType: Record<PersonType, string[]> = {
   "General Visitor": [
     "main-gate",
     "ground-floor-corridor",
+    ...mainGroundFloorCorridorIds,
     "canteen",
     ...officeIds,
     ...seminarIds,
