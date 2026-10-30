@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, Bell, BellOff, Camera, CheckCircle2, Eye, Lock, LogIn, LogOut, MapPin, Search, ShieldAlert, UserPlus, Users, Video } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bell, BellOff, Camera, CheckCircle2, Eye, Lock, LogIn, LogOut, MapPin, Search, ShieldAlert, UserPlus, Users, Video, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +24,7 @@ import { formatTime, useSecurity } from "@/security/SecurityContext";
 import { personTypes, type LocationEvent, type PersonType, type Role, type SecurityAlert } from "@/security/types";
 import { loadAdminProfiles, loadCameraConfigs, saveCameraConfig, signInWithGoogle, signInWithSupabase, signUpWithSupabase, supabaseConfigured, updateManagedProfileRole, type CameraConfig, type ManagedProfile, type ManagedRole } from "@/lib/supabase";
 import { toast } from "sonner";
+import { enableAlertSound } from "@/security/sound";
 
 const ok = "text-[hsl(var(--status-authorized))]";
 const bad = "text-[hsl(var(--status-restricted))]";
@@ -606,7 +607,11 @@ export default function Security() {
     <div className="grid lg:grid-cols-[1fr_300px] gap-4">
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-          <span className="text-sm font-medium text-foreground">{plan?.title}</span>
+          <div className="flex flex-wrap items-center gap-3 text-[10px]">
+            <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Authorized</span>
+            <span className="inline-flex items-center gap-1.5 text-red-600 dark:text-red-400"><span className="h-2.5 w-2.5 rounded-full bg-red-500" />Restricted</span>
+            <span className="hidden text-muted-foreground sm:inline">Latest mapped camera event</span>
+          </div>
           <Select value={mapFloor} onValueChange={setMapFloor}>
             <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>{buildingSections.flatMap((section) => section.floors.map((floor) => <SelectItem key={floor.id} value={floor.id}>{section.name} · {floor.label}</SelectItem>))}</SelectContent>
@@ -620,7 +625,7 @@ export default function Security() {
                 id: e.personId,
                 roomId: e.roomId,
                 name: e.personName,
-                subtitle: `${e.personType} · ${e.cameraId}`,
+                subtitle: `${e.personType} · ${e.access === "restricted" ? "RESTRICTED" : "AUTHORIZED"}`,
                 access: e.access,
               }))}
               onMarkerClick={setPersonOpen}
@@ -1243,7 +1248,7 @@ export default function Security() {
           <Button asChild variant="ghost" size="icon" className="h-9 w-9"><Link to="/" aria-label="Back to navigator"><ArrowLeft className="h-4 w-4" /></Link></Button>
           <div>
             <h1 className="font-display text-lg font-bold text-foreground leading-tight">Campus Security</h1>
-            <p className="text-[11px] text-muted-foreground">{roles.find((r) => r.id === role)?.label} view{!manage && !manageAccess ? " · read-only" : ""} · CCTV integration pending</p>
+            <p className="text-[11px] text-muted-foreground">{roles.find((r) => r.id === role)?.label} view{!manage && !manageAccess ? " · read-only" : ""} · live event sync, CCTV streams pending</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1257,7 +1262,30 @@ export default function Security() {
             <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${sec.backendReady ? "bg-[hsl(var(--status-authorized))]" : "bg-muted-foreground"}`} />
             {sec.backendReady ? "Database synced" : "Not synced"}
           </Badge>
+          <Badge
+            variant="outline"
+            className={sec.realtimeReady ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400" : "border-border text-muted-foreground"}
+            title={sec.realtimeReady ? "New camera events and alerts are streaming to this screen." : "Live event stream is not connected."}
+          >
+            <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${sec.realtimeReady ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground"}`} />
+            {sec.realtimeReady ? "Live updates" : "Live offline"}
+          </Badge>
           {activeAlerts.length > 0 && <Badge variant="destructive" className="gap-1"><Bell className="h-3 w-3" />{activeAlerts.length}</Badge>}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 gap-1.5"
+            title="Enable and test the audible security alarm"
+            onClick={() => {
+              void enableAlertSound().then((enabled) => {
+                if (enabled) toast.success("Security alert sound enabled on this device.");
+                else toast.error("This browser could not enable alert audio. Check its sound permissions.");
+              });
+            }}
+          >
+            <Volume2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Test sound</span>
+          </Button>
           <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => sec.setMuted(!sec.muted)} aria-label={sec.muted ? "Unmute alerts" : "Mute alerts"} title={sec.muted ? "Unmute alerts" : "Mute alerts"}>
             {sec.muted ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
           </Button>
