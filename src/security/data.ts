@@ -90,13 +90,6 @@ const staircaseIds = mappedPathLocations
   .map((location) => location.id);
 const recruiterOnlyIds = ["innovation-center", "dining-room"];
 const seminarIds = ["mini-seminar-hall", "seminar-hall"];
-const sharedVisitorTypes: PersonType[] = [
-  "Product/Business Visitor",
-  "Inspirational/Motivational Visitor",
-  "Faculty/Staff",
-  "General Visitor",
-];
-
 const allowByType: Record<PersonType, string[]> = {
   Parent: [
     "main-gate",
