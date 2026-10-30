@@ -25,6 +25,14 @@ vi.mock("@/lib/supabase", () => ({
   persistSecuritySnapshot: async () => undefined,
 }));
 
+describe("separate campus employee roles", () => {
+  it("keeps Faculty and Staff as distinct assignable account roles", () => {
+    expect(roles).toContainEqual({ id: "faculty", label: "Faculty" });
+    expect(roles).toContainEqual({ id: "staff", label: "Staff" });
+    expect(roles.findIndex((role) => role.id === "faculty")).not.toBe(roles.findIndex((role) => role.id === "staff"));
+  });
+});
+
 describe("pending campus accounts", () => {
   it("shows an explicit pending-approval role", () => {
     expect(roles).toContainEqual({ id: "pending", label: "Pending approval" });
