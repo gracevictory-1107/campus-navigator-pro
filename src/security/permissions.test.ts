@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { can, roles } from "./permissions";
 import { SecurityProvider, useSecurity } from "./SecurityContext";
 import { cameras } from "./data";
+import { calculateIndoorRoute } from "@/lib/indoorRouting";
 import type { LocationEvent, PersonType, Role } from "./types";
 
 const getAuthenticatedRoleMock = vi.hoisted(() => vi.fn<() => Promise<Role | null>>());
@@ -109,5 +110,22 @@ describe("simulateDetection permission guard", () => {
       expect(result.current.events).toHaveLength(0);
       expect(result.current.alerts).toHaveLength(0);
     }
+  );
+});
+
+
+describe("full campus account access", () => {
+  it.each(["student", "faculty", "staff"] as const)(
+    "%s can route anywhere on campus without visitor-category restrictions",
+    async (role) => {
+      const { result } = await renderSignedInAs(role);
+      const route = calculateIndoorRoute("mb-gf", "main-entrance", "fb-f2", "innov");
+      expect(route).not.toBeNull();
+
+      await expect(result.current.authorizeIndoorRoute(null, route!)).resolves.toMatchObject({
+        allowed: true,
+        deniedAreas: [],
+      });
+    },
   );
 });
