@@ -573,7 +573,7 @@ BEGIN
     history
   )
   VALUES (
-    'ALT-' || pg_catalog.upper(pg_catalog.left(pg_catalog.replace(NEW.id, '-', ''), 8)),
+    'ALT-' || pg_catalog.upper(pg_catalog.replace(NEW.id, '-', '')),
     NEW.id,
     event_snapshot,
     'High',
