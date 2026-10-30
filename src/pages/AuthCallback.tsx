@@ -11,8 +11,8 @@ type CallbackState = "loading" | "pending" | "ready" | "unregistered" | "registe
 const roleLabels: Record<Role, string> = {
   pending: "Pending approval",
   student: "Student",
-  faculty: "Faculty",
-  staff: "Staff",
+  faculty: "Faculty (Teaching and Technical/Lab)",
+  staff: "Staff (Office, Support and Maintenance)",
   management: "Management",
   security: "Security",
   admin: "Admin",
