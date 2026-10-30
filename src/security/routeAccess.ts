@@ -59,6 +59,7 @@ function uniqueRouteLocations(route: IndoorRoute): SecurityLocation[] {
     location.floorId === route.toFloorId && location.roomId === route.toRoomId
   );
   const encountered = securityLocations.filter((location) =>
+    !location.isPublicPath &&
     route.legs.some((leg) => leg.floorId === location.floorId && legIntersectsRoom(leg, location.roomId))
   );
   const ordered = target ? [target, ...encountered] : encountered;
