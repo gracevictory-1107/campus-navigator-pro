@@ -1047,7 +1047,13 @@ export default function Security() {
       <div>
         <h2 className="text-base font-semibold text-foreground">Access Control Management</h2>
         <p className="text-xs text-muted-foreground">
-          Rules are applied by the existing visitor-category route authorization and saved with the security state.
+          Rules below control registered visitor routes. Student, Faculty and Staff campus accounts retain full campus access.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Staircases are open to every visitor category. Mapped corridors are treated as pass-through paths; the destination rule applies only when a corridor is selected as the route destination.
+        </p>
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-5 text-muted-foreground">
+          <span className="font-semibold text-foreground">Admissions-only rule:</span> Parent access to the Library is disabled by default. An authorised Admin or Security user can enable the Parent · Library switch during the admissions period and must turn it off when admissions ends.
         </p>
       </div>
       {!manageAccess && <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">Read-only access. Only Security and Admin can change permissions.</p>}
@@ -1072,7 +1078,11 @@ export default function Security() {
               const allowedCategories = locationRules.filter(({ rule }) => rule.allowed).map(({ type }) => type);
               return (
                 <TableRow key={location.id}>
-                  <TableCell><p className="font-medium">{location.name}</p><p className="text-xs text-muted-foreground">{roomName}</p></TableCell>
+                  <TableCell>
+                    <p className="font-medium">{location.name}</p>
+                    <p className="text-xs text-muted-foreground">{roomName}</p>
+                    {location.admissionsOnly && <Badge variant="outline" className="mt-1">Parents · Admissions only</Badge>}
+                  </TableCell>
                   <TableCell className="whitespace-nowrap">{location.floorLabel}</TableCell>
                   <TableCell className="min-w-48">
                     {allowedCategories.length ? <div className="flex flex-wrap gap-1">{allowedCategories.map((type) => <Badge key={type} variant="secondary">{type}</Badge>)}</div> : <span className="text-xs text-muted-foreground">No categories allowed</span>}

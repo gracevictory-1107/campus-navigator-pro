@@ -21,6 +21,10 @@ export interface SecurityLocation {
   roomId: string;
   building: string;
   floorLabel: string;
+  /** Corridor/stair paths are checked as destinations, not as pass-through rooms. */
+  isPublicPath?: boolean;
+  /** This access rule is enabled only while campus admissions are active. */
+  admissionsOnly?: boolean;
 }
 
 export interface Camera {
