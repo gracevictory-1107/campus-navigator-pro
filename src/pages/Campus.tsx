@@ -3,20 +3,22 @@ import { Navigate } from "react-router-dom";
 import { LoaderCircle, MapPin } from "lucide-react";
 import CampusNavigator from "@/components/CampusNavigator";
 import { getAuthenticatedRole } from "@/lib/supabase";
+import type { Role } from "@/security/types";
+import { getRoleLandingPath } from "@/lib/roleLanding";
 
 /** Keep the sign-in page public; verify auth before rendering the map route. */
 export default function Campus() {
   const [checkingAccess, setCheckingAccess] = useState(true);
-  const [hasCampusAccount, setHasCampusAccount] = useState(false);
+  const [campusRole, setCampusRole] = useState<Role | null>(null);
 
   useEffect(() => {
     let active = true;
     void getAuthenticatedRole()
       .then((role) => {
-        if (active) setHasCampusAccount(Boolean(role));
+        if (active) setCampusRole(role);
       })
       .catch(() => {
-        if (active) setHasCampusAccount(false);
+        if (active) setCampusRole(null);
       })
       .finally(() => {
         if (active) setCheckingAccess(false);
@@ -38,5 +40,10 @@ export default function Campus() {
     );
   }
 
-  return hasCampusAccount ? <CampusNavigator /> : <Navigate to="/" replace />;
+  if (!campusRole) return <Navigate to="/" replace />;
+
+  const landingPath = getRoleLandingPath(campusRole);
+  return landingPath === "/campus"
+    ? <CampusNavigator />
+    : <Navigate to={landingPath} replace />;
 }

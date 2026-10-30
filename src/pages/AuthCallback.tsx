@@ -4,6 +4,7 @@ import { CheckCircle2, CircleAlert, Clock3, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAuthenticatedRole, hasVerifiedEmailPasswordIdentity, supabase } from "@/lib/supabase";
 import type { Role } from "@/security/types";
+import { getRoleLandingPath } from "@/lib/roleLanding";
 
 type CallbackState = "loading" | "pending" | "ready" | "unregistered" | "registerFirst" | "googleOnlyExisting" | "error";
 
@@ -138,8 +139,12 @@ export default function AuthCallback() {
             <p className="text-sm leading-6 text-muted-foreground">
               Your email is verified and your campus account has the {roleLabels[role ?? "pending"]} role.
             </p>
-            <Button asChild className="mt-2 w-full"><Link to="/campus">Continue to Campus Navigator</Link></Button>
-            {(role === "admin" || role === "management" || role === "security") && (
+            <Button asChild className="mt-2 w-full">
+              <Link to={getRoleLandingPath(role ?? "pending")}>
+                {role === "security" ? "Open Security Dashboard" : "Continue to Campus Navigator"}
+              </Link>
+            </Button>
+            {(role === "admin" || role === "management") && (
               <Button variant="outline" asChild className="w-full"><Link to="/security">Open Campus Security</Link></Button>
             )}
           </div>

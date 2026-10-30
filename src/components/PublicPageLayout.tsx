@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { BookOpen, House, LifeBuoy, LogOut, Navigation2 } from "lucide-react";
+import { BookOpen, House, LifeBuoy, LogOut, Navigation2, Shield } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useSecurity } from "@/security/SecurityContext";
 
@@ -60,10 +60,16 @@ export default function PublicPageLayout({
             <ThemeToggle />
             {signedIn ? (
               <>
-                <Link to="/campus" className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:text-sm">
-                  <Navigation2 className="h-4 w-4" />
-                  Open Campus Map
-                </Link>
+                {role === "pending" ? (
+                  <span className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                    Pending approval
+                  </span>
+                ) : (
+                  <Link to={role === "security" ? "/security" : "/campus"} className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:text-sm">
+                    {role === "security" ? <Shield className="h-4 w-4" /> : <Navigation2 className="h-4 w-4" />}
+                    {role === "security" ? "Security Dashboard" : "Open Campus Map"}
+                  </Link>
+                )}
                 <button type="button" onClick={signOut} className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold transition-colors hover:bg-accent sm:text-sm" aria-label="Sign out" title={`Sign out (${role})`}>
                   <LogOut className="h-4 w-4" />
                   Sign out

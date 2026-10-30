@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import PublicPageLayout from "@/components/PublicPageLayout";
 import { signInWithGoogle, signInWithSupabase, signUpWithSupabase, supabaseConfigured } from "@/lib/supabase";
 import { useSecurity } from "@/security/SecurityContext";
+import { getRoleLandingPath } from "@/lib/roleLanding";
 import { toast } from "sonner";
 
 type AuthMode = "signIn" | "signUp";
@@ -61,9 +62,9 @@ export default function Welcome() {
         throw new Error("Sign-in is not configured right now. Please contact the campus administrator.");
       }
       if (mode === "signIn") {
-        await signInWithSupabase(email, password);
+        const authenticatedRole = await signInWithSupabase(email, password);
         toast.success("Signed in. Welcome to AWDC Campus Navigator.");
-        navigate("/campus", { replace: true });
+        navigate(getRoleLandingPath(authenticatedRole), { replace: true });
       } else {
         const result = await signUpWithSupabase(fullName, email, password);
         if (result.needsEmailConfirmation) {
@@ -72,7 +73,7 @@ export default function Welcome() {
           toast.success("Account created. Check your email to verify it.");
         } else {
           toast.success("Account created. Welcome to AWDC Campus Navigator.");
-          navigate("/campus", { replace: true });
+          navigate(result.role ? getRoleLandingPath(result.role) : "/auth/callback", { replace: true });
         }
       }
     } catch (error) {
@@ -136,11 +137,19 @@ export default function Welcome() {
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
               <div>
                 <p className="text-sm font-semibold">You’re already signed in</p>
-                <p className="mt-1 text-xs text-muted-foreground">Account role: {role === "pending" ? "Pending approval" : role.charAt(0).toUpperCase() + role.slice(1)}. Continue to the map when you’re ready.</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {role === "pending"
+                    ? "Your account is waiting for Admin approval. Campus access will be available after approval."
+                    : role === "security"
+                      ? "Your Security account is ready. Open the Security Dashboard to continue."
+                      : `Account role: ${role.charAt(0).toUpperCase() + role.slice(1)}. Continue to the campus map when you’re ready.`}
+                </p>
               </div>
-              <Link to="/campus" className="inline-flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
-                Open Campus Map <ArrowRight className="h-4 w-4" />
-              </Link>
+              {role !== "pending" && (
+                <Link to={getRoleLandingPath(role)} className="inline-flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
+                  {role === "security" ? "Open Security Dashboard" : "Open Campus Map"} <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
             </div>
           )}
 
