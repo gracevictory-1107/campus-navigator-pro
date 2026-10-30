@@ -27,7 +27,7 @@ const fixedLocations: SecurityLocation[] = [
   { id: "seminar-hall", name: "Seminar Hall", floorId: "sheds", roomId: "seminar-hall", building: "Campus Sheds", floorLabel: "Ground Level" },
   { id: "innovation-center", name: "Innovation Center (AIC)", floorId: "fb-f2", roomId: "innov", building: "Fisheries Block", floorLabel: "Floor 2" },
   { id: "dining-room", name: "Dining Room", floorId: "sheds", roomId: "shed4-dining", building: "Campus Sheds", floorLabel: "Ground Level" },
-  { id: "ground-floor-corridor", name: "Ground Floor Corridor", floorId: "mb-gf", roomId: "free-space-1", building: "Main Building", floorLabel: "Ground Floor", isPublicPath: true },
+  { id: "ground-floor-corridor", name: "Ground Floor Corridor", floorId: "mb-gf", roomId: "free-space-2", building: "Main Building", floorLabel: "Ground Floor", isPublicPath: true },
 ];
 
 /** Corridors and stairs are mapped as paths so they can be selected as destinations.
