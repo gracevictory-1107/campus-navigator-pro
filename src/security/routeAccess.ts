@@ -55,6 +55,9 @@ function legIntersectsRoom(leg: RouteLeg, roomId: string) {
 }
 
 function uniqueRouteLocations(route: IndoorRoute): SecurityLocation[] {
+  const source = securityLocations.find((location) =>
+    location.floorId === route.fromFloorId && location.roomId === route.fromRoomId
+  );
   const target = securityLocations.find((location) =>
     location.floorId === route.toFloorId && location.roomId === route.toRoomId
   );
@@ -62,7 +65,7 @@ function uniqueRouteLocations(route: IndoorRoute): SecurityLocation[] {
     !location.isPublicPath &&
     route.legs.some((leg) => leg.floorId === location.floorId && legIntersectsRoom(leg, location.roomId))
   );
-  const ordered = target ? [target, ...encountered] : encountered;
+  const ordered = [source, target, ...encountered].filter((location): location is SecurityLocation => Boolean(location));
   return ordered.filter((location, index) => ordered.findIndex((candidate) => candidate.id === location.id) === index);
 }
 
@@ -75,7 +78,12 @@ export async function evaluateIndoorRouteAccess(
   const targetMapped = locations.some((location) =>
     location.floorId === route.toFloorId && location.roomId === route.toRoomId
   );
+  const sourceMapped = locations.some((location) =>
+    location.floorId === route.fromFloorId && location.roomId === route.fromRoomId
+  );
+  const sourceRoom = allFloorPlans[route.fromFloorId]?.rooms.find((room) => room.id === route.fromRoomId);
   const targetRoom = allFloorPlans[route.toFloorId]?.rooms.find((room) => room.id === route.toRoomId);
+  if (!sourceRoom) throw new Error(`Route starting point ${route.fromFloorId}:${route.fromRoomId} does not exist.`);
   if (!targetRoom) throw new Error(`Route destination ${route.toFloorId}:${route.toRoomId} does not exist.`);
 
   const checks = await Promise.all(locations.map(async (location) => ({
@@ -87,6 +95,18 @@ export async function evaluateIndoorRouteAccess(
     },
     access: await accessService.check(visitor, location.id, rules),
   })));
+
+  if (!sourceMapped) {
+    checks.unshift({
+      location: {
+        floorId: route.fromFloorId,
+        roomId: route.fromRoomId,
+        label: sourceRoom.label,
+        locationId: sourceRoom.id,
+      },
+      access: "restricted",
+    });
+  }
 
   if (!targetMapped) {
     checks.unshift({
