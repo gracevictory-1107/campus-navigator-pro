@@ -421,7 +421,8 @@ function chooseConnectorPair(fromPlan: FloorPlan, toPlan: FloorPlan, from: Room,
 
 function transitionRoom(plan: FloorPlan, toward: Room): Room {
   const entrances = plan.rooms.filter((room) => room.type === "exit");
-  const connectors = connectorCandidates(plan);
+  const stairs = plan.rooms.filter((room) => room.type === "stairs");
+  const connectors = stairs.length ? stairs : connectorCandidates(plan);
   return nearestRoom(entrances.length ? entrances : connectors, center(toward)) ?? toward;
 }
 
