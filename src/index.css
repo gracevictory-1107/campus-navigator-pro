@@ -220,7 +220,8 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-}\n
+}
+
 @layer components {
   .welcome-page-main {
     min-height: calc(100vh - 145px);
