@@ -14,8 +14,6 @@ const officeLocations: SecurityLocation[] = [
   { id: "main-f4-hod-office", name: "HOD Office", floorId: "mb-f4", roomId: "hod", building: "Main Building", floorLabel: "Floor 4" },
   { id: "main-f5-hod-office", name: "HOD Office", floorId: "mb-f5", roomId: "hod", building: "Main Building", floorLabel: "Floor 5" },
   { id: "fisheries-dean-office", name: "Dean of Fisheries Office", floorId: "fb-gf", roomId: "dean", building: "Fisheries Block", floorLabel: "Ground Floor" },
-  { id: "fisheries-f1-hod-office-1", name: "Fisheries Office · Room 4", floorId: "fb-f1", roomId: "room4", building: "Fisheries Block", floorLabel: "Floor 1" },
-  { id: "fisheries-f1-hod-office-2", name: "Fisheries Office · Room 2", floorId: "fb-f1", roomId: "room2", building: "Fisheries Block", floorLabel: "Floor 1" },
 ];
 
 const fixedLocations: SecurityLocation[] = [
