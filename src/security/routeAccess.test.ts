@@ -154,6 +154,12 @@ describe("campus visitor access policy", () => {
     }
   });
 
+  it("blocks a visitor route that starts inside an unapproved classroom", async () => {
+    const decision = await decide("Parent", ["mb-f3", "classroom-a"], ["mb-gf", "principal"]);
+    expect(decision.allowed).toBe(false);
+    expect(decision.deniedAreas.some((area) => area.roomId === "classroom-a")).toBe(true);
+  });
+
   it("does not treat an unconfigured room as accessible", async () => {
     const decision = await decide("General Visitor", ["mb-gf", "principal"], ["mb-f3", "classroom-a"]);
     expect(decision.allowed).toBe(false);
