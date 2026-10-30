@@ -42,7 +42,7 @@ describe("campus visitor access policy", () => {
   it("allows general, business and motivational visitors to offices, canteen, ground corridor and seminar halls", () => {
     const allowedRoomIds = [
       "principal", "director", "admin-desk", "vp-cabin", "help-desk", "office-desk",
-      "canteen", "free-space-2", "free-space-2", "mini-seminar", "seminar-hall",
+      "canteen", "free-space-1", "mini-seminar", "seminar-hall",
     ];
     const types: PersonType[] = ["General Visitor", "Product/Business Visitor", "Inspirational/Motivational Visitor"];
     for (const type of types) {
@@ -74,12 +74,12 @@ describe("campus visitor access policy", () => {
 
   it("allows Parents and standard visitors to reach the mapped ground-floor corridor", async () => {
     const corridor = securityLocations.find((location) =>
-      location.floorId === "mb-gf" && location.roomId === "free-space-2"
+      location.floorId === "mb-gf" && location.roomId === "free-space-1"
     );
     expect(corridor?.id).toBe("ground-floor-corridor");
 
     for (const type of ["Parent", "General Visitor", "Product/Business Visitor", "Inspirational/Motivational Visitor"] as const) {
-      const decision = await decide(type, ["mb-gf", "main-entrance"], ["mb-gf", "free-space-2"]);
+      const decision = await decide(type, ["mb-gf", "main-entrance"], ["mb-gf", "free-space-1"]);
       expect(decision.allowed, `${type} should be allowed in the ground-floor corridor`).toBe(true);
     }
   });
