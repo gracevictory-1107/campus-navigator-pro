@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CheckCircle2, LogIn, LogOut, ShieldCheck, UserRoundCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,14 @@ type Step = "form" | "face" | "done";
 const empty = { name: "", email: "", mobile: "", type: "Parent" as PersonType, visiting: "", purpose: "", authorizedLocationId: "reception", expectedExit: "" };
 
 export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { visitors, registerVisitor, setVisitorStatus } = useSecurity();
+  const { visitors, rules, registerVisitor, setVisitorStatus } = useSecurity();
+  const allowedDestinations = useMemo(
+    () => securityLocations.filter((location) => {
+      const rule = rules.find((candidate) => candidate.id === `${form.type}:${location.id}`);
+      return Boolean(rule?.allowed) && (!location.isPublicPath || location.id === "ground-floor-corridor");
+    }),
+    [form.type, rules],
+  );
   const [step, setStep] = useState<Step>("form");
   const [form, setForm] = useState(empty);
   const [verificationComplete, setVerificationComplete] = useState(false);
@@ -240,7 +247,23 @@ export default function VisitorFlowDialog({ open, onOpenChange }: { open: boolea
             <div className="grid gap-1.5"><Label>Mobile Number</Label><Input inputMode="numeric" value={form.mobile} maxLength={10} placeholder="10 digits" onChange={(e) => set("mobile")(e.target.value.replace(/\D/g, ""))} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5"><Label>Visitor Type</Label>
-                <Select value={form.type} onValueChange={set("type")}>
+                <Select
+                  value={form.type}
+                  onValueChange={(value) => {
+                    const nextType = value as PersonType;
+                    const nextDestinations = securityLocations.filter((location) => {
+                      const rule = rules.find((candidate) => candidate.id === `${nextType}:${location.id}`);
+                      return Boolean(rule?.allowed) && (!location.isPublicPath || location.id === "ground-floor-corridor");
+                    });
+                    setForm((previous) => ({
+                      ...previous,
+                      type: nextType,
+                      authorizedLocationId: nextDestinations.some((location) => location.id === previous.authorizedLocationId)
+                        ? previous.authorizedLocationId
+                        : nextDestinations[0]?.id ?? "",
+                    }));
+                  }}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{personTypes.map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectContent>
                 </Select>
