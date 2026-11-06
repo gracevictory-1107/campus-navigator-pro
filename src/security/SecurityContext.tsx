@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { RealtimeChannel } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { cameras, defaultRules, locationById, securityLocations } from "./data";
 import { can } from "./permissions";
@@ -61,6 +60,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   const [backendReady, setBackendReady] = useState(false);
   const [realtimeReady, setRealtimeReady] = useState(false);
   const knownAlertIdsRef = useRef<Set<string>>(new Set());
+  const knownEventIdsRef = useRef<Set<string>>(new Set());
   const notifiedAlertIdsRef = useRef<Set<string>>(new Set());
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -68,9 +68,12 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase) return;
     let active = true;
-    let liveChannel: RealtimeChannel | null = null;
+    let securityRefreshTimer: number | null = null;
+    let refreshInProgress = false;
 
-    const refreshSecuritySnapshot = async (incomingEventId?: string) => {
+    const refreshSecuritySnapshot = async () => {
+      if (refreshInProgress) return;
+      refreshInProgress = true;
       try {
         const remote = await loadSecuritySnapshot();
         if (!active || !remote) return;
@@ -81,10 +84,12 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           && !stateRef.current.alerts.some((known) => known.event.id === alert.event.id)
         );
         remote.alerts.forEach((alert) => knownAlertIdsRef.current.add(alert.id));
-
-        const incomingEvent = incomingEventId
-          ? remote.events.find((event) => event.id === incomingEventId)
-          : undefined;
+        const newlyRestrictedEvent = remote.events.find((event) =>
+          !knownEventIdsRef.current.has(event.id)
+          && event.access === "restricted"
+          && event.cameraId !== "ROUTE-PLANNER"
+        );
+        remote.events.forEach((event) => knownEventIdsRef.current.add(event.id));
 
         setState((local) => ({
           ...local,
@@ -94,9 +99,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           alerts: mergeRecords(local.alerts, remote.alerts).sort((left, right) => right.event.at - left.event.at),
         }));
 
-        if (incomingEvent?.access === "restricted" && incomingEvent.cameraId !== "ROUTE-PLANNER") {
-          setHighlightedCameraId(incomingEvent.cameraId);
-        }
+        if (newlyRestrictedEvent) setHighlightedCameraId(newlyRestrictedEvent.cameraId);
 
         unseenAlerts
           .filter((alert) => alert.status === "Active" && alert.event.access === "restricted")
@@ -109,10 +112,13 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           });
       } catch (error) {
         if (active) {
+          setRealtimeReady(false);
           toast.error("Live security updates could not be refreshed", {
             description: error instanceof Error ? error.message : "Check the live database connection and Security permissions.",
           });
         }
+      } finally {
+        refreshInProgress = false;
       }
     };
 
@@ -121,6 +127,8 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         const authenticatedRole = await getAuthenticatedRole();
         if (!active) return;
         if (!authenticatedRole) {
+          if (securityRefreshTimer !== null) window.clearInterval(securityRefreshTimer);
+          securityRefreshTimer = null;
           setRoleState("pending");
           setSignedIn(false);
           setBackendReady(false);
@@ -137,6 +145,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           return;
         }
         knownAlertIdsRef.current = new Set(remote.alerts.map((alert) => alert.id));
+        knownEventIdsRef.current = new Set(remote.events.map((event) => event.id));
         setState((local) => ({
           ...local,
           visitors: mergeRecords(local.visitors, remote.visitors),
@@ -145,31 +154,18 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           alerts: mergeRecords(local.alerts, remote.alerts).sort((left, right) => right.event.at - left.event.at),
         }));
 
-        if (liveChannel) void supabase.removeChannel(liveChannel);
-        liveChannel = supabase
-          .channel("security-live-map-feed")
-          .on("postgres_changes", { event: "INSERT", schema: "public", table: "security_events" }, (payload) => {
-            const eventId = String((payload.new as { id?: string }).id ?? "");
-            if (eventId) void refreshSecuritySnapshot(eventId);
-          })
-          .on("postgres_changes", { event: "INSERT", schema: "public", table: "alerts" }, () => {
-            void refreshSecuritySnapshot();
-          })
-          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "alerts" }, () => {
-            void refreshSecuritySnapshot();
-          })
-          .subscribe((status) => {
-            if (status === "SUBSCRIBED") setRealtimeReady(true);
-            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setRealtimeReady(false);
-          });
-
+        if (securityRefreshTimer !== null) window.clearInterval(securityRefreshTimer);
+        securityRefreshTimer = window.setInterval(() => {
+          void refreshSecuritySnapshot();
+        }, 10_000);
+        setRealtimeReady(true);
         setBackendReady(true);
       } catch (error) {
         if (active) {
           setBackendReady(false);
           setRealtimeReady(false);
-          toast.error("Supabase security data could not be loaded", {
-            description: error instanceof Error ? error.message : "Check the Supabase URL, key, schema, and row-level security policies.",
+          toast.error("Campus security data could not be loaded", {
+            description: error instanceof Error ? error.message : "Check the backend connection, schema, and row-level security policies.",
           });
         }
       }
@@ -180,11 +176,10 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         else {
           setBackendReady(false);
           setRealtimeReady(false);
-          if (liveChannel) {
-            void supabase.removeChannel(liveChannel);
-            liveChannel = null;
-          }
+          if (securityRefreshTimer !== null) window.clearInterval(securityRefreshTimer);
+          securityRefreshTimer = null;
           knownAlertIdsRef.current.clear();
+          knownEventIdsRef.current.clear();
           notifiedAlertIdsRef.current.clear();
           setRoleState("student");
           setSignedIn(false);
@@ -201,7 +196,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
       subscription.unsubscribe();
-      if (liveChannel) void supabase.removeChannel(liveChannel);
+      if (securityRefreshTimer !== null) window.clearInterval(securityRefreshTimer);
     };
   }, []);
   useEffect(() => {
@@ -209,7 +204,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     const timer = window.setTimeout(() => {
       void persistSecuritySnapshot(state).catch((error: unknown) => {
         setBackendReady(false);
-        toast.error("Security changes remain saved locally but could not be synced to Supabase", {
+        toast.error("Security changes remain saved locally but could not be synced to the campus backend", {
           description: error instanceof Error ? error.message : "Check the database connection and permissions.",
         });
       });
@@ -219,7 +214,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(() => {
     if (supabase) {
       void supabase.auth.signOut().then(({ error }) => {
-        if (error) toast.error("Supabase sign-out failed", { description: error.message });
+        if (error) toast.error("Sign-out failed", { description: error.message });
       });
     }
     setRoleState("student");
