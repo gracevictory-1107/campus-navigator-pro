@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { RealtimeChannel } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { cameras, defaultRules, locationById, securityLocations } from "./data";
 import { can } from "./permissions";
@@ -22,9 +21,9 @@ interface State {
 
 interface Ctx extends State {
   role: Role;
-  /** True when the current security session has loaded and can persist data through Supabase. */
+  /** True when the current authorised session can read/write the Neon campus database. */
   backendReady: boolean;
-  realtimeReady: boolean;
+  pollingReady: boolean;
   signedIn: boolean;
   signOut: () => void;
   highlightedCameraId: string | null;
@@ -59,21 +58,37 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   const [signedIn, setSignedIn] = useState(false);
   const [highlightedCameraId, setHighlightedCameraId] = useState<string | null>(null);
   const [backendReady, setBackendReady] = useState(false);
-  const [realtimeReady, setRealtimeReady] = useState(false);
+  const [pollingReady, setPollingReady] = useState(false);
   const knownAlertIdsRef = useRef<Set<string>>(new Set());
+  const knownEventIdsRef = useRef<Set<string>>(new Set());
   const notifiedAlertIdsRef = useRef<Set<string>>(new Set());
   const stateRef = useRef(state);
   stateRef.current = state;
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase || !supabaseConfigured) return;
     let active = true;
-    let liveChannel: RealtimeChannel | null = null;
+    let pollTimer: number | null = null;
+    let refreshErrorShown = false;
 
-    const refreshSecuritySnapshot = async (incomingEventId?: string) => {
+    const stopPolling = () => {
+      if (pollTimer !== null) {
+        window.clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      setPollingReady(false);
+    };
+
+    const refreshSecuritySnapshot = async () => {
       try {
         const remote = await loadSecuritySnapshot();
         if (!active || !remote) return;
+
+        const unseenEvents = remote.events.filter((event) => !knownEventIdsRef.current.has(event.id));
+        remote.events.forEach((event) => knownEventIdsRef.current.add(event.id));
+        const incomingRestrictedEvent = unseenEvents
+          .filter((event) => event.access === "restricted")
+          .sort((left, right) => right.at - left.at)[0];
 
         const unseenAlerts = remote.alerts.filter((alert) =>
           !knownAlertIdsRef.current.has(alert.id)
@@ -81,10 +96,6 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           && !stateRef.current.alerts.some((known) => known.event.id === alert.event.id)
         );
         remote.alerts.forEach((alert) => knownAlertIdsRef.current.add(alert.id));
-
-        const incomingEvent = incomingEventId
-          ? remote.events.find((event) => event.id === incomingEventId)
-          : undefined;
 
         setState((local) => ({
           ...local,
@@ -94,8 +105,8 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           alerts: mergeRecords(local.alerts, remote.alerts).sort((left, right) => right.event.at - left.event.at),
         }));
 
-        if (incomingEvent?.access === "restricted" && incomingEvent.cameraId !== "ROUTE-PLANNER") {
-          setHighlightedCameraId(incomingEvent.cameraId);
+        if (incomingRestrictedEvent && incomingRestrictedEvent.cameraId !== "ROUTE-PLANNER") {
+          setHighlightedCameraId(incomingRestrictedEvent.cameraId);
         }
 
         unseenAlerts
@@ -107,16 +118,24 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
               description: `${alert.event.locationName ?? locationById(alert.event.locationId)?.name ?? "Restricted area"} · ${allFloorPlans[alert.event.floorId]?.title ?? alert.event.floorId}`,
             });
           });
+
+        refreshErrorShown = false;
+        if (pollTimer !== null) setPollingReady(true);
       } catch (error) {
         if (active) {
-          toast.error("Live security updates could not be refreshed", {
-            description: error instanceof Error ? error.message : "Check the live database connection and Security permissions.",
-          });
+          setPollingReady(false);
+          if (!refreshErrorShown) {
+            toast.error("Neon security updates could not be refreshed", {
+              description: error instanceof Error ? error.message : "Check the Neon Data API and Security permissions.",
+            });
+            refreshErrorShown = true;
+          }
         }
       }
     };
 
     const synchronizeSession = async () => {
+      stopPolling();
       try {
         const authenticatedRole = await getAuthenticatedRole();
         if (!active) return;
@@ -125,18 +144,27 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           setSignedIn(false);
           setBackendReady(false);
           setState(emptySecurityState());
+          knownAlertIdsRef.current.clear();
+          knownEventIdsRef.current.clear();
+          notifiedAlertIdsRef.current.clear();
           await supabase.auth.signOut();
           return;
         }
+
         setRoleState(authenticatedRole);
         setSignedIn(true);
         if (supabaseConfigured) setState(emptySecurityState());
         const remote = await loadSecuritySnapshot();
-        if (!active || !remote) {
-          setRealtimeReady(false);
+        if (!active) return;
+        if (!remote) {
+          setBackendReady(false);
+          setPollingReady(false);
           return;
         }
+
         knownAlertIdsRef.current = new Set(remote.alerts.map((alert) => alert.id));
+        knownEventIdsRef.current = new Set(remote.events.map((event) => event.id));
+        notifiedAlertIdsRef.current.clear();
         setState((local) => ({
           ...local,
           visitors: mergeRecords(local.visitors, remote.visitors),
@@ -145,46 +173,30 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           alerts: mergeRecords(local.alerts, remote.alerts).sort((left, right) => right.event.at - left.event.at),
         }));
 
-        if (liveChannel) void supabase.removeChannel(liveChannel);
-        liveChannel = supabase
-          .channel("security-live-map-feed")
-          .on("postgres_changes", { event: "INSERT", schema: "public", table: "security_events" }, (payload) => {
-            const eventId = String((payload.new as { id?: string }).id ?? "");
-            if (eventId) void refreshSecuritySnapshot(eventId);
-          })
-          .on("postgres_changes", { event: "INSERT", schema: "public", table: "alerts" }, () => {
-            void refreshSecuritySnapshot();
-          })
-          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "alerts" }, () => {
-            void refreshSecuritySnapshot();
-          })
-          .subscribe((status) => {
-            if (status === "SUBSCRIBED") setRealtimeReady(true);
-            if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setRealtimeReady(false);
-          });
-
+        pollTimer = window.setInterval(() => {
+          void refreshSecuritySnapshot();
+        }, 5000);
+        setPollingReady(true);
         setBackendReady(true);
       } catch (error) {
         if (active) {
           setBackendReady(false);
-          setRealtimeReady(false);
-          toast.error("Supabase security data could not be loaded", {
-            description: error instanceof Error ? error.message : "Check the Supabase URL, key, schema, and row-level security policies.",
+          setPollingReady(false);
+          toast.error("Neon campus security data could not be loaded", {
+            description: error instanceof Error ? error.message : "Check the Neon Data API, Supabase Auth token, and RLS policies.",
           });
         }
       }
     };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       window.setTimeout(() => {
         if (session) void synchronizeSession();
         else {
+          stopPolling();
           setBackendReady(false);
-          setRealtimeReady(false);
-          if (liveChannel) {
-            void supabase.removeChannel(liveChannel);
-            liveChannel = null;
-          }
           knownAlertIdsRef.current.clear();
+          knownEventIdsRef.current.clear();
           notifiedAlertIdsRef.current.clear();
           setRoleState("student");
           setSignedIn(false);
@@ -198,10 +210,11 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         }
       }, 0);
     });
+
     return () => {
       active = false;
       subscription.unsubscribe();
-      if (liveChannel) void supabase.removeChannel(liveChannel);
+      stopPolling();
     };
   }, []);
   useEffect(() => {
@@ -209,7 +222,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     const timer = window.setTimeout(() => {
       void persistSecuritySnapshot(state).catch((error: unknown) => {
         setBackendReady(false);
-        toast.error("Security changes remain saved locally but could not be synced to Supabase", {
+        toast.error("Security changes remain saved locally but could not be synced to Neon", {
           description: error instanceof Error ? error.message : "Check the database connection and permissions.",
         });
       });
@@ -225,7 +238,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     setRoleState("student");
     setSignedIn(false);
     setBackendReady(false);
-    setRealtimeReady(false);
+    setPollingReady(false);
     knownAlertIdsRef.current.clear();
     notifiedAlertIdsRef.current.clear();
     setState(emptySecurityState());
@@ -466,7 +479,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   }, [state.events, state.visitors]);
 
   const value: Ctx = {
-    ...state, role, backendReady, realtimeReady, signedIn, signOut, highlightedCameraId, setHighlightedCameraId, registerVisitor, setVisitorStatus,
+    ...state, role, backendReady, pollingReady, signedIn, signOut, highlightedCameraId, setHighlightedCameraId, registerVisitor, setVisitorStatus,
     simulateDetection, authorizeIndoorRoute, setAlertStatus, setRule, setMuted, currentLocations,
   };
   return <SecurityCtx.Provider value={value}>{children}</SecurityCtx.Provider>;
