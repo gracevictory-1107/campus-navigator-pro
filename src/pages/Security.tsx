@@ -233,8 +233,6 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
               <span className="grid h-5 w-5 place-items-center rounded-full border border-border font-bold text-sm text-blue-600" aria-hidden="true">G</span>
               {googleBusy ? "Opening Google..." : "Continue with Google"}
             </Button>}
-            {mode !== "forgotPassword" && (
-            )}
             {!supabaseConfigured && (
               <p role="alert" className="text-xs text-destructive">Account login is unavailable because the authentication service is not configured.</p>
             )}
