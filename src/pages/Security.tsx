@@ -22,7 +22,7 @@ import { cctvEvidence, cctvEvidenceCaptureCounts, identifiedCctvEvidence } from 
 import { can, roles } from "@/security/permissions";
 import { formatTime, useSecurity } from "@/security/SecurityContext";
 import { personTypes, type LocationEvent, type PersonType, type Role, type SecurityAlert } from "@/security/types";
-import { loadAdminProfiles, loadCameraConfigs, saveCameraConfig, signInWithGoogle, signInWithSupabase, signUpWithSupabase, supabaseConfigured, updateManagedProfileRole, type CameraConfig, type ManagedProfile, type ManagedRole } from "@/lib/supabase";
+import { loadAdminProfiles, loadCameraConfigs, saveCameraConfig, signInWithGoogle, signInWithSupabase, signUpWithSupabase, supabaseConfigured, updateManagedProfileRole, verifyNeonSignupOtp, type CameraConfig, type ManagedProfile, type ManagedRole } from "@/lib/supabase";
 import { toast } from "sonner";
 import { enableAlertSound } from "@/security/sound";
 
@@ -76,6 +76,7 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
   const [authBusy, setAuthBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
 
   const resetDialog = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -83,6 +84,7 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
       setFullName("");
       setPassword("");
       setConfirmationSent(false);
+      setVerificationCode("");
     }
     onOpenChange(nextOpen);
   };
@@ -115,8 +117,8 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
         const result = await signUpWithSupabase(fullName, email, password);
         if (result.needsEmailConfirmation) {
           setConfirmationSent(true);
-          setPassword("");
-          toast.success("Check your email to verify your account.");
+          setVerificationCode("");
+          toast.success("Enter the verification code sent to your email.");
           return;
         }
         if (!result.role) throw new Error("The account was created, but the campus role could not be confirmed.");
@@ -129,6 +131,23 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
       toast.error(mode === "signIn" ? "Sign-in failed" : "Account creation failed", {
         description: error instanceof Error ? error.message : "Please check your details and try again.",
       });
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const submitVerification = async () => {
+    setAuthBusy(true);
+    try {
+      const role = await verifyNeonSignupOtp(email, password, verificationCode);
+      onRoleChange(role);
+      onOpenChange(false);
+      setPassword("");
+      setVerificationCode("");
+      setConfirmationSent(false);
+      toast.success(role === "pending" ? "Email verified. Access is pending Admin approval." : "Email verified and signed in.");
+    } catch (error) {
+      toast.error("Email verification failed", { description: error instanceof Error ? error.message : "Check the code and try again." });
     } finally {
       setAuthBusy(false);
     }
@@ -151,9 +170,14 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
             <CheckCircle2 className="h-8 w-8 text-[hsl(var(--status-authorized))]" />
             <h3 className="font-semibold text-foreground">Verify your email</h3>
             <p className="text-sm text-muted-foreground">
-              If the address is eligible for registration, a verification message has been sent to <span className="font-medium text-foreground">{email.trim().toLowerCase()}</span>. Verify your email first. Your account will then remain Pending approval until a campus Admin assigns the correct role.
+              Enter the 6-digit verification code sent to <span className="font-medium text-foreground">{email.trim().toLowerCase()}</span>. After verification, your campus account remains Pending until an Admin assigns your role.
             </p>
-            <Button onClick={() => { setMode("signIn"); setConfirmationSent(false); }}>Back to Sign In</Button>
+            <div className="grid gap-1.5">
+              <Label htmlFor="campus-verification-code">Email verification code</Label>
+              <Input id="campus-verification-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="Enter 6-digit code" />
+            </div>
+            <Button disabled={authBusy || verificationCode.length !== 6} onClick={() => void submitVerification()}>{authBusy ? "Verifying..." : "Verify Email"}</Button>
+            <Button variant="outline" onClick={() => { setMode("signIn"); setConfirmationSent(false); setVerificationCode(""); setPassword(""); }}>Back to Sign In</Button>
           </div>
         ) : (
           <form onSubmit={(event) => void submitAuth(event)} className="grid gap-3 rounded-lg border border-border p-3">
