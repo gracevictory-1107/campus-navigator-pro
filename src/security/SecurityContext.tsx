@@ -91,13 +91,19 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         );
         remote.events.forEach((event) => knownEventIdsRef.current.add(event.id));
 
-        setState((local) => ({
-          ...local,
-          visitors: mergeRecords(local.visitors, remote.visitors),
-          rules: mergeRecords(local.rules, remote.rules),
-          events: mergeRecords(local.events, remote.events).sort((left, right) => right.at - left.at),
-          alerts: mergeRecords(local.alerts, remote.alerts).sort((left, right) => right.event.at - left.event.at),
-        }));
+        setRealtimeReady(true);
+        setState((local) => {
+          const visitors = mergeRecords(local.visitors, remote.visitors);
+          const rules = mergeRecords(local.rules, remote.rules);
+          const events = mergeRecords(local.events, remote.events).sort((left, right) => right.at - left.at);
+          const alerts = mergeRecords(local.alerts, remote.alerts).sort((left, right) => right.event.at - left.event.at);
+          const changed = JSON.stringify(visitors) !== JSON.stringify(local.visitors)
+            || JSON.stringify(rules) !== JSON.stringify(local.rules)
+            || JSON.stringify(events) !== JSON.stringify(local.events)
+            || JSON.stringify(alerts) !== JSON.stringify(local.alerts);
+
+          return changed ? { ...local, visitors, rules, events, alerts } : local;
+        });
 
         if (newlyRestrictedEvent) setHighlightedCameraId(newlyRestrictedEvent.cameraId);
 
