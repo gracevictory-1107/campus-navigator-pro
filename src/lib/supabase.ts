@@ -268,6 +268,32 @@ export async function verifyNeonSignupOtp(email: string, password: string, token
   return signInWithSupabase(cleanEmail, password);
 }
 
+export async function requestNeonPasswordReset(email: string): Promise<void> {
+  if (!neonAuth) throw new Error("Password reset is unavailable because Neon Auth is not configured.");
+  const cleanEmail = email.trim().toLowerCase();
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(cleanEmail)) throw new Error("Enter a valid email address.");
+
+  const { error } = await neonAuth.emailOtp.requestPasswordReset({
+    email: cleanEmail,
+  });
+  if (error) throw error;
+}
+
+export async function resetNeonPassword(email: string, otp: string, newPassword: string): Promise<void> {
+  if (!neonAuth) throw new Error("Password reset is unavailable because Neon Auth is not configured.");
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanOtp = otp.trim();
+  if (!/^\\d{6}$/.test(cleanOtp)) throw new Error("Enter the 6-digit password reset code from your email.");
+  if (newPassword.length < 8) throw new Error("Use a password with at least 8 characters.");
+
+  const { error } = await neonAuth.emailOtp.resetPassword({
+    email: cleanEmail,
+    otp: cleanOtp,
+    password: newPassword,
+  });
+  if (error) throw error;
+}
+
 export async function getAuthenticatedRole(): Promise<Role | null> {
   if (!supabase) return null;
   const { data: { user }, error } = await supabase.auth.getUser();
