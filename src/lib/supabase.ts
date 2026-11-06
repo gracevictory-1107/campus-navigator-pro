@@ -543,7 +543,7 @@ export async function recordBiometricVerificationEvent(input: {
   accessResult?: "authorized" | "restricted";
   cameraId?: string;
 }) {
-  if (!supabase) return;
+  if (!neon) return;
 
   const profile = await getSignedInProfile();
   if (!profile || (profile.role !== "admin" && profile.role !== "security")) return;
