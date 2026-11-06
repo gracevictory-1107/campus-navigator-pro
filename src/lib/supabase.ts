@@ -136,7 +136,12 @@ interface Database {
       camera_coverage_areas: Table<CameraCoverageAreaRow, Omit<CameraCoverageAreaRow, "id" | "created_at" | "updated_at">>;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      create_profile_for_current_user: {
+        Args: { p_full_name?: string | null };
+        Returns: Json;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
@@ -144,11 +149,37 @@ interface Database {
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+const neonDataApiUrl = import.meta.env.VITE_NEON_DATA_API_URL?.trim();
 
-export const supabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
-export const supabase = supabaseConfigured
+export const supabaseAuthConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export const neonDataConfigured = Boolean(neonDataApiUrl && supabaseAuthConfigured);
+/** The app requires both the existing identity provider and the Neon campus database. */
+export const supabaseConfigured = supabaseAuthConfigured && neonDataConfigured;
+
+/** Supabase Auth remains the temporary identity provider while database reads/writes move to Neon. */
+export const supabase = supabaseAuthConfigured
   ? createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+    })
+  : null;
+
+/**
+ * Neon Data API is PostgREST-compatible. Its requests carry the current Supabase
+ * access token so Neon verifies the identity through the configured external JWKS
+ * provider and applies the migrated PostgreSQL RLS policies.
+ *
+ * The URL is the database base path without the trailing /rest/v1 segment because
+ * supabase-js appends that segment when it builds the PostgREST client URL.
+ */
+export const neon = neonDataConfigured
+  ? createClient<Database>(neonDataApiUrl!, supabaseAnonKey!, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      accessToken: async () => {
+        if (!supabase) return null;
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) return null;
+        return session?.access_token ?? null;
+      },
     })
   : null;
 
@@ -179,17 +210,37 @@ export function hasVerifiedEmailPasswordIdentity(user: AuthUserRegistrationMetad
 }
 
 async function getSignedInProfile() {
-  if (!supabase) return null;
+  if (!supabase || !neon) return null;
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError) throw userError;
   if (!user) return null;
-  const { data, error } = await supabase
+
+  const selectProfile = () => neon
     .from("profiles")
     .select("id, auth_user_id, full_name, email, role, created_at, updated_at")
     .eq("auth_user_id", user.id)
     .maybeSingle();
-  if (error) throw error;
-  return data;
+
+  const existing = await selectProfile();
+  if (existing.error) throw existing.error;
+  if (existing.data) return existing.data;
+
+  // The profile is created inside Neon with the JWT subject/email and a fixed
+  // "pending" role. The browser cannot choose or self-assign a campus role.
+  const metadata = user.user_metadata as Record<string, unknown> | undefined;
+  const fullName = typeof metadata?.full_name === "string"
+    ? metadata.full_name
+    : typeof metadata?.name === "string"
+      ? metadata.name
+      : null;
+  const { error: provisionError } = await neon.rpc("create_profile_for_current_user", {
+    p_full_name: fullName,
+  });
+  if (provisionError) throw provisionError;
+
+  const provisioned = await selectProfile();
+  if (provisioned.error) throw provisioned.error;
+  return provisioned.data;
 }
 
 export async function signInWithSupabase(email: string, password: string): Promise<Role> {
@@ -261,7 +312,7 @@ export async function signUpWithSupabase(
 }
 
 export async function getAuthenticatedRole(): Promise<Role | null> {
-  if (!supabase) return null;
+  if (!supabase || !neon) return null;
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error) throw error;
   if (!hasVerifiedEmailPasswordIdentity(user)) return null;
@@ -272,8 +323,8 @@ export async function getAuthenticatedRole(): Promise<Role | null> {
 
 export async function loadAdminProfiles(): Promise<ManagedProfile[] | null> {
   const profile = await getSignedInProfile();
-  if (profile?.role !== "admin" || !supabase) return null;
-  const { data, error } = await supabase
+  if (profile?.role !== "admin" || !neon) return null;
+  const { data, error } = await neon
     .from("profiles")
     .select("id, full_name, email, role")
     .order("full_name");
@@ -283,8 +334,8 @@ export async function loadAdminProfiles(): Promise<ManagedProfile[] | null> {
 
 export async function updateManagedProfileRole(id: string, role: ManagedRole): Promise<ManagedProfile> {
   const profile = await getSignedInProfile();
-  if (profile?.role !== "admin" || !supabase) throw new Error("A linked Supabase Admin account is required to change user roles.");
-  const { data, error } = await supabase
+  if (profile?.role !== "admin" || !neon) throw new Error("A linked campus Admin account is required to change user roles.");
+  const { data, error } = await neon
     .from("profiles")
     .update({ role })
     .eq("id", id)
@@ -303,12 +354,12 @@ export interface SupabaseSecuritySnapshot {
 
 export async function loadSecuritySnapshot(): Promise<SupabaseSecuritySnapshot | null> {
   const profile = await getSignedInProfile();
-  if (!profile || !supabase || (profile.role !== "admin" && profile.role !== "security" && profile.role !== "management")) return null;
+  if (!profile || !neon || (profile.role !== "admin" && profile.role !== "security" && profile.role !== "management")) return null;
   const [rulesResult, visitorsResult, eventsResult, alertsResult] = await Promise.all([
-    supabase.from("access_rules").select("*"),
-    supabase.from("visitors").select("*"),
-    supabase.from("security_events").select("*").order("occurred_at", { ascending: false }),
-    supabase.from("alerts").select("*").order("created_at", { ascending: false }),
+    neon.from("access_rules").select("*"),
+    neon.from("visitors").select("*"),
+    neon.from("security_events").select("*").order("occurred_at", { ascending: false }),
+    neon.from("alerts").select("*").order("created_at", { ascending: false }),
   ]);
   const failure = rulesResult.error ?? visitorsResult.error ?? eventsResult.error ?? alertsResult.error;
   if (failure) throw failure;
@@ -367,8 +418,8 @@ export async function loadSecuritySnapshot(): Promise<SupabaseSecuritySnapshot |
 
 export async function persistSecuritySnapshot(snapshot: SupabaseSecuritySnapshot): Promise<void> {
   const profile = await getSignedInProfile();
-  if (!profile || !supabase || (profile.role !== "admin" && profile.role !== "security")) {
-    throw new Error("A linked Supabase Security or Admin account is required to save campus security data.");
+  if (!profile || !neon || (profile.role !== "admin" && profile.role !== "security")) {
+    throw new Error("A linked Security or Admin campus account is required to save campus security data.");
   }
   const visitorRows = snapshot.visitors.map((visitor) => ({
     id: visitor.id,
@@ -401,7 +452,7 @@ export async function persistSecuritySnapshot(snapshot: SupabaseSecuritySnapshot
     history: alert.history as unknown as Json,
   }));
 
-  const visitorsWrite = visitorRows.length ? await supabase.from("visitors").upsert(visitorRows) : { error: null };
+  const visitorsWrite = visitorRows.length ? await neon.from("visitors").upsert(visitorRows) : { error: null };
   if (visitorsWrite.error) throw visitorsWrite.error;
   const eventRows = snapshot.events.map((event) => ({
     id: event.id,
@@ -418,11 +469,11 @@ export async function persistSecuritySnapshot(snapshot: SupabaseSecuritySnapshot
     access: event.access,
     occurred_at: event.at,
   }));
-  const eventsWrite = eventRows.length ? await supabase.from("security_events").upsert(eventRows) : { error: null };
+  const eventsWrite = eventRows.length ? await neon.from("security_events").upsert(eventRows) : { error: null };
   if (eventsWrite.error) throw eventsWrite.error;
-  const rulesWrite = ruleRows.length ? await supabase.from("access_rules").upsert(ruleRows) : { error: null };
+  const rulesWrite = ruleRows.length ? await neon.from("access_rules").upsert(ruleRows) : { error: null };
   if (rulesWrite.error) throw rulesWrite.error;
-  const alertsWrite = alertRows.length ? await supabase.from("alerts").upsert(alertRows) : { error: null };
+  const alertsWrite = alertRows.length ? await neon.from("alerts").upsert(alertRows) : { error: null };
   if (alertsWrite.error) throw alertsWrite.error;
 }
 
@@ -433,14 +484,14 @@ export async function persistSecuritySnapshot(snapshot: SupabaseSecuritySnapshot
  * SecurityContext snapshot can race and cause foreign-key failures.
  */
 export async function saveVisitorRecord(visitor: Visitor): Promise<void> {
-  if (!supabase) return;
+  if (!neon) return;
 
   const profile = await getSignedInProfile();
   if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
-    throw new Error("A linked Supabase Security or Admin account is required to save visitor records.");
+    throw new Error("A linked Security or Admin campus account is required to save visitor records.");
   }
 
-  const { error } = await supabase.from("visitors").upsert({
+  const { error } = await neon.from("visitors").upsert({
     id: visitor.id,
     name: visitor.name.trim(),
     email: normalizeVisitorEmail(visitor.email),
@@ -467,142 +518,21 @@ export interface BiometricStoredProfile {
   status: string;
 }
 
-function biometricLocalKey(visitorId: string) {
-  return "campus-biometric:" + visitorId;
+/**
+ * Biometric templates are intentionally not read or stored in browser memory,
+ * localStorage, or the Neon Data API. Re-enable only after encrypted server-side
+ * storage and server-side matching are implemented and approved.
+ */
+export async function getBiometricEmbedding(_visitorId: string): Promise<number[] | null> {
+  return null;
 }
 
-export async function getBiometricEmbedding(visitorId: string): Promise<number[] | null> {
-  if (!supabase) {
-    try {
-      const raw = localStorage.getItem(biometricLocalKey(visitorId));
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : null;
-    } catch {
-      return null;
-    }
-  }
-
-  const profile = await getSignedInProfile();
-  if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
-    return null;
-  }
-  const { data, error } = await supabase
-    .from("biometric_profiles")
-    .select("id, visitor_id, provider_reference, status")
-    .eq("visitor_id", visitorId)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data?.provider_reference || data.status !== "ENROLLED") return null;
-
-  try {
-    const parsed = JSON.parse(data.provider_reference) as { version?: number; embedding?: unknown };
-    return Array.isArray(parsed.embedding)
-      && parsed.embedding.length > 0
-      && parsed.embedding.every((item) => typeof item === "number" && Number.isFinite(item))
-      ? parsed.embedding
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-export async function saveBiometricEmbedding(visitorId: string, embedding: number[]): Promise<BiometricStoredProfile> {
-  if (!Array.isArray(embedding) || embedding.length === 0 || !embedding.every((value) => Number.isFinite(value))) {
-    throw new Error("The face template is invalid. Scan the visitor again before saving.");
-  }
-
-  if (!supabase) {
-    localStorage.setItem(biometricLocalKey(visitorId), JSON.stringify(embedding));
-    return { id: "LOCAL-" + visitorId, visitorId, embedding, status: "ENROLLED" };
-  }
-
-  const profile = await getSignedInProfile();
-  if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
-    throw new Error("A linked Supabase Security or Admin account is required for biometric enrollment.");
-  }
-
-  const providerReference = JSON.stringify({ version: 1, embedding });
-  const { data: existing, error: existingError } = await supabase
-    .from("biometric_profiles")
-    .select("id")
-    .eq("visitor_id", visitorId)
-    .maybeSingle();
-  if (existingError) throw existingError;
-
-  if (existing?.id) {
-    const { data, error } = await supabase
-      .from("biometric_profiles")
-      .update({ provider_reference: providerReference, status: "ENROLLED" })
-      .eq("id", existing.id)
-      .select("id, visitor_id, provider_reference, status")
-      .single();
-    if (error) throw error;
-    return {
-      id: data.id,
-      visitorId,
-      embedding,
-      status: data.status,
-    };
-  }
-
-  const { data, error } = await supabase
-    .from("biometric_profiles")
-    .insert({
-      visitor_id: visitorId,
-      provider_reference: providerReference,
-      status: "ENROLLED",
-    })
-    .select("id, visitor_id, provider_reference, status")
-    .single();
-  if (error) throw error;
-
-  return {
-    id: data.id,
-    visitorId,
-    embedding,
-    status: data.status,
-  };
+export async function saveBiometricEmbedding(_visitorId: string, _embedding: number[]): Promise<BiometricStoredProfile> {
+  throw new Error("Biometric enrollment is temporarily disabled. Secure server-side template storage and matching must be integrated first.");
 }
 
 export async function loadAllBiometricEmbeddings(): Promise<Array<{ visitorId: string; embedding: number[] }>> {
-  const valid = (value: unknown): value is number[] =>
-    Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === "number" && Number.isFinite(item));
-
-  if (!supabase) {
-    const entries: Array<{ visitorId: string; embedding: number[] }> = [];
-    for (let index = 0; index < localStorage.length; index += 1) {
-      const key = localStorage.key(index);
-      if (!key?.startsWith("campus-biometric:")) continue;
-      try {
-        const parsed = JSON.parse(localStorage.getItem(key) ?? "null");
-        if (valid(parsed)) entries.push({ visitorId: key.slice("campus-biometric:".length), embedding: parsed });
-      } catch { /* ignore malformed local biometric records */ }
-    }
-    return entries;
-  }
-
-  const profile = await getSignedInProfile();
-  if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
-    return []; 
-  }
-  const { data, error } = await supabase
-    .from("biometric_profiles")
-    .select("visitor_id, provider_reference, status")
-    .eq("status", "ENROLLED");
-
-  if (error) throw error;
-
-  return data.flatMap((row) => {
-    if (!row.visitor_id || !row.provider_reference) return [];
-    try {
-      const parsed = JSON.parse(row.provider_reference) as { embedding?: unknown };
-      return valid(parsed.embedding) ? [{ visitorId: row.visitor_id, embedding: parsed.embedding }] : [];
-    } catch {
-      return [];
-    }
-  });
+  return [];
 }
 
 export async function recordBiometricVerificationEvent(input: {
@@ -618,7 +548,7 @@ export async function recordBiometricVerificationEvent(input: {
   const profile = await getSignedInProfile();
   if (!profile || (profile.role !== "admin" && profile.role !== "security")) return;
 
-  const { error } = await supabase.from("biometric_verification_events").insert({
+  const { error } = await neon.from("biometric_verification_events").insert({
     visitor_id: input.visitorId,
     event_type: input.eventType ?? "visitor_face_verification",
     verification_result: input.result,
@@ -638,63 +568,28 @@ export interface CameraConfig {
   streamUrl: string;
 }
 
-const CAMERA_CONFIG_LOCAL_KEY = "campus-camera-config-v1";
-
-function localCameraConfigs(): Record<string, CameraConfig> {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(CAMERA_CONFIG_LOCAL_KEY) ?? "{}");
-    return parsed && typeof parsed === "object" ? parsed as Record<string, CameraConfig> : {};
-  } catch {
-    return {};
-  }
-}
-
 export async function loadCameraConfigs(): Promise<Record<string, CameraConfig>> {
-  if (!supabase) return localCameraConfigs();
-
   const profile = await getSignedInProfile();
-  if (!profile || !["admin", "management", "security"].includes(profile.role)) {
+  if (!profile || !neon || !["admin", "management", "security"].includes(profile.role)) {
     return {};
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await neon
     .from("camera_configs")
-    .select("camera_id, ip_address, stream_url");
+    .select("camera_id");
 
   if (error) throw error;
 
   return data.reduce<Record<string, CameraConfig>>((configs, row) => {
     configs[row.camera_id] = {
       cameraId: row.camera_id,
-      ipAddress: row.ip_address ?? "",
-      streamUrl: row.stream_url ?? "",
+      ipAddress: "",
+      streamUrl: "",
     };
     return configs;
   }, {});
 }
 
-export async function saveCameraConfig(config: CameraConfig): Promise<void> {
-  if (!supabase) {
-    const current = localCameraConfigs();
-    current[config.cameraId] = config;
-    localStorage.setItem(CAMERA_CONFIG_LOCAL_KEY, JSON.stringify(current));
-    return;
-  }
-
-  const profile = await getSignedInProfile();
-  if (!profile || !["admin", "management"].includes(profile.role)) {
-    throw new Error("A linked Supabase Management or Admin account is required to change CCTV configuration.");
-  }
-
-  const cleaned = {
-    camera_id: config.cameraId,
-    ip_address: config.ipAddress.trim(),
-    stream_url: config.streamUrl.trim(),
-  };
-  const { error } = await supabase.from("camera_configs").upsert(cleaned);
-  if (error) throw error;
-
-  const current = localCameraConfigs();
-  current[config.cameraId] = { cameraId: config.cameraId, ipAddress: cleaned.ip_address, streamUrl: cleaned.stream_url };
-  localStorage.setItem(CAMERA_CONFIG_LOCAL_KEY, JSON.stringify(current));
+export async function saveCameraConfig(_config: CameraConfig): Promise<void> {
+  throw new Error("Camera stream settings are locked until the approved server-side CCTV gateway is integrated. Do not enter RTSP URLs, private IPs, or credentials in the browser.");
 }
