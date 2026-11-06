@@ -1253,7 +1253,7 @@ export default function Security() {
           <Button asChild variant="ghost" size="icon" className="h-9 w-9"><Link to="/" aria-label="Back to navigator"><ArrowLeft className="h-4 w-4" /></Link></Button>
           <div>
             <h1 className="font-display text-lg font-bold text-foreground leading-tight">Campus Security</h1>
-            <p className="text-[11px] text-muted-foreground">{roles.find((r) => r.id === role)?.label} view{!manage && !manageAccess ? " · read-only" : ""} · live event sync, CCTV streams pending</p>
+            <p className="text-[11px] text-muted-foreground">{roles.find((r) => r.id === role)?.label} view{!manage && !manageAccess ? " · read-only" : ""} · automatic event refresh · CCTV feeds not connected</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1269,11 +1269,11 @@ export default function Security() {
           </Badge>
           <Badge
             variant="outline"
-            className={sec.realtimeReady ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400" : "border-border text-muted-foreground"}
-            title={sec.realtimeReady ? "New camera events and alerts are streaming to this screen." : "Live event stream is not connected."}
+            className={sec.pollingReady ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400" : "border-border text-muted-foreground"}
+            title={sec.pollingReady ? "Security events and alerts refresh from Neon every five seconds while this page is open." : "Automatic security data refresh is not running."}
           >
-            <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${sec.realtimeReady ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground"}`} />
-            {sec.realtimeReady ? "Live updates" : "Live offline"}
+            <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${sec.pollingReady ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground"}`} />
+            {sec.pollingReady ? "Auto refresh" : "Refresh offline"}
           </Badge>
           {activeAlerts.length > 0 && <Badge variant="destructive" className="gap-1"><Bell className="h-3 w-3" />{activeAlerts.length}</Badge>}
           <Button
