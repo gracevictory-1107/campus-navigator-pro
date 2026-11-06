@@ -1,4 +1,4 @@
-import { neon, neonConfigured } from "@/lib/neon";
+import { neon, neonAuth, neonConfigured } from "@/lib/neon";
 import { normalizeVisitorEmail } from "@/lib/visitorNormalization";
 import type { AccessRule, AlertStatus, LocationEvent, PersonType, Role, SecurityAlert, Visitor } from "@/security/types";
 
@@ -229,35 +229,43 @@ export async function signUpWithSupabase(
   email: string,
   password: string,
 ): Promise<{ role: Role | null; needsEmailConfirmation: boolean }> {
-  if (!supabase) throw new Error("Account creation is unavailable because Neon is not configured.");
+  if (!neonAuth) throw new Error("Account creation is unavailable because Neon Auth is not configured.");
   const cleanName = fullName.trim();
   const cleanEmail = email.trim().toLowerCase();
   if (cleanName.length < 2) throw new Error("Enter your full name.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) throw new Error("Enter a valid email address.");
   if (password.length < 8) throw new Error("Use a password with at least 8 characters.");
 
-  const { data, error } = await supabase.auth.signUp({
+  const { error: signupError } = await neonAuth.signUp.email({
     email: cleanEmail,
     password,
-    options: {
-      data: { full_name: cleanName },
-      // Always return email confirmation links to the live app, even when signup starts from localhost.
-      emailRedirectTo: "https://campus-navigator-pro.vercel.app/auth/callback",
-    },
+    name: cleanName,
   });
-  if (error) throw error;
-  if (!data.user) throw new Error("Account creation did not complete. Please try again.");
+  if (signupError) throw signupError;
 
-  if (!data.session) {
-    return { role: null, needsEmailConfirmation: true };
-  }
+  const { error: otpError } = await neonAuth.emailOtp.sendVerificationOtp({
+    email: cleanEmail,
+    type: "email-verification",
+  });
+  if (otpError) throw otpError;
 
-  const profile = await getSignedInProfile();
-  if (!profile) {
-    await supabase.auth.signOut();
-    throw new Error("Your account was created, but its campus profile was not provisioned. Contact the campus administrator.");
-  }
-  return { role: mapAppRole(profile.role), needsEmailConfirmation: false };
+  return { role: null, needsEmailConfirmation: true };
+}
+
+/** Verify a Neon email OTP, then establish the normal password session. */
+export async function verifyNeonSignupOtp(email: string, password: string, token: string): Promise<Role> {
+  if (!neonAuth) throw new Error("Email verification is unavailable because Neon Auth is not configured.");
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanToken = token.trim();
+  if (!/^\d{6}$/.test(cleanToken)) throw new Error("Enter the 6-digit verification code from your email.");
+
+  const { error: verificationError } = await neonAuth.emailOtp.verifyEmail({
+    email: cleanEmail,
+    otp: cleanToken,
+  });
+  if (verificationError) throw verificationError;
+
+  return signInWithSupabase(cleanEmail, password);
 }
 
 export async function getAuthenticatedRole(): Promise<Role | null> {
