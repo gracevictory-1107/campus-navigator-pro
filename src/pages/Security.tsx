@@ -227,10 +227,12 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
               {authBusy ? "Please wait..." : mode === "signIn" ? "Sign In with Email" : mode === "signUp" ? "Create Account" : passwordResetSent ? "Reset Password" : "Send Reset Code"}
             </Button>
             {mode === "signIn" && <button type="button" className="text-sm font-medium text-primary underline-offset-4 hover:underline" onClick={() => { setMode("forgotPassword"); setPassword(""); setVerificationCode(""); setPasswordResetSent(false); }}>Forgot password?</button>}
-            {mode !== "forgotPassword" && <div className="relative py-1">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-              <div className="relative flex justify-center"><span className="bg-card px-3 text-xs text-muted-foreground">or continue with</span></div>
-            </div>
+            {mode !== "forgotPassword" && (
+              <div className="relative py-1">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+                <div className="relative flex justify-center"><span className="bg-card px-3 text-xs text-muted-foreground">or continue with</span></div>
+              </div>
+            )}
             {mode !== "forgotPassword" && <Button type="button" variant="outline" className="w-full gap-3" onClick={() => void handleGoogleSignIn()} disabled={googleBusy || authBusy || !supabaseConfigured}>
               <span className="grid h-5 w-5 place-items-center rounded-full border border-border font-bold text-sm text-blue-600" aria-hidden="true">G</span>
               {googleBusy ? "Opening Google..." : "Continue with Google"}
