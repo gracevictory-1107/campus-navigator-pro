@@ -22,7 +22,7 @@ import { cctvEvidence, cctvEvidenceCaptureCounts, identifiedCctvEvidence } from 
 import { can, roles } from "@/security/permissions";
 import { formatTime, useSecurity } from "@/security/SecurityContext";
 import { personTypes, type LocationEvent, type PersonType, type Role, type SecurityAlert } from "@/security/types";
-import { loadAdminProfiles, loadCameraConfigs, saveCameraConfig, signInWithGoogle, signInWithSupabase, signUpWithSupabase, supabaseConfigured, updateManagedProfileRole, type CameraConfig, type ManagedProfile, type ManagedRole } from "@/lib/supabase";
+import { loadAdminProfiles, loadCameraConfigs, saveCameraConfig, signInWithGoogle, signInWithSupabase, signUpWithSupabase, supabaseConfigured, updateManagedProfileRole, requestNeonPasswordReset, resetNeonPassword, verifyNeonSignupOtp, type CameraConfig, type ManagedProfile, type ManagedRole } from "@/lib/supabase";
 import { toast } from "sonner";
 import { enableAlertSound } from "@/security/sound";
 
@@ -69,13 +69,15 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
   onOpenChange: (open: boolean) => void;
   onRoleChange: (role: Role) => void;
 }) {
-  const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
+  const [mode, setMode] = useState<"signIn" | "signUp" | "forgotPassword">("signIn");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [passwordResetSent, setPasswordResetSent] = useState(false);
 
   const resetDialog = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -83,6 +85,8 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
       setFullName("");
       setPassword("");
       setConfirmationSent(false);
+      setVerificationCode("");
+      setPasswordResetSent(false);
     }
     onOpenChange(nextOpen);
   };
@@ -105,7 +109,22 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
     setAuthBusy(true);
     setConfirmationSent(false);
     try {
-      if (mode === "signIn") {
+      if (mode === "forgotPassword") {
+        if (!passwordResetSent) {
+          await requestNeonPasswordReset(email);
+          setPasswordResetSent(true);
+          setVerificationCode("");
+          setPassword("");
+          toast.success("Password reset code sent to your email.");
+        } else {
+          await resetNeonPassword(email, verificationCode, password);
+          setMode("signIn");
+          setPasswordResetSent(false);
+          setVerificationCode("");
+          setPassword("");
+          toast.success("Password reset successfully. You can now sign in.");
+        }
+      } else if (mode === "signIn") {
         const role = await signInWithSupabase(email, password);
         onRoleChange(role);
         onOpenChange(false);
@@ -115,8 +134,8 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
         const result = await signUpWithSupabase(fullName, email, password);
         if (result.needsEmailConfirmation) {
           setConfirmationSent(true);
-          setPassword("");
-          toast.success("Check your email to verify your account.");
+          setVerificationCode("");
+          toast.success("Enter the verification code sent to your email.");
           return;
         }
         if (!result.role) throw new Error("The account was created, but the campus role could not be confirmed.");
@@ -134,15 +153,34 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
     }
   };
 
+  const submitVerification = async () => {
+    setAuthBusy(true);
+    try {
+      const role = await verifyNeonSignupOtp(email, password, verificationCode);
+      onRoleChange(role);
+      onOpenChange(false);
+      setPassword("");
+      setVerificationCode("");
+      setConfirmationSent(false);
+      toast.success(role === "pending" ? "Email verified. Access is pending Admin approval." : "Email verified and signed in.");
+    } catch (error) {
+      toast.error("Email verification failed", { description: error instanceof Error ? error.message : "Check the code and try again." });
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={resetDialog}>
       <DialogContent className="max-h-[90dvh] max-w-md overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{mode === "signIn" ? "Sign In to Campus Security" : "Create a Campus Account"}</DialogTitle>
+          <DialogTitle>{mode === "signIn" ? "Sign In to Campus Security" : mode === "signUp" ? "Create a Campus Account" : "Reset Your Password"}</DialogTitle>
           <DialogDescription>
             {mode === "signIn"
               ? "Sign in with the email and password for your verified campus account. Security dashboard permissions come from your assigned campus role."
-              : "Create an account with your real email address. New accounts remain Pending approval until an authorised Admin assigns the correct campus role."}
+              : mode === "signUp"
+                ? "Create an account with your real email address. New accounts remain Pending approval until an authorised Admin assigns the correct campus role."
+                : "Use your campus email to receive a secure 6-digit Neon password reset code."}
           </DialogDescription>
         </DialogHeader>
 
@@ -151,12 +189,22 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
             <CheckCircle2 className="h-8 w-8 text-[hsl(var(--status-authorized))]" />
             <h3 className="font-semibold text-foreground">Verify your email</h3>
             <p className="text-sm text-muted-foreground">
-              If the address is eligible for registration, a verification message has been sent to <span className="font-medium text-foreground">{email.trim().toLowerCase()}</span>. Verify your email first. Your account will then remain Pending approval until a campus Admin assigns the correct role.
+              Enter the 6-digit verification code sent to <span className="font-medium text-foreground">{email.trim().toLowerCase()}</span>. After verification, your campus account remains Pending until an Admin assigns your role.
             </p>
-            <Button onClick={() => { setMode("signIn"); setConfirmationSent(false); }}>Back to Sign In</Button>
+            <div className="grid gap-1.5">
+              <Label htmlFor="campus-verification-code">Email verification code</Label>
+              <Input id="campus-verification-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="Enter 6-digit code" />
+            </div>
+            <Button disabled={authBusy || verificationCode.length !== 6} onClick={() => void submitVerification()}>{authBusy ? "Verifying..." : "Verify Email"}</Button>
+            <Button variant="outline" onClick={() => { setMode("signIn"); setConfirmationSent(false); setVerificationCode(""); setPassword(""); }}>Back to Sign In</Button>
           </div>
         ) : (
           <form onSubmit={(event) => void submitAuth(event)} className="grid gap-3 rounded-lg border border-border p-3">
+            {mode === "forgotPassword" && passwordResetSent && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                Enter the 6-digit code sent to <span className="font-medium text-foreground">{email.trim().toLowerCase()}</span>, then choose a new password.
+              </div>
+            )}
             {mode === "signUp" && (
               <div className="grid gap-1.5">
                 <Label htmlFor="campus-signup-name">Full name</Label>
@@ -167,22 +215,28 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
               <Label htmlFor="campus-auth-email">Email address</Label>
               <Input id="campus-auth-email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" />
             </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="campus-auth-password">Password</Label>
-              <Input id="campus-auth-password" type="password" autoComplete={mode === "signIn" ? "current-password" : "new-password"} required minLength={mode === "signUp" ? 8 : 1} maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={mode === "signUp" ? "At least 8 characters" : "Password"} />
-              {mode === "signUp" && <p className="text-xs text-muted-foreground">Use at least 8 characters. Never share your password.</p>}
-            </div>
+            {(mode !== "forgotPassword" || passwordResetSent) && (
+              <div className="grid gap-1.5">
+                <Label htmlFor="campus-auth-password">{mode === "forgotPassword" ? "New password" : "Password"}</Label>
+                <Input id="campus-auth-password" type="password" autoComplete={mode === "signIn" ? "current-password" : "new-password"} required minLength={mode === "signUp" ? 8 : 1} maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={mode === "signUp" ? "At least 8 characters" : "Password"} />
+                {mode === "signUp" && <p className="text-xs text-muted-foreground">Use at least 8 characters. Never share your password.</p>}
+              </div>
+            )}
+            {mode === "forgotPassword" && passwordResetSent && <div className="grid gap-1.5"><Label htmlFor="campus-reset-code">Password reset code</Label><Input id="campus-reset-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\\D/g, "").slice(0, 6))} placeholder="Enter 6-digit code" /></div>}
             <Button type="submit" disabled={authBusy || !supabaseConfigured}>
-              {authBusy ? "Please wait..." : mode === "signIn" ? "Sign In with Email" : "Create Account"}
+              {authBusy ? "Please wait..." : mode === "signIn" ? "Sign In with Email" : mode === "signUp" ? "Create Account" : passwordResetSent ? "Reset Password" : "Send Reset Code"}
             </Button>
-            <div className="relative py-1">
-              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-              <div className="relative flex justify-center"><span className="bg-card px-3 text-xs text-muted-foreground">or continue with</span></div>
-            </div>
-            <Button type="button" variant="outline" className="w-full gap-3" onClick={() => void handleGoogleSignIn()} disabled={googleBusy || authBusy || !supabaseConfigured}>
+            {mode === "signIn" && <button type="button" className="text-sm font-medium text-primary underline-offset-4 hover:underline" onClick={() => { setMode("forgotPassword"); setPassword(""); setVerificationCode(""); setPasswordResetSent(false); }}>Forgot password?</button>}
+            {mode !== "forgotPassword" && (
+              <div className="relative py-1">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+                <div className="relative flex justify-center"><span className="bg-card px-3 text-xs text-muted-foreground">or continue with</span></div>
+              </div>
+            )}
+            {mode !== "forgotPassword" && <Button type="button" variant="outline" className="w-full gap-3" onClick={() => void handleGoogleSignIn()} disabled={googleBusy || authBusy || !supabaseConfigured}>
               <span className="grid h-5 w-5 place-items-center rounded-full border border-border font-bold text-sm text-blue-600" aria-hidden="true">G</span>
               {googleBusy ? "Opening Google..." : "Continue with Google"}
-            </Button>
+            </Button>}
             {!supabaseConfigured && (
               <p role="alert" className="text-xs text-destructive">Account login is unavailable because the authentication service is not configured.</p>
             )}
@@ -191,7 +245,7 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
               <button
                 type="button"
                 className="font-medium text-primary underline-offset-4 hover:underline"
-                onClick={() => { setMode((current) => current === "signIn" ? "signUp" : "signIn"); setPassword(""); setConfirmationSent(false); }}
+                onClick={() => { setMode((current) => current === "signIn" ? "signUp" : "signIn"); setPassword(""); setVerificationCode(""); setConfirmationSent(false); setPasswordResetSent(false); }}
               >
                 {mode === "signIn" ? "Create an account" : "Sign in"}
               </button>

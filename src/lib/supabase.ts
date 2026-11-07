@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { neon, neonAuth, neonConfigured } from "@/lib/neon";
 import { normalizeVisitorEmail } from "@/lib/visitorNormalization";
 import type { AccessRule, AlertStatus, LocationEvent, PersonType, Role, SecurityAlert, Visitor } from "@/security/types";
 
@@ -142,15 +142,15 @@ interface Database {
   };
 }
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
-
-export const supabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
-export const supabase = supabaseConfigured
-  ? createClient<Database>(supabaseUrl!, supabaseAnonKey!, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
-    })
-  : null;
+/**
+ * Compatibility facade during the Supabase-to-Neon migration.
+ *
+ * The application keeps this module path temporarily so the UI/security
+ * layers do not need a risky all-at-once rename. The actual client is Neon
+ * Data API + Neon Auth, configured in src/lib/neon.ts.
+ */
+export const supabaseConfigured = neonConfigured;
+export const supabase = neon;
 
 export type ManagedProfile = Pick<ProfileRow, "id" | "full_name" | "email" | "role">;
 export type ManagedRole = ProfileRow["role"];
@@ -193,7 +193,7 @@ async function getSignedInProfile() {
 }
 
 export async function signInWithSupabase(email: string, password: string): Promise<Role> {
-  if (!supabase) throw new Error("Account sign-in is unavailable because Supabase is not configured.");
+  if (!supabase) throw new Error("Account sign-in is unavailable because Neon is not configured.");
   const { error: signInError } = await supabase.auth.signInWithPassword({
     email: email.trim().toLowerCase(),
     password,
@@ -209,9 +209,9 @@ export async function signInWithSupabase(email: string, password: string): Promi
   }
 }
 
-/** Start Supabase's Google OAuth flow and return to the public auth callback. */
+/** Start Neon's Google OAuth flow and return to the public auth callback. */
 export async function signInWithGoogle(): Promise<void> {
-  if (!supabase) throw new Error("Google sign-in is unavailable because Supabase is not configured.");
+  if (!supabase) throw new Error("Google sign-in is unavailable because Neon is not configured.");
 
   const redirectTo = `${window.location.origin}/auth/callback`;
   const { error } = await supabase.auth.signInWithOAuth({
@@ -229,35 +229,69 @@ export async function signUpWithSupabase(
   email: string,
   password: string,
 ): Promise<{ role: Role | null; needsEmailConfirmation: boolean }> {
-  if (!supabase) throw new Error("Account creation is unavailable because Supabase is not configured.");
+  if (!neonAuth) throw new Error("Account creation is unavailable because Neon Auth is not configured.");
   const cleanName = fullName.trim();
   const cleanEmail = email.trim().toLowerCase();
   if (cleanName.length < 2) throw new Error("Enter your full name.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) throw new Error("Enter a valid email address.");
   if (password.length < 8) throw new Error("Use a password with at least 8 characters.");
 
-  const { data, error } = await supabase.auth.signUp({
+  const { error: signupError } = await neonAuth.signUp.email({
     email: cleanEmail,
     password,
-    options: {
-      data: { full_name: cleanName },
-      // Always return email confirmation links to the live app, even when signup starts from localhost.
-      emailRedirectTo: "https://campus-navigator-pro.vercel.app/auth/callback",
-    },
+    name: cleanName,
+  });
+  if (signupError) throw signupError;
+
+  const { error: otpError } = await neonAuth.emailOtp.sendVerificationOtp({
+    email: cleanEmail,
+    type: "email-verification",
+  });
+  if (otpError) throw otpError;
+
+  return { role: null, needsEmailConfirmation: true };
+}
+
+/** Verify a Neon email OTP, then establish the normal password session. */
+export async function verifyNeonSignupOtp(email: string, password: string, token: string): Promise<Role> {
+  if (!neonAuth) throw new Error("Email verification is unavailable because Neon Auth is not configured.");
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanToken = token.trim();
+  if (!/^\d{6}$/.test(cleanToken)) throw new Error("Enter the 6-digit verification code from your email.");
+
+  const { error: verificationError } = await neonAuth.emailOtp.verifyEmail({
+    email: cleanEmail,
+    otp: cleanToken,
+  });
+  if (verificationError) throw verificationError;
+
+  return signInWithSupabase(cleanEmail, password);
+}
+
+export async function requestNeonPasswordReset(email: string): Promise<void> {
+  if (!neonAuth) throw new Error("Password reset is unavailable because Neon Auth is not configured.");
+  const cleanEmail = email.trim().toLowerCase();
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(cleanEmail)) throw new Error("Enter a valid email address.");
+
+  const { error } = await neonAuth.emailOtp.requestPasswordReset({
+    email: cleanEmail,
   });
   if (error) throw error;
-  if (!data.user) throw new Error("Account creation did not complete. Please try again.");
+}
 
-  if (!data.session) {
-    return { role: null, needsEmailConfirmation: true };
-  }
+export async function resetNeonPassword(email: string, otp: string, newPassword: string): Promise<void> {
+  if (!neonAuth) throw new Error("Password reset is unavailable because Neon Auth is not configured.");
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanOtp = otp.trim();
+  if (!/^\\d{6}$/.test(cleanOtp)) throw new Error("Enter the 6-digit password reset code from your email.");
+  if (newPassword.length < 8) throw new Error("Use a password with at least 8 characters.");
 
-  const profile = await getSignedInProfile();
-  if (!profile) {
-    await supabase.auth.signOut();
-    throw new Error("Your account was created, but its campus profile was not provisioned. Contact the campus administrator.");
-  }
-  return { role: mapAppRole(profile.role), needsEmailConfirmation: false };
+  const { error } = await neonAuth.emailOtp.resetPassword({
+    email: cleanEmail,
+    otp: cleanOtp,
+    password: newPassword,
+  });
+  if (error) throw error;
 }
 
 export async function getAuthenticatedRole(): Promise<Role | null> {
@@ -283,7 +317,7 @@ export async function loadAdminProfiles(): Promise<ManagedProfile[] | null> {
 
 export async function updateManagedProfileRole(id: string, role: ManagedRole): Promise<ManagedProfile> {
   const profile = await getSignedInProfile();
-  if (profile?.role !== "admin" || !supabase) throw new Error("A linked Supabase Admin account is required to change user roles.");
+  if (profile?.role !== "admin" || !supabase) throw new Error("A linked Neon Admin account is required to change user roles.");
   const { data, error } = await supabase
     .from("profiles")
     .update({ role })
@@ -368,7 +402,7 @@ export async function loadSecuritySnapshot(): Promise<SupabaseSecuritySnapshot |
 export async function persistSecuritySnapshot(snapshot: SupabaseSecuritySnapshot): Promise<void> {
   const profile = await getSignedInProfile();
   if (!profile || !supabase || (profile.role !== "admin" && profile.role !== "security")) {
-    throw new Error("A linked Supabase Security or Admin account is required to save campus security data.");
+    throw new Error("A linked Neon Security or Admin account is required to save campus security data.");
   }
   const visitorRows = snapshot.visitors.map((visitor) => ({
     id: visitor.id,
@@ -437,7 +471,7 @@ export async function saveVisitorRecord(visitor: Visitor): Promise<void> {
 
   const profile = await getSignedInProfile();
   if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
-    throw new Error("A linked Supabase Security or Admin account is required to save visitor records.");
+    throw new Error("A linked Neon Security or Admin account is required to save visitor records.");
   }
 
   const { error } = await supabase.from("visitors").upsert({
@@ -520,7 +554,7 @@ export async function saveBiometricEmbedding(visitorId: string, embedding: numbe
 
   const profile = await getSignedInProfile();
   if (!profile || (profile.role !== "admin" && profile.role !== "security")) {
-    throw new Error("A linked Supabase Security or Admin account is required for biometric enrollment.");
+    throw new Error("A linked Neon Security or Admin account is required for biometric enrollment.");
   }
 
   const providerReference = JSON.stringify({ version: 1, embedding });
@@ -683,7 +717,7 @@ export async function saveCameraConfig(config: CameraConfig): Promise<void> {
 
   const profile = await getSignedInProfile();
   if (!profile || !["admin", "management"].includes(profile.role)) {
-    throw new Error("A linked Supabase Management or Admin account is required to change CCTV configuration.");
+    throw new Error("A linked Neon Management or Admin account is required to change CCTV configuration.");
   }
 
   const cleaned = {
