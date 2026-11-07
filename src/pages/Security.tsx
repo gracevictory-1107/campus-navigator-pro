@@ -215,11 +215,13 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
               <Label htmlFor="campus-auth-email">Email address</Label>
               <Input id="campus-auth-email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" />
             </div>
-            {mode !== "forgotPassword" || passwordResetSent ? <div className="grid gap-1.5">
-              <Label htmlFor="campus-auth-password">{mode === "forgotPassword" ? "New password" : "Password"}</Label>
-              <Input id="campus-auth-password" type="password" autoComplete={mode === "signIn" ? "current-password" : "new-password"} required minLength={mode === "signUp" ? 8 : 1} maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={mode === "signUp" ? "At least 8 characters" : "Password"} />
-              {mode === "signUp" && <p className="text-xs text-muted-foreground">Use at least 8 characters. Never share your password.</p>}
-            </div> : null}
+            {(mode !== "forgotPassword" || passwordResetSent) && (
+              <div className="grid gap-1.5">
+                <Label htmlFor="campus-auth-password">{mode === "forgotPassword" ? "New password" : "Password"}</Label>
+                <Input id="campus-auth-password" type="password" autoComplete={mode === "signIn" ? "current-password" : "new-password"} required minLength={mode === "signUp" ? 8 : 1} maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={mode === "signUp" ? "At least 8 characters" : "Password"} />
+                {mode === "signUp" && <p className="text-xs text-muted-foreground">Use at least 8 characters. Never share your password.</p>}
+              </div>
+            )}
             {mode === "forgotPassword" && passwordResetSent && <div className="grid gap-1.5"><Label htmlFor="campus-reset-code">Password reset code</Label><Input id="campus-reset-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\\D/g, "").slice(0, 6))} placeholder="Enter 6-digit code" /></div>}
             <Button type="submit" disabled={authBusy || !supabaseConfigured}>
               {authBusy ? "Please wait..." : mode === "signIn" ? "Sign In with Email" : mode === "signUp" ? "Create Account" : passwordResetSent ? "Reset Password" : "Send Reset Code"}
