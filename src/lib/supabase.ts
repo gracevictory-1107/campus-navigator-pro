@@ -273,8 +273,9 @@ export async function requestNeonPasswordReset(email: string): Promise<void> {
   const cleanEmail = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) throw new Error("Enter a valid email address.");
 
-  const { error } = await neonAuth.emailOtp.requestPasswordReset({
+  const { error } = await neonAuth.emailOtp.sendVerificationOtp({
     email: cleanEmail,
+    type: "forget-password",
   });
   if (error) throw error;
 }
