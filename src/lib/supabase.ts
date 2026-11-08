@@ -271,7 +271,7 @@ export async function verifyNeonSignupOtp(email: string, password: string, token
 export async function requestNeonPasswordReset(email: string): Promise<void> {
   if (!neonAuth) throw new Error("Password reset is unavailable because Neon Auth is not configured.");
   const cleanEmail = email.trim().toLowerCase();
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(cleanEmail)) throw new Error("Enter a valid email address.");
+  if (!/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(cleanEmail)) throw new Error("Enter a valid email address.");
 
   const { error } = await neonAuth.emailOtp.requestPasswordReset({
     email: cleanEmail,
@@ -283,7 +283,7 @@ export async function resetNeonPassword(email: string, otp: string, newPassword:
   if (!neonAuth) throw new Error("Password reset is unavailable because Neon Auth is not configured.");
   const cleanEmail = email.trim().toLowerCase();
   const cleanOtp = otp.trim();
-  if (!/^\\d{6}$/.test(cleanOtp)) throw new Error("Enter the 6-digit password reset code from your email.");
+  if (!/^\d{6}$/.test(cleanOtp)) throw new Error("Enter the 6-digit password reset code from your email.");
   if (newPassword.length < 8) throw new Error("Use a password with at least 8 characters.");
 
   const { error } = await neonAuth.emailOtp.resetPassword({
