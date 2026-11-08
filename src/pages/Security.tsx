@@ -145,7 +145,7 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
         toast.success(result.role === "pending" ? "Account created. Access is pending Admin approval." : "Account created.");
       }
     } catch (error) {
-      toast.error(mode === "signIn" ? "Sign-in failed" : "Account creation failed", {
+      toast.error(mode === "signIn" ? "Sign-in failed" : mode === "forgotPassword" ? "Password reset failed" : "Account creation failed", {
         description: error instanceof Error ? error.message : "Please check your details and try again.",
       });
     } finally {
@@ -222,7 +222,7 @@ function SecuritySignInDialog({ open, onOpenChange, onRoleChange }: {
                 {mode === "signUp" && <p className="text-xs text-muted-foreground">Use at least 8 characters. Never share your password.</p>}
               </div>
             )}
-            {mode === "forgotPassword" && passwordResetSent && <div className="grid gap-1.5"><Label htmlFor="campus-reset-code">Password reset code</Label><Input id="campus-reset-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\\D/g, "").slice(0, 6))} placeholder="Enter 6-digit code" /></div>}
+            {mode === "forgotPassword" && passwordResetSent && <div className="grid gap-1.5"><Label htmlFor="campus-reset-code">Password reset code</Label><Input id="campus-reset-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="Enter 6-digit code" /></div>}
             <Button type="submit" disabled={authBusy || !supabaseConfigured}>
               {authBusy ? "Please wait..." : mode === "signIn" ? "Sign In with Email" : mode === "signUp" ? "Create Account" : passwordResetSent ? "Reset Password" : "Send Reset Code"}
             </Button>
